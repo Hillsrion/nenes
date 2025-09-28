@@ -3,7 +3,7 @@
     <div
       ref="scrollContainer"
       class="w-full h-full overflow-y-auto"
-      @scroll="handleScroll"
+      data-lenis-prevent
     >
       <slot />
     </div>
@@ -12,20 +12,17 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted } from "vue";
+import { useLenis } from "@/composables/useLenis";
 
 const scrollContainer = ref(null);
-let ticking = false;
+const { lenis, scrollTo } = useLenis();
 
 const handleScroll = () => {
-  if (!ticking) {
-    requestAnimationFrame(() => {
-      const scrollY = scrollContainer.value?.scrollTop || 0;
-      // Emit scroll position for child components to use
-      // This will be used for scroll-triggered animations
-      ticking = false;
-    });
-    ticking = true;
-  }
+  // Lenis handles the smooth scrolling, so we don't need manual scroll handling
+  // But we can still emit scroll events for GSAP ScrollTrigger if needed
+  const scrollY = scrollContainer.value?.scrollTop || 0;
+  // Emit scroll position for child components to use
+  // This will be used for scroll-triggered animations
 };
 
 onMounted(() => {
@@ -34,6 +31,16 @@ onMounted(() => {
     scrollContainer.value.style.height = "100vh";
     scrollContainer.value.style.overflowY = "auto";
   }
+
+  // Expose scrollTo function globally for programmatic scrolling
+  if (process.client) {
+    window.scrollTo = scrollTo;
+  }
+});
+
+// Expose scrollTo function for programmatic scrolling from child components
+defineExpose({
+  scrollTo,
 });
 </script>
 

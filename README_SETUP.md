@@ -24,8 +24,8 @@ This guide covers the setup and technologies used in the Nénés breast cancer a
   - ScrollTrigger plugin for scroll-based animations
   - TextPlugin for advanced text animations
 - **Lenis** - Smooth scroll library
-  - `nuxt3-lenis` - Nuxt module for Lenis integration
-  - Custom easing functions
+  - `lenis` - Modern smooth scroll implementation
+  - Custom composable for Vue 3 integration
 - **Intersection Observer** - Performance-optimized scroll animations
 
 ### Text Effects (Future Implementation)
@@ -101,9 +101,11 @@ export default {
 
 ### Lenis Smooth Scroll
 
-- **Duration**: 1.2s
+- **Custom Composable**: `composables/useLenis.ts` for Vue 3 integration
+- **Duration**: 1.2s (configurable)
 - **Custom Easing**: Exponential decay function
 - **Smooth**: Hardware-accelerated scrolling
+- **Global Access**: `scrollTo` function available on window object
 
 ### Intersection Observer Animations
 
@@ -237,7 +239,7 @@ export default {
 
 1. **Tailwind classes not working**: Check content paths in `tailwind.config.js` and `@theme` configuration in `assets/css/main.css`
 2. **GSAP not loading**: Verify module configuration in `nuxt.config.ts`
-3. **Lenis not smooth**: Check CSS conflicts with smooth scroll behavior
+3. **Lenis not smooth**: Check composable setup and CSS conflicts with smooth scroll behavior
 4. **Animations not triggering**: Verify Intersection Observer setup and `:class` bindings
 
 ### Debug Mode

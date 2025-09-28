@@ -13,23 +13,15 @@ export default defineNuxtConfig({
   css: ["~/assets/css/main.css"],
 
   // Modules configuration
-  modules: ["@hypernym/nuxt-gsap", "nuxt3-lenis", "nuxt-split-type"],
+  modules: ["@hypernym/nuxt-gsap", "nuxt-split-type"],
 
   // GSAP configuration
   gsap: {
     // GSAP will be available globally
     extraPlugins: {
-      ScrollTrigger: true,
-      TextPlugin: true,
+      scrollTrigger: true,
+      textPlugin: true,
     },
-  },
-
-  // Lenis smooth scroll configuration
-  lenis: {
-    // Smooth scroll options
-    duration: 1.2,
-    easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-    smooth: true,
   },
 
   // PostCSS configuration for Tailwind CSS
