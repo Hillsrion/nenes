@@ -62,10 +62,9 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { useSectionVisibility } from "~/composables/useSectionVisibility";
 
-const sectionRef = ref(null);
-const isVisible = ref(false);
+const { sectionRef, isVisible } = useSectionVisibility(0.2);
 
 const resources = ref([
   {
@@ -92,21 +91,6 @@ const resources = ref([
     description: "Recommandations officielles et ressources sur le dépistage.",
   },
 ]);
-
-onMounted(() => {
-  const observer = new IntersectionObserver(
-    ([entry]) => {
-      if (entry.isIntersecting) {
-        isVisible.value = true;
-      }
-    },
-    { threshold: 0.2 }
-  );
-
-  if (sectionRef.value) {
-    observer.observe(sectionRef.value);
-  }
-});
 </script>
 
 <style scoped>

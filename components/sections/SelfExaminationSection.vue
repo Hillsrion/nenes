@@ -66,11 +66,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
 import Logo from "~/components/ui/Logo.vue";
+import { useSectionVisibility } from "~/composables/useSectionVisibility";
 
-const sectionRef = ref(null);
-const isVisible = ref(false);
+const { sectionRef, isVisible } = useSectionVisibility(0.3);
 const activeStep = ref(0);
 
 const examSteps = ref([
@@ -108,28 +107,18 @@ const examSteps = ref([
 
 const guideImages = ref([...Array(4)]); // 4 guide images
 
-onMounted(() => {
-  const observer = new IntersectionObserver(
-    ([entry]) => {
-      if (entry.isIntersecting) {
-        isVisible.value = true;
-        // Auto-advance through steps
-        let stepIndex = 0;
-        const interval = setInterval(() => {
-          if (stepIndex < examSteps.value.length) {
-            activeStep.value = stepIndex;
-            stepIndex++;
-          } else {
-            clearInterval(interval);
-          }
-        }, 3000);
+// Auto-advance through steps when section becomes visible
+watch(isVisible, (visible) => {
+  if (visible) {
+    let stepIndex = 0;
+    const interval = setInterval(() => {
+      if (stepIndex < examSteps.value.length) {
+        activeStep.value = stepIndex;
+        stepIndex++;
+      } else {
+        clearInterval(interval);
       }
-    },
-    { threshold: 0.3 }
-  );
-
-  if (sectionRef.value) {
-    observer.observe(sectionRef.value);
+    }, 3000);
   }
 });
 </script>

@@ -50,11 +50,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
 import Logo from "~/components/ui/Logo.vue";
+import { useSectionVisibility } from "~/composables/useSectionVisibility";
 
-const sectionRef = ref(null);
-const isVisible = ref(false);
+const { sectionRef, isVisible } = useSectionVisibility(0.2);
 
 const symptoms = ref([
   {
@@ -75,21 +74,6 @@ const symptoms = ref([
     description: "Écoulement ou modification du mamelon",
   },
 ]);
-
-onMounted(() => {
-  const observer = new IntersectionObserver(
-    ([entry]) => {
-      if (entry.isIntersecting) {
-        isVisible.value = true;
-      }
-    },
-    { threshold: 0.2 }
-  );
-
-  if (sectionRef.value) {
-    observer.observe(sectionRef.value);
-  }
-});
 </script>
 
 <style scoped>

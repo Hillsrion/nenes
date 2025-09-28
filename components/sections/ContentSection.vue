@@ -58,9 +58,9 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from "vue";
 import Logo from "~/components/ui/Logo.vue";
 import ScrollIndicator from "~/components/ui/ScrollIndicator.vue";
+import { useSectionVisibility } from "~/composables/useSectionVisibility";
 
 const props = defineProps({
   contentElements: {
@@ -85,8 +85,7 @@ const props = defineProps({
   },
 });
 
-const sectionRef = ref(null);
-const isVisible = ref(false);
+const { sectionRef, isVisible } = useSectionVisibility(0.2);
 
 const getBackgroundGradient = computed(() => {
   const gradientMap = {
@@ -103,21 +102,6 @@ const getBackgroundGradient = computed(() => {
       "bg-gradient-to-br from-nenes-sky-light to-nenes-sky-dark",
   };
   return gradientMap[props.backgroundGradient] || "bg-gray-50";
-});
-
-onMounted(() => {
-  const observer = new IntersectionObserver(
-    ([entry]) => {
-      if (entry.isIntersecting) {
-        isVisible.value = true;
-      }
-    },
-    { threshold: 0.2 }
-  );
-
-  if (sectionRef.value) {
-    observer.observe(sectionRef.value);
-  }
 });
 </script>
 

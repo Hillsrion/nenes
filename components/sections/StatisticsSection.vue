@@ -42,11 +42,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from "vue";
 import ScrollIndicator from "~/components/ui/ScrollIndicator.vue";
+import { useSectionVisibility } from "~/composables/useSectionVisibility";
 
-const sectionRef = ref(null);
-const isVisible = ref(false);
+const { sectionRef, isVisible } = useSectionVisibility(0.3);
 const images = ref([...Array(8)]); // 8 floating images from the design
 
 const getImageStyle = (index) => {
@@ -67,21 +66,6 @@ const getImageStyle = (index) => {
     animationDelay: `${index * 0.2}s`,
   };
 };
-
-onMounted(() => {
-  const observer = new IntersectionObserver(
-    ([entry]) => {
-      if (entry.isIntersecting) {
-        isVisible.value = true;
-      }
-    },
-    { threshold: 0.3 }
-  );
-
-  if (sectionRef.value) {
-    observer.observe(sectionRef.value);
-  }
-});
 </script>
 
 <style scoped>
