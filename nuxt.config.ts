@@ -13,7 +13,12 @@ export default defineNuxtConfig({
   css: ["~/assets/css/main.css"],
 
   // Modules configuration
-  modules: ["@hypernym/nuxt-gsap", "nuxt-split-type", "@nuxtjs/google-fonts"],
+  modules: [
+    "@hypernym/nuxt-gsap",
+    "nuxt-split-type",
+    "@nuxtjs/google-fonts",
+    "@pinia/nuxt",
+  ],
 
   // Google Fonts configuration
   googleFonts: {

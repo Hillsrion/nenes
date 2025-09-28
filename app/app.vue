@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="translate-y-[100vh]" ref="globalContainer">
     <MainLayout>
       <!-- Loading Section -->
       <LoadingSection />
@@ -54,4 +54,8 @@ const mainContentElements = ref([
 const mainBackgroundGradient = ref(
   "bg-gradient-to-br from-pink-300 to-pink-500"
 );
+
+const globalContainer = ref(null);
+
+onMounted(() => {});
 </script>

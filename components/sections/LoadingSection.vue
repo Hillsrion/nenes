@@ -1,7 +1,7 @@
 <template>
   <section
     ref="loadingSectionRef"
-    class="min-h-screen relative overflow-hidden bg-primary"
+    class="min-h-screen overflow-hidden bg-primary fixed inset-0"
   >
     <!-- Blue background section -->
     <div
@@ -44,9 +44,13 @@
 <script setup>
 import { gsap } from "gsap";
 import Logo from "~/components/ui/Logo.vue";
+import { useAnimationsStore } from "~/stores";
 
 const progress = ref(0);
 const isComplete = ref(false);
+
+// Store
+const store = useAnimationsStore();
 
 // Refs for GSAP animations
 const loadingSectionRef = ref(null);
@@ -94,6 +98,8 @@ const startLoadingSequence = () => {
     // Mark as complete after progress finishes
     .call(() => {
       isComplete.value = true;
+      // Update the section state using the proper method
+      store.updateSectionState("loading", "isComplete");
     });
 };
 
