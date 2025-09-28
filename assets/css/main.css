@@ -3,10 +3,11 @@
 /* Theme Configuration - Tailwind CSS v4 */
 @theme {
   /* Custom colors extracted from Figma gradients */
+  --color-primary: #335ede;
   --color-nenes-blue-light: #667eea;
   --color-nenes-blue-dark: #764ba2;
 
-  --color-nenes-pink-light: #f093fb;
+  --color-nenes-pink-light: #ffdde2;
   --color-nenes-pink-medium: #ff9ff3;
   --color-nenes-pink-dark: #f5576c;
   --color-nenes-pink-accent: #ff6b9d;
@@ -48,6 +49,9 @@
   --shadow-soft: 0 2px 15px rgba(0, 0, 0, 0.08);
   --shadow-medium: 0 4px 25px rgba(0, 0, 0, 0.12);
   --shadow-large: 0 8px 40px rgba(0, 0, 0, 0.16);
+
+  /* Font families */
+  --font-family-serif: "Dawning of a New Day", Georgia, serif;
 }
 
 /* Animation utilities */
