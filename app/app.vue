@@ -22,6 +22,9 @@
       <!-- Resources Section -->
       <ResourcesSection />
     </MainLayout>
+
+    <!-- Sticky Scroll Indicator -->
+    <StickyScrollIndicator text="scroll" :scroll-threshold="0.3" />
   </div>
 </template>
 
@@ -33,6 +36,7 @@ import ContentSection from "~/components/sections/ContentSection.vue";
 import SelfExaminationSection from "~/components/sections/SelfExaminationSection.vue";
 import SymptomsSection from "~/components/sections/SymptomsSection.vue";
 import ResourcesSection from "~/components/sections/ResourcesSection.vue";
+import StickyScrollIndicator from "~/components/ui/StickyScrollIndicator.vue";
 
 // Define main content elements for the ContentSection
 const mainContentElements = ref([
