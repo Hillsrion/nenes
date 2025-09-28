@@ -1,6 +1,5 @@
 <template>
   <div>
-    <NuxtRouteAnnouncer />
     <MainLayout>
       <!-- Loading Section -->
       <LoadingSection />

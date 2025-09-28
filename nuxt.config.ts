@@ -13,14 +13,23 @@ export default defineNuxtConfig({
   css: ["~/assets/css/main.css"],
 
   // Modules configuration
-  modules: ["@hypernym/nuxt-gsap", "nuxt-split-type"],
+  modules: ["@hypernym/nuxt-gsap", "nuxt-split-type", "@nuxtjs/google-fonts"],
+
+  // Google Fonts configuration
+  googleFonts: {
+    families: {
+      "DM+Sans": [400, 500, 600, 700],
+    },
+    display: "swap",
+    preload: true,
+    useStylesheet: true,
+  },
 
   // GSAP configuration
   gsap: {
     // GSAP will be available globally
     extraPlugins: {
       scrollTrigger: true,
-      textPlugin: true,
     },
   },
 
