@@ -1,0 +1,232 @@
+# Cursor Rules for Nénés Breast Cancer Awareness Website
+
+## 🏥 Project Overview
+
+This is a Nuxt.js/Vue.js application for "Nénés" - a French breast cancer awareness website. The project focuses on education, self-examination guidance, and providing essential resources for breast cancer awareness and prevention.
+
+## 🛠️ Technology Stack
+
+- **Framework**: Nuxt 4 with Vue 3 Composition API
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS v4
+- **Animation**: GSAP with ScrollTrigger
+- **Package Manager**: pnpm
+- **Additional Libraries**: @vueuse/core, Lenis smooth scrolling, Google Fonts (DM Sans)
+
+## 📁 Project Structure
+
+```
+components/
+├── layout/
+│   └── MainLayout.vue          # Main scrollable layout container
+├── sections/                   # Page sections with full viewport height
+│   ├── LoadingSection.vue      # Animated loading screen
+│   ├── StatisticsSection.vue   # Statistics with floating animations
+│   ├── ContentSection.vue      # Flexible content with animations
+│   ├── SelfExaminationSection.vue # Interactive self-exam guide
+│   ├── SymptomsSection.vue     # Symptoms awareness cards
+│   └── ResourcesSection.vue    # Resources and contact info
+├── ui/                         # Reusable UI components
+│   ├── Logo.vue               # Brand logo (113x32px)
+│   └── ScrollIndicator.vue    # Animated scroll indicator
+composables/                    # Vue 3 composables
+├── useLenis.ts                # Smooth scrolling setup
+└── useSectionVisibility.ts    # Intersection Observer logic
+```
+
+## 🎨 Design System Guidelines
+
+### Colors & Gradients
+
+- **Primary Gradients**: Section-specific gradients (blue-purple, pink, orange)
+- **Text**: White on colored backgrounds, dark gray on light
+- **Accent**: Pink/magenta (#EC4899, #BE185D) for highlights and CTAs
+- **Backgrounds**: Full gradient backgrounds per section
+
+### Typography
+
+- **Font**: DM Sans (400, 500, 600, 700)
+- **Headings**: Bold, 2-3rem, responsive scaling
+- **Body**: Regular weight, 1.5-1.6 line height
+- **Accent Text**: Highlighted statistics and key information
+
+### Layout Principles
+
+- **Full Height Sections**: Each section takes full viewport height (100vh)
+- **Centered Content**: Max-width containers with horizontal centering
+- **Responsive**: Mobile-first with 768px breakpoint
+- **Grid/Flexbox**: Modern CSS layout techniques
+
+## 🔧 Development Guidelines
+
+### Component Architecture
+
+1. **Section Components**: Use `useSectionVisibility` composable for scroll-triggered animations
+2. **Intersection Observer**: Implement with `@vueuse/core` for performance
+3. **Animation Delays**: Use staggered timing (0.1s, 0.2s, 0.3s intervals)
+4. **Responsive Design**: Include mobile-first responsive classes
+
+### Code Style
+
+- **TypeScript**: Strict typing with proper interfaces
+- **Vue 3**: Composition API with `<script setup>`
+- **Naming**: PascalCase for components, camelCase for functions/props
+- **Imports**: Group by type (Vue, third-party, local)
+- **Auto-imports**: Never import Vue 3 Composition API functions (ref, reactive, computed, watch, onMounted, etc.) as Nuxt provides auto-imports for these
+- **Styling**: Tailwind classes with custom CSS in `assets/css/`
+
+### Animation Standards
+
+- **Scroll-triggered**: Use Intersection Observer pattern
+- **Performance**: RequestAnimationFrame for smooth animations
+- **Easing**: `cubic-bezier(0.25, 0.46, 0.45, 0.94)` for smooth curves
+- **Hardware Acceleration**: CSS transforms over position changes
+
+## 📝 Content Guidelines
+
+### French Language Content
+
+- **Primary Language**: French throughout the application
+- **Medical Accuracy**: Ensure content is medically accurate and sensitive
+- **Cultural Sensitivity**: Appropriate tone for health education
+- **Accessibility**: Clear, readable content for all users
+
+### Section Content Structure
+
+- **Loading**: Progress-based animation (0-100%)
+- **Statistics**: Key facts about breast cancer in France
+- **Self-Examination**: 5-step interactive guide with visuals
+- **Symptoms**: 4 main symptom categories with descriptions
+- **Resources**: Contact information for French health organizations
+
+## 🚀 Development Workflow
+
+### Setup & Installation
+
+```bash
+pnpm install  # Install dependencies
+pnpm dev      # Start development server
+pnpm build    # Build for production
+```
+
+### File Organization
+
+- **Components**: Feature-based organization in `/sections` and `/ui`
+- **Composables**: Reusable logic in `/composables`
+- **Assets**: CSS in `/assets/css`, images in `/public`
+- **Configuration**: Nuxt config in `nuxt.config.ts`
+
+### Performance Optimization
+
+- **Images**: Optimize for web (WebP format preferred)
+- **Animations**: 60fps scroll performance with Lenis
+- **Bundle**: Tree-shaking with ES modules
+- **Caching**: Proper cache headers for static assets
+
+## 🎯 Component Creation Guidelines
+
+### New Section Component Template
+
+```vue
+<template>
+  <section
+    ref="sectionRef"
+    class="min-h-screen flex items-center justify-center relative"
+    :class="backgroundGradient"
+  >
+    <div class="container mx-auto px-4 max-w-6xl">
+      <!-- Section content with staggered animations -->
+      <div class="section-element" :style="{ animationDelay: '0.1s' }">
+        <!-- Content here -->
+      </div>
+    </div>
+  </section>
+</template>
+
+<script setup lang="ts">
+// Import required composables
+import { ref } from "vue";
+import { useSectionVisibility } from "~/composables/useSectionVisibility";
+
+// Define props
+interface Props {
+  backgroundGradient?: string;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  backgroundGradient: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+});
+
+// Section visibility logic
+const { sectionRef, isVisible } = useSectionVisibility(0.2);
+</script>
+
+<style scoped>
+.section-element {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.section-element.animate-in {
+  opacity: 1;
+  transform: translateY(0);
+}
+</style>
+```
+
+### UI Component Guidelines
+
+- **Reusable**: Design for multiple use cases
+- **Props**: Clear, typed prop interfaces
+- **Slots**: Use for flexible content insertion
+- **Accessibility**: ARIA labels, keyboard navigation
+
+## 🔍 Code Review Checklist
+
+### Functionality
+
+- [ ] Components use proper TypeScript interfaces
+- [ ] Scroll animations trigger correctly with Intersection Observer
+- [ ] Responsive design works on mobile and desktop
+- [ ] French content is accurate and culturally appropriate
+
+### Performance
+
+- [ ] Animations use CSS transforms for hardware acceleration
+- [ ] Intersection Observer implemented instead of scroll events
+- [ ] Images optimized for web delivery
+- [ ] Bundle size remains reasonable
+
+### Code Quality
+
+- [ ] Consistent naming conventions followed
+- [ ] Proper error handling implemented
+- [ ] Accessibility features included
+- [ ] Documentation comments for complex logic
+
+### Design Consistency
+
+- [ ] Gradient backgrounds match section theme
+- [ ] Typography follows DM Sans font system
+- [ ] Spacing consistent with Tailwind scale
+- [ ] Animations have appropriate timing and easing
+
+## 📚 Additional Resources
+
+### Key Libraries Documentation
+
+- [Nuxt 4 Documentation](https://nuxt.com/docs)
+- [Vue 3 Composition API](https://vuejs.org/api/composition-api.html)
+- [Tailwind CSS v4](https://tailwindcss.com/docs)
+- [GSAP ScrollTrigger](https://gsap.com/docs/v3/Plugins/ScrollTrigger/)
+- [VueUse](https://vueuse.org/)
+
+### Health Information Sources
+
+- Ligue contre le cancer (French Cancer League)
+- Ruban Rose (Pink Ribbon France)
+- Santé publique France (Public Health France)
+- Cancer Info Service
+
+This cursor rule ensures consistent development practices and maintains the high-quality standards required for this sensitive health education project.
