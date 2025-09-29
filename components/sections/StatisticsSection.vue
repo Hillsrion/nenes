@@ -4,27 +4,14 @@
     ref="sectionRef"
   >
     <div class="absolute -top-2 left-0 w-full h-16 bg-primary -z-1" />
-    <div class="relative h-full w-full min-h-screen bg-white transition-all duration-300 ease-out" :class="{ 'rounded-t-4xl': !isLoadingComplete }">
+    <div class="relative h-full w-full min-h-screen bg-white transition-all duration-300 ease-out place-content-center" :class="{ 'rounded-t-4xl': !isLoadingComplete }">
       <Logo class="absolute top-8 left-1/2 transform -translate-x-1/2" :color="isCoverFullyVisible ? 'var(--color-nenes-pink-light)' : 'var(--color-primary)'" />
-      <div class="max-w-6xl w-full px-8 relative z-10">
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-          <div class="text-white">
-            <h2 class="text-3xl lg:text-4xl font-light leading-tight mb-8">
-              Chaque année en France, le cancer du sein touche
-            </h2>
-            <div class="flex flex-col gap-4">
-              <span class="text-xl lg:text-2xl font-light text-white/80"
-                >plus de</span
-              >
-              <span
-                class="text-4xl lg:text-5xl font-bold text-nenes-yellow shadow-lg"
-                >60000 femmes</span
-              >
-            </div>
-          </div>
+      <div class="max-w-[42rem] w-full px-8 relative z-10 mx-auto flex flex-col items-center">
+          <h2 class="text-3xl lg:text-5xl leading-snug font-medium text-center text-primary">
+            Chaque année en France, le cancer du sein touche plus de 60000 femmes.
+          </h2>
 
-          <div class="relative h-96">
-            <div class="relative w-full h-full">
+          <div class="absolute hidden">
               <div
                 v-for="(image, index) in images"
                 :key="index"
@@ -33,8 +20,6 @@
                 :style="getImageStyle(index)"
               ></div>
             </div>
-          </div>
-        </div>
         <ScrollIndicator
           text="scroll"
             class="absolute bottom-8 left-1/2 -translate-x-1/2 text-white"
