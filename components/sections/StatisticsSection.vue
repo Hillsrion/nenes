@@ -20,12 +20,12 @@
                 :style="getImageStyle(index)"
               ></div>
             </div>
-        <ScrollIndicator
-          text="scroll"
-            class="absolute bottom-8 left-1/2 -translate-x-1/2 text-white"
-          />
       </div>
     </div>
+    <ScrollIndicator
+          text="scroll"
+          class="absolute bottom-10 left-1/2 -translate-x-1/2 text-primary"
+          />
   </section>
 </template>
 

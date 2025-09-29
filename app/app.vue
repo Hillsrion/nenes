@@ -42,7 +42,6 @@ import ContentSection from "~/components/sections/ContentSection.vue";
 import SelfExaminationSection from "~/components/sections/SelfExaminationSection.vue";
 import SymptomsSection from "~/components/sections/SymptomsSection.vue";
 import ResourcesSection from "~/components/sections/ResourcesSection.vue";
-import StickyScrollIndicator from "~/components/ui/StickyScrollIndicator.vue";
 import { useAnimationsStore } from "~/stores";
 
 // Store

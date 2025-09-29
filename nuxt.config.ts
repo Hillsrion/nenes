@@ -24,7 +24,6 @@ export default defineNuxtConfig({
   googleFonts: {
     families: {
       "DM+Sans": [400, 500, 600, 700],
-      "Dawning+of+a+New+Day": true,
     },
     display: "swap",
     preload: true,
