@@ -1,7 +1,9 @@
 <template>
   <div
     class="transition-transform duration-1000 ease-out"
-    :class="isLoadingComplete ? 'translate-y-0' : 'translate-y-[100vh]'"
+    :class="{
+      'translate-y-[100vh]': !isLoadingComplete,
+    }"
     ref="globalContainer"
   >
     <MainLayout>
@@ -70,8 +72,9 @@ const globalContainer = ref(null);
 
 // Watch for loading completion
 watch(
-  () => store.sections.get("loading")?.state,
+  () => store.sections.loading?.state,
   (newState) => {
+    console.log("newState", newState);
     if (newState === "isComplete") {
       // Add a small delay to ensure smooth transition
       setTimeout(() => {

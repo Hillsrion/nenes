@@ -1,7 +1,7 @@
 <template>
   <section
     ref="loadingSectionRef"
-    class="min-h-screen overflow-hidden bg-primary fixed inset-0 -z-50"
+    class="min-h-screen overflow-hidden bg-primary fixed inset-0 -translate-y-full -z-10"
   >
     <!-- Blue background section -->
     <div
@@ -95,10 +95,6 @@ const startLoadingSequence = () => {
       },
       "-=2.5"
     )
-    // Mark as complete after progress finishes
-    .call(() => {
-      isComplete.value = true;
-    });
 };
 
 const startProgressCounter = () => {
@@ -110,7 +106,6 @@ const startProgressCounter = () => {
   const interval = setInterval(() => {
     currentStep++;
     progress.value = Math.round(currentStep * increment);
-
     if (currentStep >= steps) {
       progress.value = 100;
       store.updateSectionState("loading", "isComplete");

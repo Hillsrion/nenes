@@ -67,23 +67,3 @@ const getImageStyle = (index) => {
   };
 };
 </script>
-
-<style scoped>
-@media (max-width: 768px) {
-  .grid {
-    @apply grid-cols-1 gap-8 text-center;
-  }
-
-  .text-3xl {
-    @apply text-2xl lg:text-3xl;
-  }
-
-  .text-xl {
-    @apply text-lg lg:text-xl;
-  }
-
-  .text-4xl {
-    @apply text-3xl lg:text-4xl;
-  }
-}
-</style>
