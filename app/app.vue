@@ -1,5 +1,9 @@
 <template>
-  <div class="translate-y-[100vh]" ref="globalContainer">
+  <div
+    class="transition-transform duration-1000 ease-out"
+    :class="isLoadingComplete ? 'translate-y-0' : 'translate-y-[100vh]'"
+    ref="globalContainer"
+  >
     <MainLayout>
       <!-- Loading Section -->
       <LoadingSection />
@@ -37,6 +41,13 @@ import SelfExaminationSection from "~/components/sections/SelfExaminationSection
 import SymptomsSection from "~/components/sections/SymptomsSection.vue";
 import ResourcesSection from "~/components/sections/ResourcesSection.vue";
 import StickyScrollIndicator from "~/components/ui/StickyScrollIndicator.vue";
+import { useAnimationsStore } from "~/stores";
+
+// Store
+const store = useAnimationsStore();
+
+// Reactive state for loading completion
+const isLoadingComplete = ref(false);
 
 // Define main content elements for the ContentSection
 const mainContentElements = ref([
@@ -56,6 +67,20 @@ const mainBackgroundGradient = ref(
 );
 
 const globalContainer = ref(null);
+
+// Watch for loading completion
+watch(
+  () => store.sections.get("loading")?.state,
+  (newState) => {
+    if (newState === "isComplete") {
+      // Add a small delay to ensure smooth transition
+      setTimeout(() => {
+        isLoadingComplete.value = true;
+      }, 200);
+    }
+  },
+  { immediate: true }
+);
 
 onMounted(() => {});
 </script>
