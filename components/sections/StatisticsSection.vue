@@ -1,42 +1,45 @@
 <template>
   <section
-    class="min-h-screen flex items-center justify-center relative overflow-hidden bg-gradient-to-br from-nenes-blue-light to-nenes-blue-dark"
+    class="flex items-center justify-center relative"
     ref="sectionRef"
   >
-    <div class="max-w-6xl w-full px-8 relative z-10">
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-        <div class="text-white">
-          <h2 class="text-3xl lg:text-4xl font-light leading-tight mb-8">
-            Chaque année en France, le cancer du sein touche
-          </h2>
-          <div class="flex flex-col gap-4">
-            <span class="text-xl lg:text-2xl font-light text-white/80"
-              >plus de</span
-            >
-            <span
-              class="text-4xl lg:text-5xl font-bold text-nenes-yellow shadow-lg"
-              >60000 femmes</span
-            >
+    <div class="absolute -top-2 left-0 w-full h-16 bg-primary -z-1" />
+    <div class="relative h-full w-full min-h-screen bg-white transition-all duration-300 ease-out" :class="{ 'rounded-t-4xl': !isLoadingComplete }">
+      <Logo class="absolute top-8 left-1/2 transform -translate-x-1/2" :color="isCoverFullyVisible ? 'var(--color-nenes-pink-light)' : 'var(--color-primary)'" />
+      <div class="max-w-6xl w-full px-8 relative z-10">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+          <div class="text-white">
+            <h2 class="text-3xl lg:text-4xl font-light leading-tight mb-8">
+              Chaque année en France, le cancer du sein touche
+            </h2>
+            <div class="flex flex-col gap-4">
+              <span class="text-xl lg:text-2xl font-light text-white/80"
+                >plus de</span
+              >
+              <span
+                class="text-4xl lg:text-5xl font-bold text-nenes-yellow shadow-lg"
+                >60000 femmes</span
+              >
+            </div>
           </div>
-        </div>
 
-        <div class="relative h-96">
-          <div class="relative w-full h-full">
-            <div
-              v-for="(image, index) in images"
-              :key="index"
-              class="absolute w-20 h-20 rounded-full bg-white/10 backdrop-blur-md border-2 border-white/30 opacity-0 translate-y-12 scale-75 transition-all duration-700 ease-out"
-              :class="{ 'opacity-100 translate-y-0 scale-100': isVisible }"
-              :style="getImageStyle(index)"
-            ></div>
+          <div class="relative h-96">
+            <div class="relative w-full h-full">
+              <div
+                v-for="(image, index) in images"
+                :key="index"
+                class="absolute w-20 h-20 rounded-full bg-white/10 backdrop-blur-md border-2 border-white/30 opacity-0 translate-y-12 scale-75 transition-all duration-700 ease-out"
+                :class="{ 'opacity-100 translate-y-0 scale-100': isVisible }"
+                :style="getImageStyle(index)"
+              ></div>
+            </div>
           </div>
         </div>
+        <ScrollIndicator
+          text="scroll"
+            class="absolute bottom-8 left-1/2 -translate-x-1/2 text-white"
+          />
       </div>
-
-      <ScrollIndicator
-        text="scroll"
-        class="absolute bottom-8 left-1/2 -translate-x-1/2 text-white"
-      />
     </div>
   </section>
 </template>
@@ -44,9 +47,15 @@
 <script setup>
 import ScrollIndicator from "~/components/ui/ScrollIndicator.vue";
 import { useSectionVisibility } from "~/composables/useSectionVisibility";
+import { useAnimationsStore } from "~/stores";
+import Logo from "~/components/ui/Logo.vue";
 
 const { sectionRef, isVisible } = useSectionVisibility(0.3);
+const store = useAnimationsStore();
+const isLoadingComplete = store.getSectionState("loading") === "isComplete";
 const images = ref([...Array(8)]); // 8 floating images from the design
+
+const isCoverFullyVisible = ref(false);
 
 const getImageStyle = (index) => {
   const positions = [

@@ -1,15 +1,16 @@
 <template>
   <div
-    class="transition-transform duration-1000 ease-out"
-    :class="{
-      'translate-y-[100vh]': !isLoadingComplete,
-    }"
+ 
     ref="globalContainer"
   >
     <MainLayout>
       <!-- Loading Section -->
       <LoadingSection />
-
+      <div 
+      class="transition-transform duration-1000 ease-out"
+      :class="{
+      'translate-y-[100vh]': !isLoadingComplete,
+    }">
       <!-- Statistics Section -->
       <StatisticsSection />
 
@@ -27,10 +28,9 @@
 
       <!-- Resources Section -->
       <ResourcesSection />
+      </div>
     </MainLayout>
 
-    <!-- Sticky Scroll Indicator -->
-    <StickyScrollIndicator text="scroll" :scroll-threshold="0.3" />
   </div>
 </template>
 
