@@ -154,10 +154,6 @@ const fadeFirstTwoLines = (progress) => {
   const startFade = 0;
   const fadeDuration = 0.15;
   const totalLines = textSpans.length;
-
-  // Update last line position based on progress
-  updateLastLinePosition(progress);
-
   // Only fade the first two lines
   Array.from(textSpans).forEach((span, index) => {
     if (index < 2) {
@@ -217,39 +213,10 @@ const updateLastLinePosition = (progress) => {
   }
 };
 
-// Reset last line position (called when needed)
-const resetLastLinePosition = () => {
-  if (!statisticsTextRef.value) return;
-
-  const textSpans = statisticsTextRef.value.children;
-  const lastSpan = textSpans[textSpans.length - 1];
-
-  if (lastSpan) {
-    // Reset centered state
-    lastLineCentered.value = false;
-
-    // Set last line back to original position immediately
-    $gsap.set(lastSpan, { y: 0 });
-  }
-};
-
-// Reset statistics text to full opacity and animation state
-const resetStatisticsText = () => {
-  if (statisticsTextRef.value) {
-    const textSpans = statisticsTextRef.value.children;
-
-    // Reset all text to full opacity
-    $gsap.set(textSpans, { opacity: 1 });
-
-    // Reset animation state
-    firstTwoLinesFaded.value = false;
-    lastLineCentered.value = false;
-  }
-};
-
 // Update statistics opacity based on scroll progress
 const updateStatisticsOpacity = (progress) => {
   fadeFirstTwoLines(progress);
+  updateLastLinePosition(progress);
 
   // Update cover visibility
   isCoverFullyVisible.value = progress > 0.5;
