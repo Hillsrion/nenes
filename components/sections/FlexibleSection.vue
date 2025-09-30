@@ -19,6 +19,7 @@
         class="max-w-[42rem] h-[100svh] w-full px-8 sticky top-0 left-1/2 transform -translate-x-1/2 z-10 mx-auto flex flex-col justify-center"
       >
         <div
+          ref="statisticsTextRef"
           class="text-3xl lg:text-5xl leading-snug font-medium text-center text-primary relative statistics-text"
         >
           <span
@@ -93,9 +94,14 @@ const props = defineProps({
 
 const { sectionRef, isVisible } = useSectionVisibility(0.2);
 const whiteSectionRef = ref(null);
+const statisticsTextRef = ref(null);
 
 // GSAP ScrollTrigger for statistics section
 let statisticsTrigger = null;
+
+// Animation state
+const firstTwoLinesFaded = ref(false);
+const lastLineCentered = ref(false);
 
 // Computed properties for statistics section
 const isCoverFullyVisible = ref(false);
@@ -118,11 +124,6 @@ onMounted(() => {
         end: "bottom bottom", // End before section leaves viewport
         markers: true,
         scrub: true, // Smooth scrubbing
-        onLeaveBack: () => {
-          console.log("ScrollTrigger: onLeaveBack triggered");
-          // Reset when scrolling back up
-          resetStatisticsText();
-        },
         onUpdate: (self) => {
           console.log("ScrollTrigger progress:", self.progress);
           // Update based on scroll progress
@@ -139,27 +140,47 @@ onMounted(() => {
 
 // Initialize statistics text to full opacity
 const initializeStatisticsText = () => {
-  const textSpans = sectionRef.value.querySelectorAll(".statistics-text span");
-  $gsap.set(textSpans, { opacity: 1 });
+  if (statisticsTextRef.value) {
+    const textSpans = statisticsTextRef.value.children;
+    $gsap.set(textSpans, { opacity: 1 });
+  }
 };
 
 // Fade out first two lines progressively
 const fadeFirstTwoLines = (progress) => {
-  const textSpans = sectionRef.value.querySelectorAll(".statistics-text span");
-  const startFade = 0; // Start fading at 50%
-  const fadeDuration = 0.15; // Fade over 30% of scroll progress
+  if (!statisticsTextRef.value) return;
+
+  const textSpans = statisticsTextRef.value.children;
+  const startFade = 0;
+  const fadeDuration = 0.15;
+  const totalLines = textSpans.length;
+
+  // Update last line position based on progress
+  updateLastLinePosition(progress);
 
   // Only fade the first two lines
-  textSpans.forEach((span, index) => {
+  Array.from(textSpans).forEach((span, index) => {
     if (index < 2) {
       // First two lines only
       if (progress >= startFade) {
         const fadeProgress = Math.min(1, (progress - startFade) / fadeDuration);
-        const opacity = Math.max(0.3, 1 - fadeProgress * 0.7); // Fade from 1 to 0.3
+        const opacity = Math.max(0, 1 - fadeProgress); // Fade from 1 to 0
         $gsap.set(span, { opacity });
+
+        // Track fade state for other animations
+        if (fadeProgress >= 1) {
+          firstTwoLinesFaded.value = true;
+        } else if (fadeProgress < 0.5) {
+          firstTwoLinesFaded.value = false;
+        }
       } else {
         $gsap.set(span, { opacity: 1 });
+        firstTwoLinesFaded.value = false;
       }
+    } else if (index === totalLines - 1) {
+      // Last line - position already handled by updateLastLinePosition
+      // Keep at full opacity
+      $gsap.set(span, { opacity: 1 });
     } else {
       // Keep other lines at full opacity
       $gsap.set(span, { opacity: 1 });
@@ -167,10 +188,63 @@ const fadeFirstTwoLines = (progress) => {
   });
 };
 
-// Reset statistics text to full opacity
+// Update last line position based on scroll progress
+const updateLastLinePosition = (progress) => {
+  if (!statisticsTextRef.value) return;
+
+  const textSpans = statisticsTextRef.value.children;
+  const lastSpan = textSpans[textSpans.length - 1];
+
+  if (lastSpan) {
+    // Calculate Y position based on progress after fade is complete
+    const startMoveProgress = 0.15; // Start moving after fade is complete
+    const moveDuration = 0.15; // Move over 30% of progress
+
+    if (progress >= startMoveProgress) {
+      const moveProgress = Math.min(
+        1,
+        (progress - startMoveProgress) / moveDuration
+      );
+      const yOffset = -40 * moveProgress; // Move up to -40px
+
+      $gsap.set(lastSpan, { y: yOffset });
+      lastLineCentered.value = true;
+    } else {
+      // Keep at original position before movement starts
+      $gsap.set(lastSpan, { y: 0 });
+      lastLineCentered.value = false;
+    }
+  }
+};
+
+// Reset last line position (called when needed)
+const resetLastLinePosition = () => {
+  if (!statisticsTextRef.value) return;
+
+  const textSpans = statisticsTextRef.value.children;
+  const lastSpan = textSpans[textSpans.length - 1];
+
+  if (lastSpan) {
+    // Reset centered state
+    lastLineCentered.value = false;
+
+    // Set last line back to original position immediately
+    $gsap.set(lastSpan, { y: 0 });
+  }
+};
+
+// Reset statistics text to full opacity and animation state
 const resetStatisticsText = () => {
-  const textSpans = sectionRef.value.querySelectorAll(".statistics-text span");
-  $gsap.set(textSpans, { opacity: 1 });
+  if (statisticsTextRef.value) {
+    const textSpans = statisticsTextRef.value.children;
+
+    // Reset all text to full opacity
+    $gsap.set(textSpans, { opacity: 1 });
+
+    // Reset animation state
+    firstTwoLinesFaded.value = false;
+    lastLineCentered.value = false;
+  }
 };
 
 // Update statistics opacity based on scroll progress
