@@ -18,6 +18,7 @@ export default defineNuxtConfig({
     "nuxt-split-type",
     "@nuxtjs/google-fonts",
     "@pinia/nuxt",
+    "lenis/nuxt",
   ],
 
   // Google Fonts configuration

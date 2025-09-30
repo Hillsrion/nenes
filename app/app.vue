@@ -1,8 +1,7 @@
 <template>
-  <div
- 
-    ref="globalContainer"
-  >
+  <div ref="globalContainer">
+    <VueLenis root />
+
     <MainLayout>
       <!-- Loading Section -->
       <LoadingSection />
@@ -30,7 +29,6 @@
       <ResourcesSection />
       </div>
     </MainLayout>
-
   </div>
 </template>
 
