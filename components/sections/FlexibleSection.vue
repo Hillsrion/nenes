@@ -96,8 +96,10 @@ const { sectionRef, isVisible } = useSectionVisibility(0.2);
 const whiteSectionRef = ref(null);
 const statisticsTextRef = ref(null);
 
-// GSAP ScrollTrigger for statistics section
-let statisticsTrigger = null;
+// GSAP ScrollTriggers for statistics section
+let fadeTrigger = null;
+let positionTrigger = null;
+let coverTrigger = null;
 
 // Animation state
 const firstTwoLinesFaded = ref(false);
@@ -106,7 +108,7 @@ const lastLineCentered = ref(false);
 // Computed properties for statistics section
 const isCoverFullyVisible = ref(false);
 
-// Initialize ScrollTrigger on mount
+// Initialize ScrollTriggers on mount
 onMounted(() => {
   console.log("Component mounted, checking conditions...");
   console.log("sectionRef available:", !!sectionRef.value);
@@ -116,23 +118,12 @@ onMounted(() => {
     // Initialize all text to full opacity first
     initializeStatisticsText();
 
-    // Create ScrollTrigger for statistics text fade effect
-    statisticsTrigger = $gsap.to(sectionRef.value, {
-      scrollTrigger: {
-        trigger: sectionRef.value,
-        start: "top bottom", // Start shortly after scrolling begins
-        end: "bottom bottom", // End before section leaves viewport
-        markers: true,
-        scrub: true, // Smooth scrubbing
-        onUpdate: (self) => {
-          console.log("ScrollTrigger progress:", self.progress);
-          // Update based on scroll progress
-          updateStatisticsOpacity(self.progress);
-        },
-      },
-    });
+    // Create separate ScrollTriggers for each animation
+    createFadeTrigger();
+    createPositionTrigger();
+    createCoverTrigger();
 
-    console.log("ScrollTrigger created:", !!statisticsTrigger);
+    console.log("ScrollTriggers created");
   } else {
     console.log("Conditions not met for ScrollTrigger creation");
   }
@@ -146,87 +137,100 @@ const initializeStatisticsText = () => {
   }
 };
 
-// Fade out first two lines progressively
-const fadeFirstTwoLines = (progress) => {
+// Create separate ScrollTrigger for fading first two lines
+const createFadeTrigger = () => {
   if (!statisticsTextRef.value) return;
 
   const textSpans = statisticsTextRef.value.children;
-  const startFade = 0;
-  const fadeDuration = 0.15;
-  const totalLines = textSpans.length;
-  // Only fade the first two lines
-  Array.from(textSpans).forEach((span, index) => {
-    if (index < 2) {
-      // First two lines only
-      if (progress >= startFade) {
-        const fadeProgress = Math.min(1, (progress - startFade) / fadeDuration);
-        const opacity = Math.max(0, 1 - fadeProgress); // Fade from 1 to 0
-        $gsap.set(span, { opacity });
+  const firstTwoLines = Array.from(textSpans).slice(0, 2); // Only first two lines
 
-        // Track fade state for other animations
-        if (fadeProgress >= 1) {
-          firstTwoLinesFaded.value = true;
-        } else if (fadeProgress < 0.5) {
-          firstTwoLinesFaded.value = false;
-        }
-      } else {
-        $gsap.set(span, { opacity: 1 });
-        firstTwoLinesFaded.value = false;
-      }
-    } else if (index === totalLines - 1) {
-      // Last line - position already handled by updateLastLinePosition
-      // Keep at full opacity
-      $gsap.set(span, { opacity: 1 });
-    } else {
-      // Keep other lines at full opacity
-      $gsap.set(span, { opacity: 1 });
-    }
+  fadeTrigger = $gsap.to(firstTwoLines, {
+    opacity: 0,
+    duration: 1,
+    ease: "none",
+    scrollTrigger: {
+      trigger: sectionRef.value,
+      start: "top bottom", // Start immediately when scrolling begins
+      end: "top 20%", // End when section is well into viewport
+      scrub: 0.5, // Smooth scrubbing with slight delay
+      onUpdate: (self) => {
+        // Track fade state
+        firstTwoLinesFaded.value = self.progress > 0.8;
+      },
+    },
   });
 };
 
-// Update last line position based on scroll progress
-const updateLastLinePosition = (progress) => {
+// Create separate ScrollTrigger for last line position
+const createPositionTrigger = () => {
   if (!statisticsTextRef.value) return;
 
   const textSpans = statisticsTextRef.value.children;
   const lastSpan = textSpans[textSpans.length - 1];
 
   if (lastSpan) {
-    // Calculate Y position based on progress after fade is complete
-    const startMoveProgress = 0.15; // Start moving after fade is complete
-    const moveDuration = 0.15; // Move over 30% of progress
+    // Calculate the center position dynamically
+    const calculateCenterY = () => {
+      if (!statisticsTextRef.value || !lastSpan) return 0;
 
-    if (progress >= startMoveProgress) {
-      const moveProgress = Math.min(
-        1,
-        (progress - startMoveProgress) / moveDuration
-      );
-      const yOffset = -40 * moveProgress; // Move up to -40px
+      const parentHeight = statisticsTextRef.value.offsetHeight;
+      const lineHeight = lastSpan.offsetHeight;
+      const centerY = (parentHeight - lineHeight) / 2;
 
-      $gsap.set(lastSpan, { y: yOffset });
-      lastLineCentered.value = true;
-    } else {
-      // Keep at original position before movement starts
-      $gsap.set(lastSpan, { y: 0 });
-      lastLineCentered.value = false;
-    }
+      return -centerY; // Negative because we're moving up
+    };
+
+    positionTrigger = $gsap.to(lastSpan, {
+      y: calculateCenterY, // Animate to the calculated center position
+      duration: 1,
+      ease: "none",
+      scrollTrigger: {
+        trigger: sectionRef.value,
+        start: "top 20%", // Start right after fade animation
+        end: "top 10%", // End shortly after
+        scrub: 0.5, // Smooth scrubbing
+        onUpdate: (self) => {
+          const moveProgress = self.progress;
+          lastLineCentered.value = moveProgress > 0.8;
+        },
+      },
+    });
   }
 };
 
-// Update statistics opacity based on scroll progress
-const updateStatisticsOpacity = (progress) => {
-  fadeFirstTwoLines(progress);
-  updateLastLinePosition(progress);
-
-  // Update cover visibility
-  isCoverFullyVisible.value = progress > 0.5;
+// Create separate ScrollTrigger for cover visibility
+const createCoverTrigger = () => {
+  coverTrigger = $gsap.to(
+    {},
+    {
+      duration: 1,
+      ease: "none",
+      scrollTrigger: {
+        trigger: sectionRef.value,
+        start: "top 10%", // Start right after position animation
+        end: "bottom 80%", // End before section leaves viewport
+        scrub: 0.3, // Faster scrubbing for visibility change
+        onUpdate: (self) => {
+          isCoverFullyVisible.value = self.progress > 0.2;
+        },
+      },
+    }
+  );
 };
 
 // Cleanup on unmount
 onUnmounted(() => {
-  if (statisticsTrigger) {
-    statisticsTrigger.kill();
-    statisticsTrigger = null;
+  if (fadeTrigger) {
+    fadeTrigger.kill();
+    fadeTrigger = null;
+  }
+  if (positionTrigger) {
+    positionTrigger.kill();
+    positionTrigger = null;
+  }
+  if (coverTrigger) {
+    coverTrigger.kill();
+    coverTrigger = null;
   }
 });
 </script>
