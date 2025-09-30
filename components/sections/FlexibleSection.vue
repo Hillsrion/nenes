@@ -114,9 +114,10 @@ onMounted(() => {
     statisticsTrigger = $gsap.to(sectionRef.value, {
       scrollTrigger: {
         trigger: sectionRef.value,
-        start: "top 0", // Start fading when section is 50% scrolled
-        end: "bottom center",
+        start: "top bottom", // Start shortly after scrolling begins
+        end: "bottom bottom", // End before section leaves viewport
         markers: true,
+        scrub: true, // Smooth scrubbing
         onLeaveBack: () => {
           console.log("ScrollTrigger: onLeaveBack triggered");
           // Reset when scrolling back up
@@ -146,7 +147,7 @@ const initializeStatisticsText = () => {
 const fadeFirstTwoLines = (progress) => {
   const textSpans = sectionRef.value.querySelectorAll(".statistics-text span");
   const startFade = 0; // Start fading at 50%
-  const fadeDuration = 0.2; // Fade over 30% of scroll progress
+  const fadeDuration = 0.15; // Fade over 30% of scroll progress
 
   // Only fade the first two lines
   textSpans.forEach((span, index) => {

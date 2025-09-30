@@ -11,7 +11,7 @@ type TSection =
 type TSectionAnimationState = "idle" | "isAnimating" | "isComplete";
 
 const sections: Record<TSection, { state: TSectionAnimationState }> = {
-  loading: { state: "idle" },
+  loading: { state: "isComplete" },
   statistics: { state: "idle" },
   content: { state: "idle" },
   "self-examination": { state: "idle" },
