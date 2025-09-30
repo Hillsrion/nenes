@@ -3,11 +3,11 @@
     <!-- Statistics Section -->
     <div class="absolute -top-2 left-0 w-full h-16 bg-primary -z-1" />
     <div
-      class="relative h-full w-full min-h-screen bg-white transition-all duration-300 ease-out rounded-t-4xl"
+      class="relative h-[300svh] w-full min-h-screen bg-white transition-all duration-300 ease-out rounded-t-4xl"
       :class="{ 'rounded-t-4xl': !isLoadingComplete }"
     >
       <Logo
-        class="absolute top-8 left-1/2 transform -translate-x-1/2"
+        class="fixed top-8 left-1/2 transform -translate-x-1/2"
         :color="
           isCoverFullyVisible
             ? 'var(--color-nenes-pink-light)'
@@ -15,7 +15,7 @@
         "
       />
       <div
-        class="max-w-[42rem] w-full px-8 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 mx-auto flex flex-col items-center"
+        class="max-w-[42rem] h-[100svh] w-full px-8 sticky top-0 left-1/2 transform -translate-x-1/2 z-10 mx-auto flex flex-col justify-center"
       >
         <div
           class="text-3xl lg:text-5xl leading-snug font-medium text-center text-primary relative"
