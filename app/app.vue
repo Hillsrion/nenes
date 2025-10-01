@@ -12,7 +12,7 @@
         }"
       >
         <!-- Unified Statistics and Content Section -->
-        <FlexibleSection
+        <EntrySection
           :statistics-text="statisticsText"
           :content-elements="mainContentElements"
           :background-gradient="mainBackgroundGradient"
@@ -35,7 +35,7 @@
 <script setup>
 import MainLayout from "~/components/layout/MainLayout.vue";
 import LoadingSection from "~/components/sections/LoadingSection.vue";
-import FlexibleSection from "~/components/sections/FlexibleSection.vue";
+import EntrySection from "~/components/sections/EntrySection.vue";
 import SelfExaminationSection from "~/components/sections/SelfExaminationSection.vue";
 import SymptomsSection from "~/components/sections/SymptomsSection.vue";
 import ResourcesSection from "~/components/sections/ResourcesSection.vue";

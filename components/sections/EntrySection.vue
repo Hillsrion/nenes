@@ -20,7 +20,7 @@
       >
         <div
           ref="statisticsTextRef"
-          class="text-3xl lg:text-5xl leading-snug font-medium text-center text-primary relative statistics-text"
+          class="text-3xl lg:text-5xl leading-snug font-medium text-center text-primary relative"
         >
           <span
             v-for="(line, index) in statisticsText"
@@ -137,14 +137,14 @@ const initializeStatisticsText = () => {
   }
 };
 
-// Create separate ScrollTrigger for fading first two lines
+// Create separate ScrollTrigger for fading all lines except the last one
 const createFadeTrigger = () => {
   if (!statisticsTextRef.value) return;
 
   const textSpans = statisticsTextRef.value.children;
-  const firstTwoLines = Array.from(textSpans).slice(0, 2); // Only first two lines
+  const allLinesExceptLast = Array.from(textSpans).slice(0, -1); // Every line except the last one
 
-  fadeTrigger = $gsap.to(firstTwoLines, {
+  fadeTrigger = $gsap.to(allLinesExceptLast, {
     opacity: 0,
     duration: 1,
     ease: "none",
