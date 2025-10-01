@@ -27,7 +27,18 @@
             :key="index"
             class="inline-block"
           >
-            {{ line }}
+            <template v-if="index === statisticsText.length - 1">
+              <!-- Split last line: first word goes left, rest goes right -->
+              <span class="inline-block animate-split-word-left">{{
+                getFirstWord(line)
+              }}</span>
+              <span class="inline-block animate-split-word-right">{{
+                getRemainingWords(line)
+              }}</span>
+            </template>
+            <template v-else>
+              {{ line }}
+            </template>
           </span>
         </div>
       </div>
@@ -96,6 +107,17 @@ const { sectionRef, isVisible } = useSectionVisibility(0.2);
 const whiteSectionRef = ref(null);
 const statisticsTextRef = ref(null);
 
+// Helper functions to split the last line
+const getFirstWord = (line) => {
+  const words = line.trim().split(/\s+/);
+  return words.length > 0 ? words[0] : "";
+};
+
+const getRemainingWords = (line) => {
+  const words = line.trim().split(/\s+/);
+  return words.length > 1 ? words.slice(1).join(" ") : "";
+};
+
 // GSAP ScrollTriggers for statistics section
 let fadeTrigger = null;
 let positionTrigger = null;
@@ -133,7 +155,23 @@ onMounted(() => {
 const initializeStatisticsText = () => {
   if (statisticsTextRef.value) {
     const textSpans = statisticsTextRef.value.children;
+    // Initialize all spans to full opacity
     $gsap.set(textSpans, { opacity: 1 });
+
+    // Also initialize the split words to their starting position (center)
+    const lastLineIndex = textSpans.length - 1;
+    if (lastLineIndex >= 0) {
+      const lastLineSpan = textSpans[lastLineIndex];
+      const splitWordLeft = lastLineSpan.children[0]; // First child
+      const splitWordRight = lastLineSpan.children[1]; // Second child
+
+      if (splitWordLeft && splitWordRight) {
+        $gsap.set([splitWordLeft, splitWordRight], {
+          opacity: 1,
+          x: 0, // Start at center position
+        });
+      }
+    }
   }
 };
 
@@ -161,40 +199,72 @@ const createFadeTrigger = () => {
   });
 };
 
-// Create separate ScrollTrigger for last line position
+// Create separate ScrollTrigger for last line position (split animation)
 const createPositionTrigger = () => {
   if (!statisticsTextRef.value) return;
 
   const textSpans = statisticsTextRef.value.children;
-  const lastSpan = textSpans[textSpans.length - 1];
+  const lastLineIndex = textSpans.length - 1;
 
-  if (lastSpan) {
-    // Calculate the center position dynamically
-    const calculateCenterY = () => {
-      if (!statisticsTextRef.value || !lastSpan) return 0;
+  if (lastLineIndex >= 0) {
+    // Get the split parts of the last line
+    const lastLineSpan = textSpans[lastLineIndex];
+    const splitWordLeft = lastLineSpan.children[0]; // First child
+    const splitWordRight = lastLineSpan.children[1]; // Second child
 
-      const parentHeight = statisticsTextRef.value.offsetHeight;
-      const lineHeight = lastSpan.offsetHeight;
-      const centerY = (parentHeight - lineHeight) / 2;
+    if (splitWordLeft && splitWordRight) {
+      // Calculate the center position dynamically for Y movement
+      const calculateCenterY = () => {
+        if (!statisticsTextRef.value || !lastLineSpan) return 0;
 
-      return -centerY; // Negative because we're moving up
-    };
+        const parentHeight = statisticsTextRef.value.offsetHeight;
+        const lineHeight = lastLineSpan.offsetHeight;
+        const centerY = (parentHeight - lineHeight) / 2;
 
-    positionTrigger = $gsap.to(lastSpan, {
-      y: calculateCenterY, // Animate to the calculated center position
-      duration: 1,
-      ease: "none",
-      scrollTrigger: {
-        trigger: sectionRef.value,
-        start: "top 15%", // Start right after fade animation
-        end: "top 10%", // End shortly after
-        scrub: 0.3, // Smooth scrubbing
-        onUpdate: (self) => {
-          const moveProgress = self.progress;
-          lastLineCentered.value = moveProgress > 0.8;
+        return -centerY; // Negative because we're moving up
+      };
+
+      // First: Animate vertical centering (Y movement only)
+      const centerTrigger = $gsap.to([splitWordLeft, splitWordRight], {
+        y: calculateCenterY, // Center vertically
+        duration: 0.5,
+        ease: "none",
+        scrollTrigger: {
+          trigger: sectionRef.value,
+          start: "top 15%", // Start right after fade animation
+          end: "top 8%", // Complete Y movement with small delay before X starts
+          scrub: 0.3, // Smooth scrubbing
         },
-      },
-    });
+      });
+
+      // Second: Animate horizontal split after Y movement is complete (with delay)
+      positionTrigger = $gsap.to(splitWordLeft, {
+        x: "-150vw", // Move completely out of viewport to the left
+        duration: 3,
+        ease: "none",
+        scrollTrigger: {
+          trigger: sectionRef.value,
+          start: "top 6%", // Start after delay when Y movement is complete
+          end: "top -40%", // Much more scroll distance for very gradual exit
+          scrub: 0.8, // Even smoother scrubbing
+        },
+      });
+
+      const rightWordTrigger = $gsap.to(splitWordRight, {
+        x: "150vw", // Move completely out of viewport to the right
+        duration: 3,
+        ease: "none",
+        scrollTrigger: {
+          trigger: sectionRef.value,
+          start: "top 6%", // Start after delay when Y movement is complete
+          end: "top -40%", // Much more scroll distance for very gradual exit
+          scrub: 0.8, // Even smoother scrubbing
+        },
+      });
+
+      // Store all triggers for cleanup (center trigger + both position triggers)
+      positionTrigger = [centerTrigger, positionTrigger, rightWordTrigger];
+    }
   }
 };
 
@@ -225,7 +295,12 @@ onUnmounted(() => {
     fadeTrigger = null;
   }
   if (positionTrigger) {
-    positionTrigger.kill();
+    // Handle both single trigger and array of triggers
+    if (Array.isArray(positionTrigger)) {
+      positionTrigger.forEach((trigger) => trigger.kill());
+    } else {
+      positionTrigger.kill();
+    }
     positionTrigger = null;
   }
   if (coverTrigger) {
@@ -236,6 +311,22 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+/* Split word animations */
+.animate-split-word-left,
+.animate-split-word-right {
+  display: inline-block;
+  will-change: transform;
+}
+
+/* Ensure proper spacing between split words */
+.animate-split-word-left {
+  margin-right: 0.25rem;
+}
+
+.animate-split-word-right {
+  margin-left: 0.25rem;
+}
+
 @media (max-width: 768px) {
   .grid {
     @apply grid-cols-1 gap-8;
