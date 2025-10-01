@@ -186,9 +186,9 @@ const createPositionTrigger = () => {
       ease: "none",
       scrollTrigger: {
         trigger: sectionRef.value,
-        start: "top 20%", // Start right after fade animation
+        start: "top 15%", // Start right after fade animation
         end: "top 10%", // End shortly after
-        scrub: 0.5, // Smooth scrubbing
+        scrub: 0.3, // Smooth scrubbing
         onUpdate: (self) => {
           const moveProgress = self.progress;
           lastLineCentered.value = moveProgress > 0.8;
