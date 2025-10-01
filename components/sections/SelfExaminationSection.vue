@@ -16,11 +16,11 @@
           </p>
         </div>
 
-        <div class="flex flex-col gap-8 mb-16">
+        <div class="flex flex-col gap-6 mb-16">
           <div
             v-for="(step, index) in examSteps"
             :key="index"
-            class="grid grid-cols-3 gap-8 items-center p-8 bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl opacity-70 transition-all duration-500"
+            class="grid grid-cols-3 gap-6 items-center p-8 bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl opacity-70 transition-all duration-500"
             :class="{
               'opacity-100 bg-white/20 scale-105': activeStep === index,
               'opacity-70': activeStep > index,
@@ -46,7 +46,7 @@
         </div>
 
         <div class="mt-16 text-center">
-          <div class="flex justify-center gap-8 flex-wrap">
+          <div class="flex justify-center gap-6 flex-wrap">
             <div
               v-for="(image, index) in guideImages"
               :key="`guide-${index}`"

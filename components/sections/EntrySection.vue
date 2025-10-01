@@ -1,5 +1,22 @@
 <template>
   <section class="min-h-screen flex items-center relative" ref="sectionRef">
+    <!-- Entry Cover Image -->
+    <img
+      ref="entryCoverRef"
+      src="/images/entry-cover.jpg"
+      alt="Entry Cover"
+      class="fixed z-5 pointer-events-none"
+      style="
+        width: 100vw;
+        height: 100vh;
+        transform-origin: center center;
+        object-fit: cover;
+        will-change: transform;
+        top: 0;
+        left: 0;
+      "
+    />
+
     <!-- Statistics Section -->
     <div class="absolute -top-2 left-0 w-full h-16 bg-primary -z-1" />
     <div
@@ -46,7 +63,7 @@
       <!-- Main Content Section (appears after statistics) -->
       <div class="max-w-6xl w-full mx-auto px-8 relative mt-32">
         <div class="mt-24">
-          <div class="flex flex-col gap-8">
+          <div class="flex flex-col gap-6">
             <div
               v-for="(element, index) in contentElements"
               :key="index"
@@ -76,7 +93,6 @@
 import Logo from "~/components/ui/Logo.vue";
 import ScrollIndicator from "~/components/ui/ScrollIndicator.vue";
 import { useSectionVisibility } from "~/composables/useSectionVisibility";
-import { onMounted, onUnmounted } from "vue";
 // Use global GSAP instance (should be available through Nuxt GSAP module)
 const { $gsap } = useNuxtApp();
 
@@ -106,6 +122,7 @@ const props = defineProps({
 const { sectionRef, isVisible } = useSectionVisibility(0.2);
 const whiteSectionRef = ref(null);
 const statisticsTextRef = ref(null);
+const entryCoverRef = ref(null);
 
 // Helper functions to split the last line
 const getFirstWord = (line) => {
@@ -122,6 +139,7 @@ const getRemainingWords = (line) => {
 let fadeTrigger = null;
 let positionTrigger = null;
 let coverTrigger = null;
+let imageAnimation = null;
 
 // Animation state
 const firstTwoLinesFaded = ref(false);
@@ -143,6 +161,7 @@ onMounted(() => {
     // Create separate ScrollTriggers for each animation
     createFadeTrigger();
     createPositionTrigger();
+    imageAnimation = createEntryCoverAnimation();
     createCoverTrigger();
 
     console.log("ScrollTriggers created");
@@ -268,6 +287,178 @@ const createPositionTrigger = () => {
   }
 };
 
+// Create animation for entry cover image
+const createEntryCoverAnimation = () => {
+  if (!entryCoverRef.value || !statisticsTextRef.value) return;
+
+  // Utility function to get the center position between two DOM elements
+  const getCenterBetweenElements = (element1, element2) => {
+    if (!element1 || !element2) return { x: 0, y: 0 };
+
+    const rect1 = element1.getBoundingClientRect();
+    const rect2 = element2.getBoundingClientRect();
+
+    // Calculate the center point between the two elements
+    const centerX = (rect1.right + rect2.left) / 2;
+    const centerY = (rect1.top + rect1.bottom + rect2.top + rect2.bottom) / 4;
+
+    return { x: centerX, y: centerY };
+  };
+
+  // Enhanced function to calculate the exact center position between splitting words
+  const calculateImagePosition = () => {
+    if (!statisticsTextRef.value) return { x: 0, y: 0, width: 0, height: 0 };
+
+    const lastLineSpan =
+      statisticsTextRef.value.children[
+        statisticsTextRef.value.children.length - 1
+      ];
+    if (!lastLineSpan) return { x: 0, y: 0, width: 0, height: 0 };
+
+    const splitWordLeft = lastLineSpan.children[0];
+    const splitWordRight = lastLineSpan.children[1];
+
+    if (!splitWordLeft || !splitWordRight)
+      return { x: 0, y: 0, width: 0, height: 0 };
+
+    // Get center position between the two words
+    const centerPos = getCenterBetweenElements(splitWordLeft, splitWordRight);
+
+    // Debug logging to understand the position calculation
+    console.log("Word positions:", {
+      leftWord: splitWordLeft.getBoundingClientRect(),
+      rightWord: splitWordRight.getBoundingClientRect(),
+      centerPos,
+      viewport: { width: window.innerWidth, height: window.innerHeight },
+    });
+
+    // Calculate the distance between words to determine initial image size
+    const leftRect = splitWordLeft.getBoundingClientRect();
+    const rightRect = splitWordRight.getBoundingClientRect();
+    const wordDistance = rightRect.left - leftRect.right;
+    const initialImageSize = Math.max(wordDistance * 2, 100); // Start at least 100px wide
+
+    return {
+      x: centerPos.x,
+      y: centerPos.y,
+      width: initialImageSize,
+      height: initialImageSize,
+    };
+  };
+
+  // Function to position image so its center aligns with the target position
+  const positionImageAtCenter = (imageElement, targetX, targetY, scale = 0) => {
+    if (!imageElement) return;
+
+    // Get actual viewport dimensions (not document dimensions)
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    // Use document.documentElement.clientHeight as a fallback if innerHeight seems wrong
+    const actualViewportHeight =
+      viewportHeight > 2000
+        ? document.documentElement.clientHeight
+        : viewportHeight;
+
+    // Since the image is fixed positioned and covers the full viewport,
+    // we need to calculate the offset to center it on the target point
+    // The image is already at (0,0) with 100vw x 100vh size
+    const translateX = targetX - viewportWidth / 2;
+    const translateY = targetY - actualViewportHeight / 2;
+
+    // Apply the transform to position the image correctly
+    imageElement.style.transform = `translate(${translateX}px, ${0}px) scale(${scale})`;
+
+    // Debug logging to understand positioning
+    console.log("Image positioning:", {
+      targetX,
+      targetY,
+      viewportWidth,
+      viewportHeight,
+      actualViewportHeight,
+      translateX,
+      translateY,
+      scale,
+      bodyRect: document.body.getBoundingClientRect(),
+    });
+  };
+
+  // Throttle function to avoid excessive calculations during scroll
+  let positionUpdateTimeout = null;
+  const throttledPositionUpdate = (
+    imageElement,
+    targetX,
+    targetY,
+    scale = 0
+  ) => {
+    if (positionUpdateTimeout) return;
+
+    positionUpdateTimeout = setTimeout(() => {
+      positionImageAtCenter(imageElement, targetX, targetY, scale);
+      positionUpdateTimeout = null;
+    }, 16); // ~60fps
+  };
+
+  // Get initial position and set up the image
+  const initialPos = calculateImagePosition();
+  if (initialPos.x !== 0 || initialPos.y !== 0) {
+    positionImageAtCenter(entryCoverRef.value, initialPos.x, initialPos.y);
+  }
+
+  // Animation: scale from 0 to full size while staying centered between words
+  const imageAnimation = $gsap.fromTo(
+    entryCoverRef.value,
+    {
+      scale: 0,
+      opacity: 1,
+      transformOrigin: "center center",
+    },
+    {
+      scale: 1,
+      opacity: 1,
+      duration: 4.5,
+      ease: "power2.out",
+      scrollTrigger: {
+        trigger: sectionRef.value,
+        start: "60px 10%", // Start when words begin horizontal splitting
+        end: "top -30%", // End much later for longer animation
+        scrub: 0.8,
+        onUpdate: (self) => {
+          // Simple scroll-based scaling with built-in delay
+          // Scale from 0 to 1 over the trigger range, but with a delayed start
+          const progress = self.progress;
+
+          // Add a delay - only start scaling after 60% of the trigger progress
+          const delayedProgress = Math.max(0, progress - 0.6);
+
+          // Scale grows from the delayed progress point
+          const scaleValue = Math.min(delayedProgress, 1); // Faster scaling after delay
+
+          // Get current position for image placement
+          const currentPos = calculateImagePosition();
+
+          // Continuously update position to stay centered between moving words
+          try {
+            if (currentPos && (currentPos.x !== 0 || currentPos.y !== 0)) {
+              throttledPositionUpdate(
+                entryCoverRef.value,
+                currentPos.x,
+                currentPos.y,
+                scaleValue
+              );
+            }
+          } catch (error) {
+            console.warn("Error updating image position:", error);
+          }
+        },
+      },
+    }
+  );
+
+  // Store the animation reference for cleanup
+  return imageAnimation;
+};
+
 // Create separate ScrollTrigger for cover visibility
 const createCoverTrigger = () => {
   coverTrigger = $gsap.to(
@@ -290,6 +481,12 @@ const createCoverTrigger = () => {
 
 // Cleanup on unmount
 onUnmounted(() => {
+  // Clear any pending position updates
+  if (positionUpdateTimeout) {
+    clearTimeout(positionUpdateTimeout);
+    positionUpdateTimeout = null;
+  }
+
   if (fadeTrigger) {
     fadeTrigger.kill();
     fadeTrigger = null;
@@ -302,6 +499,10 @@ onUnmounted(() => {
       positionTrigger.kill();
     }
     positionTrigger = null;
+  }
+  if (imageAnimation) {
+    imageAnimation.kill();
+    imageAnimation = null;
   }
   if (coverTrigger) {
     coverTrigger.kill();
@@ -320,7 +521,7 @@ onUnmounted(() => {
 
 @media (max-width: 768px) {
   .grid {
-    @apply grid-cols-1 gap-8;
+    @apply grid-cols-1 gap-6;
   }
 
   .absolute {

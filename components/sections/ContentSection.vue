@@ -15,7 +15,7 @@
             : 'grid grid-cols-1'
         "
       >
-        <div class="flex flex-col gap-8">
+        <div class="flex flex-col gap-6">
           <div
             v-for="(element, index) in contentElements"
             :key="index"
@@ -29,7 +29,7 @@
           </div>
         </div>
 
-        <div class="flex flex-col gap-8" v-if="hasSidebar">
+        <div class="flex flex-col gap-6" v-if="hasSidebar">
           <div
             v-for="(sidebarElement, index) in sidebarElements"
             :key="`sidebar-${index}`"
@@ -108,7 +108,7 @@ const getBackgroundGradient = computed(() => {
 <style scoped>
 @media (max-width: 768px) {
   .grid {
-    @apply grid-cols-1 gap-8;
+    @apply grid-cols-1 gap-6;
   }
 
   .absolute {
