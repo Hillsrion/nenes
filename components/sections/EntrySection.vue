@@ -29,7 +29,7 @@
           >
             <template v-if="index === statisticsText.length - 1">
               <!-- Split last line: first word goes left, rest goes right -->
-              <span class="inline-block animate-split-word-left">{{
+              <span class="inline-block animate-split-word-left mr-2.75">{{
                 getFirstWord(line)
               }}</span>
               <span class="inline-block animate-split-word-right">{{
@@ -184,13 +184,13 @@ const createFadeTrigger = () => {
 
   fadeTrigger = $gsap.to(allLinesExceptLast, {
     opacity: 0,
-    duration: 1,
+    duration: 0.05, // Ultra fast fade
     ease: "none",
     scrollTrigger: {
       trigger: sectionRef.value,
       start: "top bottom", // Start immediately when scrolling begins
       end: "top 20%", // End when section is well into viewport
-      scrub: 0.5, // Smooth scrubbing with slight delay
+      scrub: 1, // Instant scrubbing for immediate fade
       onUpdate: (self) => {
         // Track fade state
         firstTwoLinesFaded.value = self.progress > 0.8;
@@ -316,15 +316,6 @@ onUnmounted(() => {
 .animate-split-word-right {
   display: inline-block;
   will-change: transform;
-}
-
-/* Ensure proper spacing between split words */
-.animate-split-word-left {
-  margin-right: 0.25rem;
-}
-
-.animate-split-word-right {
-  margin-left: 0.25rem;
 }
 
 @media (max-width: 768px) {
