@@ -15,15 +15,12 @@
         <EntrySection
           :statistics-text="statisticsText"
           :content-elements="mainContentElements"
-          :background-gradient="mainBackgroundGradient"
-          :is-loading-complete="isLoadingComplete"
         />
+        <!-- Symptoms Section -->
+        <SymptomsSection />
 
         <!-- Self-Examination Section -->
         <SelfExaminationSection />
-
-        <!-- Symptoms Section -->
-        <SymptomsSection />
 
         <!-- Resources Section -->
         <ResourcesSection />
@@ -50,19 +47,14 @@ const isLoadingComplete = ref(false);
 // Define main content elements for the ContentSection
 const mainContentElements = ref([
   {
-    type: "h2",
-    props: {
-      class:
-        "text-2xl font-normal leading-relaxed text-white text-center max-w-4xl mx-auto",
-    },
     content:
-      "Détecté à un stade précoce, le cancer du sein est guéri dans plus de 9 cas sur 10. C'est pourquoi il est essentiel d'agir et de se sensibiliser aux gestes qui sauvent.",
+      "Il est le cancer le plus fréquent pour la femme",
+  },
+  {
+    content:
+      "Ainsi que la première cause de mortalité par cancer",
   },
 ]);
-
-const mainBackgroundGradient = ref(
-  "bg-gradient-to-br from-pink-300 to-pink-500"
-);
 
 // Statistics text for the statistics section
 const statisticsText = ref([

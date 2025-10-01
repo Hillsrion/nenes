@@ -4,8 +4,6 @@
     ref="sectionRef"
   >
     <div class="max-w-6xl mx-auto px-8">
-      <Logo class="absolute top-8 left-1/2 -translate-x-1/2 z-10" />
-
       <div class="mt-24">
         <div class="text-center mb-16">
           <h2 class="text-5xl font-bold text-gray-800 mb-4">Les symptômes</h2>

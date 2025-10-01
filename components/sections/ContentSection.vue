@@ -7,44 +7,20 @@
     <div class="max-w-6xl w-full mx-auto px-8 relative">
       <Logo class="absolute top-8 left-1/2 -translate-x-1/2 z-10" />
 
-      <div
-        class="mt-24"
-        :class="
-          hasSidebar
-            ? 'grid grid-cols-1 lg:grid-cols-3 gap-16'
-            : 'grid grid-cols-1'
-        "
-      >
-        <div class="flex flex-col gap-6">
-          <div
-            v-for="(element, index) in contentElements"
-            :key="index"
-            class="opacity-0 translate-y-8 transition-all duration-700 ease-out"
-            :class="{ 'opacity-100 translate-y-0 animate-slide-up': isVisible }"
-            :style="{ animationDelay: `${index * 0.2}s` }"
-          >
-            <component :is="element.type" v-bind="element.props">
-              {{ element.content }}
-            </component>
-          </div>
-        </div>
-
-        <div class="flex flex-col gap-6" v-if="hasSidebar">
-          <div
-            v-for="(sidebarElement, index) in sidebarElements"
-            :key="`sidebar-${index}`"
-            class="opacity-0 translate-x-8 transition-all duration-700 ease-out"
-            :class="{
-              'opacity-100 translate-x-0 animate-slide-in-right': isVisible,
-            }"
-            :style="{
-              animationDelay: `${(index + contentElements.length) * 0.2}s`,
-            }"
-          >
-            <component :is="sidebarElement.type" v-bind="sidebarElement.props">
-              {{ sidebarElement.content }}
-            </component>
-          </div>
+      <div class="mt-24 grid grid-cols-3 gap-y-12 auto-rows-auto">
+        <div
+          v-for="(element, index) in contentElements"
+          :key="index"
+          :ref="(el) => setTextRef(el, index)"
+          :class="[
+            index % 2 === 0
+              ? 'col-span-1 text-left'
+              : 'col-start-2 col-span-2 text-right',
+          ]"
+        >
+          <component :is="element.type" v-bind="element.props">
+            {{ element.content }}
+          </component>
         </div>
       </div>
 

@@ -60,23 +60,21 @@
         </div>
       </div>
 
-      <!-- Main Content Section (appears after statistics) -->
-      <div class="max-w-6xl w-full mx-auto px-8 relative mt-32">
-        <div class="mt-24">
-          <div class="flex flex-col gap-6">
-            <div
-              v-for="(element, index) in contentElements"
-              :key="index"
-              class="opacity-0 translate-y-8 transition-all duration-700 ease-out"
-              :class="{
-                'opacity-100 translate-y-0 animate-slide-up': isVisible,
-              }"
-              :style="{ animationDelay: `${index * 0.2}s` }"
-            >
-              <component :is="element.type" v-bind="element.props">
-                {{ element.content }}
-              </component>
-            </div>
+      <div class="container w-full mx-auto px-8 relative z-10 mt-[55svh]">
+        <div class="max-w-[70rem] mx-auto mt-24 grid grid-cols-3 gap-y-96 auto-rows-auto">
+          <div
+            v-for="(element, index) in contentElements"
+            :key="index"
+            :ref="(el) => setTextRef(el, index)"
+            :class="[
+              index % 2 === 0
+                ? 'col-span-1'
+                : 'col-start-2 col-span-2 row-start-2 pr-4',
+            ]"
+          >
+            <p class="text-nenes-pink-light font-medium text-5xl leading-[1.33]">
+              {{ element.content }}
+            </p>
           </div>
         </div>
       </div>
@@ -148,6 +146,14 @@ const lastLineCentered = ref(false);
 // Computed properties for statistics section
 const isCoverFullyVisible = ref(false);
 
+// Text refs for split text animation
+const textRefs = ref([]);
+const setTextRef = (el, index) => {
+  if (el) {
+    textRefs.value[index] = el;
+  }
+};
+
 // Initialize ScrollTriggers on mount
 onMounted(() => {
   console.log("Component mounted, checking conditions...");
@@ -162,12 +168,16 @@ onMounted(() => {
     createFadeTrigger();
     createPositionTrigger();
     imageAnimation = createEntryCoverAnimation();
-    createCoverTrigger();
 
     console.log("ScrollTriggers created");
   } else {
     console.log("Conditions not met for ScrollTrigger creation");
   }
+
+  // Initialize split text animations for content elements
+  nextTick(() => {
+    initializeSplitTextAnimations();
+  });
 });
 
 // Initialize statistics text to full opacity
@@ -405,6 +415,11 @@ const createEntryCoverAnimation = () => {
     positionImageAtCenter(entryCoverRef.value, initialPos.x, initialPos.y);
   }
 
+  const screenRatio = Math.min(
+    window.innerWidth / initialPos.width,
+    window.innerHeight / initialPos.height
+  );
+
   // Animation: scale from 0 to full size while staying centered between words
   const imageAnimation = $gsap.fromTo(
     entryCoverRef.value,
@@ -414,13 +429,13 @@ const createEntryCoverAnimation = () => {
       transformOrigin: "center center",
     },
     {
-      scale: 1,
+      scale: window.innerWidth > 1500 ? 1.17 : 1.25,
       opacity: 1,
       duration: 4.5,
       ease: "power2.out",
       scrollTrigger: {
         trigger: sectionRef.value,
-        start: "60px 10%", // Start when words begin horizontal splitting
+        start: "65px 10%", // Start when words begin horizontal splitting
         end: "top -30%", // End much later for longer animation
         scrub: 0.8,
         onUpdate: (self) => {
@@ -433,6 +448,7 @@ const createEntryCoverAnimation = () => {
 
           // Scale grows from the delayed progress point
           const scaleValue = Math.min(delayedProgress, 1); // Faster scaling after delay
+          console.log("Scale value:", scaleValue);
 
           // Get current position for image placement
           const currentPos = calculateImagePosition();
@@ -459,24 +475,48 @@ const createEntryCoverAnimation = () => {
   return imageAnimation;
 };
 
-// Create separate ScrollTrigger for cover visibility
-const createCoverTrigger = () => {
-  coverTrigger = $gsap.to(
-    {},
-    {
-      duration: 1,
-      ease: "none",
-      scrollTrigger: {
-        trigger: sectionRef.value,
-        start: "top 10%", // Start right after position animation
-        end: "bottom 80%", // End before section leaves viewport
-        scrub: 0.3, // Faster scrubbing for visibility change
-        onUpdate: (self) => {
-          isCoverFullyVisible.value = self.progress > 0.2;
-        },
-      },
-    }
-  );
+
+// Split text animations for content elements
+const splitTextTriggers = ref([]);
+
+const initializeSplitTextAnimations = () => {
+  if (!textRefs.value.length) return;
+
+  textRefs.value.forEach((textElement, index) => {
+    if (!textElement) return;
+
+    // Find the <p> element within the div
+    const paragraph = textElement.querySelector('p');
+    if (!paragraph) return;
+
+    // Use SplitType to split text into lines
+    const { $splitType } = useNuxtApp();
+    const splitText = new $splitType(paragraph, {
+      types: 'lines',
+      lineClass: 'split-line'
+    });
+
+    // Set initial state: all lines invisible
+    $gsap.set(splitText.lines, { opacity: 0 });
+
+    // Create scroll trigger for each line
+    splitText.lines.forEach((line, lineIndex) => {
+      const trigger = $gsap.to(line, {
+        opacity: 1,
+        duration: 0.8,
+        ease: 'power2.out',
+        scrollTrigger: {
+          trigger: line,
+          start: 'top 85%',
+          end: 'top 60%',
+          scrub: 1,
+          toggleActions: 'play none none reverse'
+        }
+      });
+
+      splitTextTriggers.value.push(trigger);
+    });
+  });
 };
 
 // Cleanup on unmount
@@ -504,10 +544,17 @@ onUnmounted(() => {
     imageAnimation.kill();
     imageAnimation = null;
   }
-  if (coverTrigger) {
-    coverTrigger.kill();
-    coverTrigger = null;
-  }
+
+  // Cleanup split text triggers
+  splitTextTriggers.value.forEach((trigger) => {
+    if (trigger && trigger.scrollTrigger) {
+      trigger.scrollTrigger.kill();
+    }
+    if (trigger) {
+      trigger.kill();
+    }
+  });
+  splitTextTriggers.value = [];
 });
 </script>
 
@@ -517,6 +564,12 @@ onUnmounted(() => {
 .animate-split-word-right {
   display: inline-block;
   will-change: transform;
+}
+
+/* Split line styles */
+.split-line {
+  display: block;
+  will-change: opacity;
 }
 
 @media (max-width: 768px) {
