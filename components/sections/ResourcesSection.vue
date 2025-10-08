@@ -92,28 +92,3 @@ const resources = ref([
   },
 ]);
 </script>
-
-<style scoped>
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .grid-cols-1 {
-    @apply grid-cols-1;
-  }
-
-  .text-4xl {
-    @apply text-2xl;
-  }
-
-  .text-2xl {
-    @apply text-xl;
-  }
-
-  .text-xl {
-    @apply text-lg;
-  }
-
-  .flex {
-    @apply flex-col gap-4 text-center;
-  }
-}
-</style>

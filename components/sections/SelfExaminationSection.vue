@@ -4,7 +4,6 @@
     ref="sectionRef"
   >
     <div class="max-w-6xl mx-auto px-8">
-
       <div class="mt-24">
         <div class="text-center mb-16">
           <h2 class="text-5xl font-bold text-white mb-4">L'autopalpation</h2>
@@ -121,28 +120,3 @@ watch(isVisible, (visible) => {
   }
 });
 </script>
-
-<style scoped>
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .grid-cols-3 {
-    @apply grid-cols-1 text-center gap-4;
-  }
-
-  .text-5xl {
-    @apply text-3xl;
-  }
-
-  .text-2xl {
-    @apply text-xl;
-  }
-
-  .w-48 {
-    @apply w-40;
-  }
-
-  .h-36 {
-    @apply h-32;
-  }
-}
-</style>

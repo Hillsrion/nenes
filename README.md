@@ -1,6 +1,6 @@
-# Nuxt Minimal Starter
+# Nénés - Breast Cancer Awareness Website
 
-Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
+A French breast cancer awareness website built with Nuxt 4, focusing on education, self-examination guidance, and essential resources for breast cancer awareness and prevention.
 
 ## Setup
 

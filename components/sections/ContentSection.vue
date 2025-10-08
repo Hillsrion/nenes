@@ -80,19 +80,3 @@ const getBackgroundGradient = computed(() => {
   return gradientMap[props.backgroundGradient] || "bg-gray-50";
 });
 </script>
-
-<style scoped>
-@media (max-width: 768px) {
-  .grid {
-    @apply grid-cols-1 gap-6;
-  }
-
-  .absolute {
-    @apply static transform-none mb-8;
-  }
-
-  .mx-auto {
-    @apply mt-8;
-  }
-}
-</style>

@@ -94,7 +94,7 @@ const startLoadingSequence = () => {
         ease: "power2.out",
       },
       "-=2.5"
-    )
+    );
 };
 
 const startProgressCounter = () => {
@@ -114,17 +114,3 @@ const startProgressCounter = () => {
   }, duration / steps);
 };
 </script>
-
-<style scoped>
-/* Additional custom styles if needed */
-.section-element {
-  opacity: 0;
-  transform: translateY(30px);
-  transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-}
-
-.section-element.animate-in {
-  opacity: 1;
-  transform: translateY(0);
-}
-</style>

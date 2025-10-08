@@ -92,7 +92,7 @@ const globalContainer = ref(null);
 watch(
   () => store.sections.loading?.state,
   (newState) => {
-    console.log("newState", newState);
+    console.log("Animation state:", newState);
     if (newState === "isComplete") {
       // Add a small delay to ensure smooth transition
       setTimeout(() => {

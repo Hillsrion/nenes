@@ -73,20 +73,3 @@ const symptoms = ref([
   },
 ]);
 </script>
-
-<style scoped>
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .grid-cols-1 {
-    @apply grid-cols-1;
-  }
-
-  .text-5xl {
-    @apply text-3xl;
-  }
-
-  .text-2xl {
-    @apply text-xl;
-  }
-}
-</style>
