@@ -17,13 +17,13 @@
           :content-elements="mainContentElements"
         />
         <!-- Symptoms Section -->
-        <SymptomsSection />
+        <!-- <SymptomsSection /> -->
 
         <!-- Self-Examination Section -->
-        <SelfExaminationSection />
+        <!-- <SelfExaminationSection /> -->
 
         <!-- Resources Section -->
-        <ResourcesSection />
+        <!-- <ResourcesSection /> -->
       </div>
     </MainLayout>
   </div>
@@ -47,12 +47,10 @@ const isLoadingComplete = ref(false);
 // Define main content elements for the ContentSection
 const mainContentElements = ref([
   {
-    content:
-      "Il est le cancer le plus fréquent pour la femme",
+    content: "Il est le cancer le plus fréquent pour la femme",
   },
   {
-    content:
-      "Ainsi que la première cause de mortalité par cancer",
+    content: "Ainsi que la première cause de mortalité par cancer",
   },
 ]);
 

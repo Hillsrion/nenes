@@ -12,10 +12,12 @@ declare const useNuxtApp: () => { $gsap: any };
 
 interface SplitTextAnimationOptions {
   textRefs: Ref<HTMLElement[]>;
+  sectionRef?: Ref<HTMLElement | null>;
 }
 
 export const useSplitTextAnimation = ({
   textRefs,
+  sectionRef,
 }: SplitTextAnimationOptions) => {
   // Split text triggers
   const splitTextTriggers = ref<any[]>([]);
@@ -59,38 +61,32 @@ export const useSplitTextAnimation = ({
         }
       });
 
-      // Set initial state: all lines invisible
+      // Set initial state: all lines visible (natural state)
       nextTick(() => {
-        if (!split?.lines?.length) return;
-
+        if (!split?.lines?.length || !sectionRef?.value) return;
         const { $gsap } = useNuxtApp();
-        $gsap.set(split.lines, { opacity: 0 });
 
-        // Create scroll trigger for each line
-        split.lines.forEach((line) => {
-          if (!line) return;
-
-          const trigger = $gsap.to(line, {
+        // Create scroll trigger using sectionRef as trigger for all line animations
+        const mainTrigger = $gsap.fromTo(
+          split.lines,
+          {
+            opacity: 0,
+          },
+          {
             opacity: 1,
             duration: 0.8,
             ease: "power2.out",
+            stagger: 0.1,
             scrollTrigger: {
-              trigger: line,
-              start: "top 85%",
-              end: "top 60%",
+              trigger: sectionRef.value,
+              start: "top center", // Start when words begin horizontal splitting
+              end: "top bottom", // End much later for longer animation
+              markers: true,
               scrub: 1,
-              toggleActions: "play none none reverse",
             },
-            onComplete() {
-              // Clean up the trigger when the animation completes
-              if (this.scrollTrigger) {
-                this.scrollTrigger.kill();
-              }
-            },
-          });
-
-          splitTextTriggers.value.push(trigger);
-        });
+          }
+        );
+        splitTextTriggers.value.push(mainTrigger);
       });
     });
   };
