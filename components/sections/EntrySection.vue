@@ -153,6 +153,7 @@ const {
 const { setTextRef, initializeAnimations: initializeSplitTextAnimations } =
   useSplitTextAnimation({
     textRefs,
+    sectionRef,
   });
 
 // Initialize animations on mount

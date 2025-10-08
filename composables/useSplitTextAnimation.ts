@@ -74,14 +74,13 @@ export const useSplitTextAnimation = ({
           },
           {
             opacity: 1,
-            duration: 0.8,
+            duration: 0.3, // Much shorter duration for faster fade-in
             ease: "power2.out",
-            stagger: 0.1,
+            stagger: 0.05, // Faster stagger for quicker sequence
             scrollTrigger: {
               trigger: sectionRef.value,
-              start: "top center", // Start when words begin horizontal splitting
-              end: "top bottom", // End much later for longer animation
-              markers: true,
+              start: "top 0",
+              end: "center 80%",
               scrub: 1,
             },
           }
