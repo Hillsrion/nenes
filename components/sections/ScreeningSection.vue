@@ -9,9 +9,7 @@
           <p
             class="text-primary font-medium text-3xl md:text-4xl lg:text-5xl leading-[1.33] mb-8"
           >
-            Détecté à un stade précoce, le cancer du sein est guéri dans plus de
-            9 cas sur 10. C'est pourquoi il est essentiel d'agir et de se
-            sensibiliser aux gestes qui sauvent.
+            {{ title }}
           </p>
         </div>
       </div>
@@ -62,9 +60,11 @@ interface SidebarElement {
 
 interface Props {
   sidebarElements: SidebarElement[];
+  title?: string;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   sidebarElements: () => [],
+  title: () => "",
 });
 </script>
