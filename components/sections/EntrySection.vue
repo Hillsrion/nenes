@@ -6,19 +6,19 @@
       src="/images/entry-cover.jpg"
       alt="Entry Cover"
       class="fixed z-5 pointer-events-none"
-      style="
-        width: 100vw;
-        height: 100vh;
-        transform-origin: center center;
-        object-fit: cover;
-        will-change: transform;
-        top: 0;
-        left: 0;
-      "
+      :style="{
+        width: '100vw',
+        height: '100vh',
+        transformOrigin: 'center center',
+        objectFit: 'cover',
+        willChange: 'transform',
+        top: 0,
+        left: 0,
+      }"
     />
 
     <!-- Statistics Section -->
-    <div class="absolute -top-2 left-0 w-full h-16 bg-primary -z-1" />
+    <div class="absolute -top-2 left-0 w-full h-16 bg-primary -z-1"></div>
     <div
       class="relative h-[300svh] w-full min-h-screen bg-white transition-all duration-300 ease-out rounded-t-4xl"
       ref="whiteSectionRef"
@@ -32,6 +32,7 @@
             : 'var(--color-primary)'
         "
       />
+
       <div
         class="max-w-[42rem] h-[100svh] w-full px-8 sticky top-0 left-1/2 transform -translate-x-1/2 z-10 mx-auto flex flex-col justify-center"
       >
@@ -39,29 +40,29 @@
           ref="statisticsTextRef"
           class="text-3xl lg:text-5xl leading-snug font-medium text-center text-primary relative"
         >
-          <span
-            v-for="(line, index) in statisticsText"
-            :key="index"
-            class="inline-block"
-          >
-            <template v-if="index === statisticsText.length - 1">
-              <!-- Split last line: first word goes left, rest goes right -->
-              <span class="inline-block animate-split-word-left mr-2.75">{{
-                getFirstWord(line)
-              }}</span>
-              <span class="inline-block animate-split-word-right">{{
-                getRemainingWords(line)
-              }}</span>
-            </template>
-            <template v-else>
-              {{ line }}
-            </template>
-          </span>
+          <template v-for="(line, index) in statisticsText" :key="index">
+            <span class="inline-block">
+              <template v-if="index === statisticsText.length - 1">
+                <!-- Split last line: first word goes left, rest goes right -->
+                <span class="inline-block animate-split-word-left mr-2.75">
+                  {{ getFirstWord(line) }}
+                </span>
+                <span class="inline-block animate-split-word-right">
+                  {{ getRemainingWords(line) }}
+                </span>
+              </template>
+              <template v-else>
+                {{ line }}
+              </template>
+            </span>
+          </template>
         </div>
       </div>
 
       <div class="container w-full mx-auto px-8 relative z-10 mt-[55svh]">
-        <div class="max-w-[70rem] mx-auto mt-24 grid grid-cols-3 gap-y-96 auto-rows-auto">
+        <div
+          class="max-w-[70rem] mx-auto mt-24 grid grid-cols-3 gap-y-96 auto-rows-auto"
+        >
           <div
             v-for="(element, index) in contentElements"
             :key="index"
@@ -72,7 +73,9 @@
                 : 'col-start-2 col-span-2 row-start-2 pr-4',
             ]"
           >
-            <p class="text-nenes-pink-light font-medium text-5xl leading-[1.33]">
+            <p
+              class="text-nenes-pink-light font-medium text-5xl leading-[1.33]"
+            >
               {{ element.content }}
             </p>
           </div>
@@ -81,26 +84,25 @@
     </div>
 
     <ScrollIndicator
-      text="scroll"
       class="absolute bottom-10 left-1/2 -translate-x-1/2 text-primary"
     />
   </section>
 </template>
 
 <script setup>
-import Logo from "~/components/ui/Logo.vue";
-import ScrollIndicator from "~/components/ui/ScrollIndicator.vue";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import SplitType from "split-type";
 import { useSectionVisibility } from "~/composables/useSectionVisibility";
+
 // Use global GSAP instance (should be available through Nuxt GSAP module)
 const { $gsap } = useNuxtApp();
 
+// Props
 const props = defineProps({
   backgroundGradient: {
     type: String,
     default: "linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)",
   },
-
-  // Statistics props
   statisticsText: {
     type: Array,
     default: () => [],
@@ -109,18 +111,32 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-
-  // Content props
   contentElements: {
     type: Array,
     default: () => [],
   },
 });
 
+// Refs
 const { sectionRef, isVisible } = useSectionVisibility(0.2);
 const whiteSectionRef = ref(null);
 const statisticsTextRef = ref(null);
 const entryCoverRef = ref(null);
+const textRefs = ref([]);
+
+// GSAP ScrollTriggers
+let fadeTrigger = null;
+let positionTrigger = null;
+let coverTrigger = null;
+let imageAnimation = null;
+
+// Animation state
+const firstTwoLinesFaded = ref(false);
+const lastLineCentered = ref(false);
+const isCoverFullyVisible = ref(false);
+
+// Split text triggers
+const splitTextTriggers = ref([]);
 
 // Helper functions to split the last line
 const getFirstWord = (line) => {
@@ -133,21 +149,7 @@ const getRemainingWords = (line) => {
   return words.length > 1 ? words.slice(1).join(" ") : "";
 };
 
-// GSAP ScrollTriggers for statistics section
-let fadeTrigger = null;
-let positionTrigger = null;
-let coverTrigger = null;
-let imageAnimation = null;
-
-// Animation state
-const firstTwoLinesFaded = ref(false);
-const lastLineCentered = ref(false);
-
-// Computed properties for statistics section
-const isCoverFullyVisible = ref(false);
-
-// Text refs for split text animation
-const textRefs = ref([]);
+// Set text ref for split text animation
 const setTextRef = (el, index) => {
   if (el) {
     textRefs.value[index] = el;
@@ -429,7 +431,7 @@ const createEntryCoverAnimation = () => {
       transformOrigin: "center center",
     },
     {
-      scale: window.innerWidth > 1500 ? 1.17 : 1.25,
+      scale: 1.25,
       opacity: 1,
       duration: 4.5,
       ease: "power2.out",
@@ -475,46 +477,64 @@ const createEntryCoverAnimation = () => {
   return imageAnimation;
 };
 
-
 // Split text animations for content elements
-const splitTextTriggers = ref([]);
-
 const initializeSplitTextAnimations = () => {
   if (!textRefs.value.length) return;
 
-  textRefs.value.forEach((textElement, index) => {
+  textRefs.value.forEach((textElement) => {
     if (!textElement) return;
 
     // Find the <p> element within the div
-    const paragraph = textElement.querySelector('p');
+    const paragraph = textElement.querySelector("p");
     if (!paragraph) return;
 
-    // Use SplitType to split text into lines
-    const { $splitType } = useNuxtApp();
-    const splitText = new $splitType(paragraph, {
-      types: 'lines',
-      lineClass: 'split-line'
+    const splitTypeInstance = new SplitType(paragraph, {
+      types: "lines",
+      lineClass: "split-line",
+      splitClass: "split-text",
+      tagName: "span",
+    });
+
+    const { split, revert } = splitTypeInstance;
+
+    // Store the revert function for cleanup
+    onUnmounted(() => {
+      if (revert) {
+        revert();
+      }
     });
 
     // Set initial state: all lines invisible
-    $gsap.set(splitText.lines, { opacity: 0 });
+    nextTick(() => {
+      if (!split?.lines?.length) return;
 
-    // Create scroll trigger for each line
-    splitText.lines.forEach((line, lineIndex) => {
-      const trigger = $gsap.to(line, {
-        opacity: 1,
-        duration: 0.8,
-        ease: 'power2.out',
-        scrollTrigger: {
-          trigger: line,
-          start: 'top 85%',
-          end: 'top 60%',
-          scrub: 1,
-          toggleActions: 'play none none reverse'
-        }
+      $gsap.set(split.lines, { opacity: 0 });
+
+      // Create scroll trigger for each line
+      split.lines.forEach((line) => {
+        if (!line) return;
+
+        const trigger = $gsap.to(line, {
+          opacity: 1,
+          duration: 0.8,
+          ease: "power2.out",
+          scrollTrigger: {
+            trigger: line,
+            start: "top 85%",
+            end: "top 60%",
+            scrub: 1,
+            toggleActions: "play none none reverse",
+          },
+          onComplete() {
+            // Clean up the trigger when the animation completes
+            if (this.scrollTrigger) {
+              this.scrollTrigger.kill();
+            }
+          },
+        });
+
+        splitTextTriggers.value.push(trigger);
       });
-
-      splitTextTriggers.value.push(trigger);
     });
   });
 };
@@ -527,62 +547,46 @@ onUnmounted(() => {
     positionUpdateTimeout = null;
   }
 
-  if (fadeTrigger) {
-    fadeTrigger.kill();
-    fadeTrigger = null;
-  }
-  if (positionTrigger) {
-    // Handle both single trigger and array of triggers
-    if (Array.isArray(positionTrigger)) {
-      positionTrigger.forEach((trigger) => trigger.kill());
-    } else {
-      positionTrigger.kill();
+  // Clean up ScrollTriggers
+  [fadeTrigger, positionTrigger, coverTrigger].forEach((trigger) => {
+    if (trigger) {
+      try {
+        if (trigger.scrollTrigger) {
+          trigger.scrollTrigger.kill();
+        }
+        trigger.kill();
+      } catch (error) {
+        console.warn("Error cleaning up ScrollTrigger:", error);
+      }
     }
-    positionTrigger = null;
-  }
+  });
+
+  // Clean up GSAP animations
   if (imageAnimation) {
-    imageAnimation.kill();
+    try {
+      imageAnimation.kill();
+    } catch (error) {
+      console.warn("Error cleaning up image animation:", error);
+    }
     imageAnimation = null;
   }
 
-  // Cleanup split text triggers
+  // Clean up split text triggers
   splitTextTriggers.value.forEach((trigger) => {
-    if (trigger && trigger.scrollTrigger) {
-      trigger.scrollTrigger.kill();
-    }
-    if (trigger) {
-      trigger.kill();
+    try {
+      if (trigger && trigger.scrollTrigger) {
+        trigger.scrollTrigger.kill();
+      }
+      if (trigger && trigger.kill) {
+        trigger.kill();
+      }
+    } catch (error) {
+      console.warn("Error cleaning up GSAP animation:", error);
     }
   });
   splitTextTriggers.value = [];
+
+  // Kill all ScrollTriggers to prevent memory leaks
+  ScrollTrigger.getAll().forEach((trigger) => trigger.kill());
 });
 </script>
-
-<style scoped>
-/* Split word animations */
-.animate-split-word-left,
-.animate-split-word-right {
-  display: inline-block;
-  will-change: transform;
-}
-
-/* Split line styles */
-.split-line {
-  display: block;
-  will-change: opacity;
-}
-
-@media (max-width: 768px) {
-  .grid {
-    @apply grid-cols-1 gap-6;
-  }
-
-  .absolute {
-    @apply static transform-none mb-8;
-  }
-
-  .mx-auto {
-    @apply mt-8;
-  }
-}
-</style>
