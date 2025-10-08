@@ -61,7 +61,7 @@
 
       <div class="container w-full mx-auto px-8 relative z-100 mt-[55svh]">
         <div
-          class="max-w-[70rem] mx-auto mt-24 grid grid-cols-3 gap-y-96 auto-rows-auto"
+          class="max-w-[70rem] mx-auto mt-24 grid grid-cols-3 gap-y-72 auto-rows-auto"
         >
           <div
             v-for="(element, index) in contentElements"
@@ -91,12 +91,12 @@
 
 <script setup>
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import SplitType from "split-type";
 import { useSectionVisibility } from "~/composables/useSectionVisibility";
 import { useTextUtils } from "~/composables/useTextUtils";
 import { useStatisticsAnimation } from "~/composables/useStatisticsAnimation";
 import { useEntryCoverAnimation } from "~/composables/useEntryCoverAnimation";
 import { useSplitTextAnimation } from "~/composables/useSplitTextAnimation";
+import Logo from "~/components/ui/Logo.vue";
 
 // Use global GSAP instance (should be available through Nuxt GSAP module)
 const { $gsap } = useNuxtApp();
