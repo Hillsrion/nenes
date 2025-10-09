@@ -36,9 +36,7 @@ export const useEntryCoverAnimation = ({
   // Watch for scale changes and update logo color when scale reaches 1
   watch(currentScale, (newScale) => {
     console.log("newScale", newScale);
-    if (newScale >= 1) {
-      animationsStore.updateLogoColor(false);
-    }
+    animationsStore.updateLogoColor(newScale <= 0.3);
   });
 
   /**
@@ -204,8 +202,7 @@ export const useEntryCoverAnimation = ({
             // Scale from 0 to 1 over the trigger range, but with a delayed start
             const progress = self.progress;
 
-            // Add a delay - only start scaling after 60% of the trigger progress
-            const delayedProgress = Math.max(0, progress - 0.6);
+            const delayedProgress = Math.max(0, progress);
 
             // Scale grows from the delayed progress point
             const scaleValue = Math.min(delayedProgress, 1); // Faster scaling after delay
