@@ -64,12 +64,12 @@ export const useEntryCoverAnimation = ({
     const centerPos = getCenterBetweenElements(splitWordLeft, splitWordRight);
 
     // Debug logging to understand the position calculation
-    console.log("Word positions:", {
-      leftWord: splitWordLeft.getBoundingClientRect(),
-      rightWord: splitWordRight.getBoundingClientRect(),
-      centerPos,
-      viewport: { width: window.innerWidth, height: window.innerHeight },
-    });
+    // console.log("Word positions:", {
+    //   leftWord: splitWordLeft.getBoundingClientRect(),
+    //   rightWord: splitWordRight.getBoundingClientRect(),
+    //   centerPos,
+    //   viewport: { width: window.innerWidth, height: window.innerHeight },
+    // });
 
     // Calculate the distance between words to determine initial image size
     const leftRect = splitWordLeft.getBoundingClientRect();

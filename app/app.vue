@@ -2,15 +2,10 @@
   <div ref="globalContainer">
     <VueLenis root />
 
-    <MainLayout>
+    <MainLayout class="relative">
       <!-- Loading Section -->
       <LoadingSection />
-      <div
-        class="transition-transform duration-1000 ease-out"
-        :class="{
-          'translate-y-[100vh]': !isLoadingComplete,
-        }"
-      >
+      <div class="transition-transform duration-1000 ease-out sticky top-full">
         <!-- Unified Statistics and Content Section -->
         <EntrySection
           :statistics-text="statisticsText"
