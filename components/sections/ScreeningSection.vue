@@ -82,35 +82,12 @@ const props = withDefaults(defineProps<Props>(), {
 
 // Animation store
 const store = useAnimationsStore();
+const { $gsap } = useNuxtApp();
 
 // ScrollTrigger timeline ref for cleanup
 let logoScrollTrigger: any = null;
 
 const sectionRef = ref<HTMLElement | null>(null);
-
-// ScrollTrigger to detect when section top reaches viewport top
-onMounted(() => {
-  if (!sectionRef.value) return;
-
-  const { $gsap } = useNuxtApp();
-
-  // Create ScrollTrigger that triggers when section top reaches viewport top
-  logoScrollTrigger = $gsap.timeline({
-    scrollTrigger: {
-      trigger: sectionRef.value,
-      start: "top top", // When top of section reaches top of viewport
-      end: "bottom top", // Keep active until section bottom reaches viewport top
-      onEnter: () => {
-        // When section top reaches viewport top, set logo back to primary
-        store.updateLogoColor(true);
-      },
-      onEnterBack: () => {
-        // When scrolling back up and section top reaches viewport top again, set logo back to primary
-        store.updateLogoColor(true);
-      },
-    },
-  });
-});
 
 // Title refs for split text animation
 const textRefs = ref<HTMLElement[]>([]);
@@ -164,7 +141,6 @@ const initializeTitleAnimation = () => {
             start: "top 80%", // Start when section enters viewport
             end: "center center", // End when section reaches center
             scrub: 1, // Smooth scrubbing
-            markers: true,
           },
         }
       );
@@ -195,9 +171,28 @@ const initializeTitleAnimation = () => {
 watch(
   () => store.getSectionState("loading"),
   (loadingState) => {
-    if (loadingState === "isComplete" && sectionRef.value) {
+    if (
+      loadingState === "isComplete" &&
+      sectionRef.value &&
+      sectionRef.value.parentElement
+    ) {
       setTimeout(() => {
         initializeTitleAnimation();
+        // Create ScrollTrigger that triggers when section top reaches viewport top
+        logoScrollTrigger = $gsap.timeline({
+          scrollTrigger: {
+            trigger: sectionRef.value?.parentElement,
+            start: "top +=100px",
+            end: "bottom bottom",
+            markers: true,
+            onEnter: () => {
+              store.updateLogoColor(true);
+            },
+            onLeaveBack: () => {
+              store.updateLogoColor(false);
+            },
+          },
+        });
       }, 1000);
     }
   }

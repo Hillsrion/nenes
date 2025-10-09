@@ -22,7 +22,7 @@
     <div
       class="relative h-[300svh] w-full min-h-screen bg-white transition-all duration-300 ease-out rounded-t-4xl"
       ref="whiteSectionRef"
-      :class="{ 'rounded-t-4xl': !isLoadingComplete }"
+      :class="{ 'rounded-t-4xl': !store.sections.loading?.state === 'idle' }"
     >
       <div
         class="max-w-[42rem] h-[100svh] w-full px-8 sticky top-0 left-1/2 transform -translate-x-1/2 z-10 mx-auto flex flex-col justify-center"
@@ -87,10 +87,13 @@ import { useTextUtils } from "~/composables/useTextUtils";
 import { useStatisticsAnimation } from "~/composables/useStatisticsAnimation";
 import { useEntryCoverAnimation } from "~/composables/useEntryCoverAnimation";
 import { useSplitTextAnimation } from "~/composables/useSplitTextAnimation";
-import Logo from "~/components/ui/Logo.vue";
+import { useAnimationsStore } from "~/stores";
 
 // Use global GSAP instance (should be available through Nuxt GSAP module)
 const { $gsap } = useNuxtApp();
+
+// Store
+const store = useAnimationsStore();
 
 // Props
 const props = defineProps({
@@ -101,10 +104,6 @@ const props = defineProps({
   statisticsText: {
     type: Array,
     default: () => [],
-  },
-  isLoadingComplete: {
-    type: Boolean,
-    default: false,
   },
   contentElements: {
     type: Array,

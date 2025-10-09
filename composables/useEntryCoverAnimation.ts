@@ -35,7 +35,6 @@ export const useEntryCoverAnimation = ({
 
   // Watch for scale changes and update logo color when scale reaches 1
   watch(currentScale, (newScale) => {
-    console.log("newScale", newScale);
     animationsStore.updateLogoColor(newScale <= 0.3);
   });
 
@@ -208,7 +207,6 @@ export const useEntryCoverAnimation = ({
             const scaleValue = Math.min(delayedProgress, 1); // Faster scaling after delay
             // Update the current scale ref so the watcher can detect when it reaches 1
             currentScale.value = scaleValue;
-
             // Get current position for image placement
             const currentPos = calculateImagePosition();
 

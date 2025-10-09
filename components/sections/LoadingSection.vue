@@ -108,7 +108,7 @@ const startProgressCounter = () => {
     progress.value = Math.round(currentStep * increment);
     if (currentStep >= steps) {
       progress.value = 100;
-      store.updateSectionState("loading", "isComplete");
+      store.updateSectionState("loading", "isAnimating");
       clearInterval(interval);
     }
   }, duration / steps);

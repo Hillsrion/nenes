@@ -8,7 +8,7 @@
       <div
         class="transition-transform duration-1000 ease-out"
         :class="{
-          'translate-y-[100vh]': !isLoadingComplete,
+          'translate-y-[100vh]': store.sections.loading?.state === 'idle',
         }"
       >
         <Logo
@@ -64,7 +64,9 @@ const {
 } = useContent();
 
 // Reactive state for loading completion
-const isLoadingComplete = ref(false);
+const isLoadingComplete = computed(
+  () => store.sections.loading?.state === "isComplete"
+);
 
 // Prevent scroll during loading using useHead with Tailwind classes on both html and body
 useHead({
@@ -91,12 +93,10 @@ const logoColor = computed(() => {
 watch(
   () => store.sections.loading?.state,
   (newState) => {
-    console.log("Animation state:", newState);
-    if (newState === "isComplete") {
-      // Add a small delay to ensure smooth transition
+    if (newState === "isAnimating") {
       setTimeout(() => {
-        isLoadingComplete.value = true;
-      }, 200);
+        store.updateSectionState("loading", "isComplete");
+      }, 1000);
     }
   },
   { immediate: true }
