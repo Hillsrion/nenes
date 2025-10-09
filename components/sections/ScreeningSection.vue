@@ -62,6 +62,7 @@ import {
 } from "vue";
 import SplitType from "split-type";
 import { useAnimationsStore } from "../../stores";
+import { useNuxtApp } from "nuxt/app";
 
 // Define the interface for sidebar elements
 interface SidebarElement {
@@ -167,7 +168,6 @@ const initializeTitleAnimation = () => {
   });
 };
 
-// Watch for loading completion and initialize animation
 watch(
   () => store.getSectionState("loading"),
   (loadingState) => {
@@ -178,13 +178,11 @@ watch(
     ) {
       setTimeout(() => {
         initializeTitleAnimation();
-        // Create ScrollTrigger that triggers when section top reaches viewport top
         logoScrollTrigger = $gsap.timeline({
           scrollTrigger: {
             trigger: sectionRef.value?.parentElement,
             start: "top +=100px",
             end: "bottom bottom",
-            markers: true,
             onEnter: () => {
               store.updateLogoColor(true);
             },

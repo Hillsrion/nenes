@@ -29,6 +29,20 @@
           CHARGEMENT
         </div>
 
+        <!-- Image sequence container -->
+        <div class="flex items-center justify-center flex-1 mx-8">
+          <div ref="imageContainerRef" class="relative w-36 h-36 opacity-0">
+            <Transition name="image-fade" mode="out-in">
+              <img
+                :key="currentImageIndex"
+                :src="currentImage.src"
+                :alt="`Illustration ${currentImage.id}`"
+                class="w-full h-full object-contain"
+              />
+            </Transition>
+          </div>
+        </div>
+
         <!-- Percentage text -->
         <div
           ref="percentageTextRef"
@@ -58,12 +72,51 @@ const blueSectionRef = ref(null);
 const logoBlueRef = ref(null);
 const chargementTextRef = ref(null);
 const percentageTextRef = ref(null);
+const imageContainerRef = ref(null);
+
+// Image sequence state
+const currentImageIndex = ref(0);
+const imageSequence = ref([
+  { id: 1, src: "/images/illustrations/1.svg" },
+  { id: 2, src: "/images/illustrations/2.svg" },
+  { id: 3, src: "/images/illustrations/3.svg" },
+  { id: 4, src: "/images/illustrations/4.svg" },
+  { id: 5, src: "/images/illustrations/5.svg" },
+  { id: 6, src: "/images/illustrations/6.svg" },
+  { id: 7, src: "/images/illustrations/7.svg" },
+  { id: 8, src: "/images/illustrations/8.svg" },
+]);
+
+// Computed property for current image
+const currentImage = computed(
+  () => imageSequence.value[currentImageIndex.value]
+);
+
+// Function to update image with non-linear timing
+const updateImageSequence = (progressValue) => {
+  // Create non-linear progression using easing
+  // We'll use a power curve to make changes more frequent at the beginning and end
+  const easedProgress =
+    progressValue < 50
+      ? Math.pow(progressValue / 50, 2) * 50 // Accelerate in first half
+      : 50 + Math.pow((progressValue - 50) / 50, 0.5) * 50; // Decelerate in second half
+
+  // Calculate which image to show (0-7 range for 8 images)
+  const imageIndex = Math.min(Math.floor((easedProgress / 100) * 8), 7);
+  console.log("imageIndex", imageIndex);
+  if (imageIndex !== currentImageIndex.value) {
+    currentImageIndex.value = imageIndex;
+  }
+};
 
 onMounted(() => {
   // Initial setup
-  gsap.set([chargementTextRef.value, percentageTextRef.value], {
-    opacity: 0,
-  });
+  gsap.set(
+    [chargementTextRef.value, percentageTextRef.value, imageContainerRef.value],
+    {
+      opacity: 0,
+    }
+  );
 
   // Start loading animation
   startLoadingSequence();
@@ -85,6 +138,16 @@ const startLoadingSequence = () => {
     },
     "-=0.6"
   )
+    // Animate image container fade in
+    .to(
+      imageContainerRef.value,
+      {
+        opacity: 1,
+        duration: 0.8,
+        ease: "power2.out",
+      },
+      "-=0.6"
+    )
     // Animate percentage text fade in (starts after progress begins)
     .to(
       percentageTextRef.value,
@@ -106,11 +169,36 @@ const startProgressCounter = () => {
   const interval = setInterval(() => {
     currentStep++;
     progress.value = Math.round(currentStep * increment);
+
+    // Update image sequence based on non-linear progression
+    updateImageSequence(progress.value);
+
     if (currentStep >= steps) {
       progress.value = 100;
-      store.updateSectionState("loading", "isAnimating");
+      // store.updateSectionState("loading", "isAnimating");
       clearInterval(interval);
     }
   }, duration / steps);
 };
 </script>
+
+<style scoped>
+/* Image transition animations - Pure scale effect */
+.image-fade-enter-active,
+.image-fade-leave-active {
+  transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.image-fade-enter-from {
+  transform: scale(0.7) translateZ(0);
+}
+
+.image-fade-leave-to {
+  transform: scale(1.1) translateZ(0);
+}
+
+.image-fade-enter-to,
+.image-fade-leave-from {
+  transform: scale(1) translateZ(0);
+}
+</style>
