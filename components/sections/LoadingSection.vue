@@ -91,10 +91,34 @@ const currentImage = computed(
   () => imageSequence.value[currentImageIndex.value]
 );
 
+// Master timeline for coordinated loading sequence
+let masterTimeline = null;
+
+const startLoadingSequence = () => {
+  // Create master timeline for the entire loading sequence
+  masterTimeline = gsap.timeline();
+
+  // Add initial image setup
+  masterTimeline.set(currentImageRef.value, {
+    scale: 1,
+    opacity: 1,
+  });
+
+  // Set all elements to visible immediately (no opacity animations)
+  masterTimeline.set(
+    [chargementTextRef.value, imageContainerRef.value, percentageTextRef.value],
+    {
+      opacity: 1,
+    }
+  );
+
+  // Start the progress counter immediately
+  masterTimeline.add(startProgressCounter());
+};
+
 // Function to update image with GSAP bounce animation (2 turns through 8 images)
 const updateImageSequence = (progressValue) => {
   // Calculate which image to show for 2 full cycles through 8 images
-  // Progress 0-100% maps to 0-15 (16 positions), then mod 8 gives us 2 cycles
   const cyclePosition = Math.floor((progressValue / 100) * 16); // 0-15 range for 16 steps
   const imageIndex = cyclePosition % 8; // Modulo 8 gives us 2 full cycles: 0-7, 0-7
 
@@ -102,32 +126,29 @@ const updateImageSequence = (progressValue) => {
     const previousIndex = currentImageIndex.value;
     currentImageIndex.value = imageIndex;
 
+    // Update image source immediately
+    currentImageRef.value.src = currentImage.value.src;
+    currentImageRef.value.alt = `Illustration ${currentImage.value.id}`;
+
     // Create bounce animation with GSAP
-    const tl = gsap.timeline();
+    const bounceTl = gsap.timeline();
 
-    // Bounce out the current image and bounce in the new one simultaneously
-    if (previousIndex !== imageIndex) {
-      // Update image source immediately
-      currentImageRef.value.src = currentImage.value.src;
-      currentImageRef.value.alt = `Illustration ${currentImage.value.id}`;
-
-      // Bounce out the old image while bouncing in the new one
-      tl.to(currentImageRef.value, {
+    // Bounce out and in simultaneously
+    bounceTl
+      .to(currentImageRef.value, {
         scale: 1.2,
         duration: 0.3,
-        ease: "power3.in",
+        ease: "power4.in",
       })
-        // Immediately bounce in the new image
-        .to(
-          currentImageRef.value,
-          {
-            scale: 1,
-            duration: 0.4,
-            ease: "power3.out",
-          },
-          0 // Start at the same time as the bounce out
-        );
-    }
+      .to(
+        currentImageRef.value,
+        {
+          scale: 1,
+          duration: 0.4,
+          ease: "power4.out",
+        },
+        0 // Start at the same time
+      );
   }
 };
 
@@ -140,62 +161,15 @@ onMounted(() => {
     }
   );
 
-  // Set initial image state
-  if (currentImageRef.value) {
-    gsap.set(currentImageRef.value, {
-      scale: 1,
-      opacity: 1,
-    });
-  }
-
-  // Start loading animation
+  // Start the coordinated loading sequence
   startLoadingSequence();
-
-  // Start progress counter
-  startProgressCounter();
 });
-
-const startLoadingSequence = () => {
-  const tl = gsap.timeline();
-
-  // Animate logo in blue section
-  tl.to(
-    chargementTextRef.value,
-    {
-      opacity: 1,
-      duration: 0.8,
-      ease: "power2.out",
-    },
-    "-=0.6"
-  )
-    // Animate image container fade in
-    .to(
-      imageContainerRef.value,
-      {
-        opacity: 1,
-        duration: 0.8,
-        ease: "power2.out",
-      },
-      "-=0.6"
-    )
-    // Initial image is already visible, no need to animate it
-    // Animate percentage text fade in (starts after progress begins)
-    .to(
-      percentageTextRef.value,
-      {
-        opacity: 1,
-        duration: 0.8,
-        ease: "power2.out",
-      },
-      "-=2.5"
-    );
-};
 
 const startProgressCounter = () => {
   const duration = 2500; // 2.5 seconds total
 
   // Use GSAP to animate progress from 0 to 100
-  gsap.to(
+  return gsap.to(
     { progress: 0 },
     {
       progress: 100,
