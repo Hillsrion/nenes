@@ -92,20 +92,26 @@ const currentImage = computed(
   () => imageSequence.value[currentImageIndex.value]
 );
 
+// Track if we're currently transitioning to prevent conflicts
+let isTransitioning = false;
+
 // Function to update image with non-linear timing
 const updateImageSequence = (progressValue) => {
-  // Create non-linear progression using easing
-  // We'll use a power curve to make changes more frequent at the beginning and end
-  const easedProgress =
-    progressValue < 50
-      ? Math.pow(progressValue / 50, 2) * 50 // Accelerate in first half
-      : 50 + Math.pow((progressValue - 50) / 50, 0.5) * 50; // Decelerate in second half
+  // Don't update if we're currently transitioning
+  if (isTransitioning) return;
 
   // Calculate which image to show (0-7 range for 8 images)
-  const imageIndex = Math.min(Math.floor((easedProgress / 100) * 8), 7);
-  console.log("imageIndex", imageIndex);
+  // Use direct linear progression for now to ensure all images show
+  const imageIndex = Math.min(Math.floor((progressValue / 100) * 8), 7);
+
   if (imageIndex !== currentImageIndex.value) {
+    isTransitioning = true;
     currentImageIndex.value = imageIndex;
+
+    // Allow transition to complete before allowing next update
+    setTimeout(() => {
+      isTransitioning = false;
+    }, 100); // Slightly longer than CSS transition (80ms)
   }
 };
 
@@ -161,8 +167,8 @@ const startLoadingSequence = () => {
 };
 
 const startProgressCounter = () => {
-  const duration = 3000; // 3 seconds
-  const steps = 60; // Update every 50ms
+  const duration = 2500; // 2.5 seconds - faster but still shows all images
+  const steps = 25; // Enough steps to show all 8 images
   const increment = 100 / steps;
   let currentStep = 0;
 
@@ -170,7 +176,7 @@ const startProgressCounter = () => {
     currentStep++;
     progress.value = Math.round(currentStep * increment);
 
-    // Update image sequence based on non-linear progression
+    // Update image sequence based on progression
     updateImageSequence(progress.value);
 
     if (currentStep >= steps) {
@@ -183,18 +189,18 @@ const startProgressCounter = () => {
 </script>
 
 <style scoped>
-/* Image transition animations - Pure scale effect */
+/* Image transition animations - Fast scale effect */
 .image-fade-enter-active,
 .image-fade-leave-active {
-  transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  transition: transform 0.08s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 .image-fade-enter-from {
-  transform: scale(0.7) translateZ(0);
+  transform: scale(0.85) translateZ(0);
 }
 
 .image-fade-leave-to {
-  transform: scale(1.1) translateZ(0);
+  transform: scale(1.05) translateZ(0);
 }
 
 .image-fade-enter-to,
