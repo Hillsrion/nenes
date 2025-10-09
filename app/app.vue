@@ -13,7 +13,7 @@
       >
         <Logo
           class="fixed top-8 left-1/2 transform -translate-x-1/2 z-150"
-          :color="'var(--color-nenes-pink-light)'"
+          :color="logoColor"
         />
 
         <!-- Unified Statistics and Content Section -->
@@ -79,6 +79,13 @@ useHead({
 });
 
 const globalContainer = ref(null);
+
+// Computed logo color based on store state
+const logoColor = computed(() => {
+  return store.getLogoState
+    ? "var(--color-primary)"
+    : "var(--color-nenes-pink-light)";
+});
 
 // Watch for loading completion
 watch(

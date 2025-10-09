@@ -1,5 +1,6 @@
-import { ref } from "vue";
+import { ref, watch } from "vue";
 import type { Ref } from "vue";
+import { useAnimationsStore } from "../stores";
 
 // Nuxt composables are auto-imported
 declare const useNuxtApp: () => { $gsap: any };
@@ -25,6 +26,20 @@ export const useEntryCoverAnimation = ({
 
   // Animation reference
   let imageAnimation: any = null;
+
+  // Animations store
+  const animationsStore = useAnimationsStore();
+
+  // Scale value ref to track current scale
+  const currentScale = ref(0);
+
+  // Watch for scale changes and update logo color when scale reaches 1
+  watch(currentScale, (newScale) => {
+    console.log("newScale", newScale);
+    if (newScale >= 1) {
+      animationsStore.updateLogoColor(false);
+    }
+  });
 
   /**
    * Utility function to get the center position between two DOM elements
@@ -194,7 +209,8 @@ export const useEntryCoverAnimation = ({
 
             // Scale grows from the delayed progress point
             const scaleValue = Math.min(delayedProgress, 1); // Faster scaling after delay
-            // console.log("Scale value:", scaleValue);
+            // Update the current scale ref so the watcher can detect when it reaches 1
+            currentScale.value = scaleValue;
 
             // Get current position for image placement
             const currentPos = calculateImagePosition();

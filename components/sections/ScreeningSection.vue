@@ -61,7 +61,7 @@ import {
   type ComponentPublicInstance,
 } from "vue";
 import SplitType from "split-type";
-import { useAnimationsStore } from "~/stores";
+import { useAnimationsStore } from "../../stores";
 
 // Define the interface for sidebar elements
 interface SidebarElement {
@@ -83,7 +83,35 @@ const props = withDefaults(defineProps<Props>(), {
 // Animation store
 const store = useAnimationsStore();
 
+// ScrollTrigger timeline ref for cleanup
+let logoScrollTrigger: any = null;
+
 const sectionRef = ref<HTMLElement | null>(null);
+
+// ScrollTrigger to detect when section top reaches viewport top
+onMounted(() => {
+  if (!sectionRef.value) return;
+
+  const { $gsap } = useNuxtApp();
+
+  // Create ScrollTrigger that triggers when section top reaches viewport top
+  logoScrollTrigger = $gsap.timeline({
+    scrollTrigger: {
+      trigger: sectionRef.value,
+      start: "top top", // When top of section reaches top of viewport
+      end: "bottom top", // Keep active until section bottom reaches viewport top
+      onEnter: () => {
+        // When section top reaches viewport top, set logo back to primary
+        store.updateLogoColor(true);
+      },
+      onEnterBack: () => {
+        // When scrolling back up and section top reaches viewport top again, set logo back to primary
+        store.updateLogoColor(true);
+      },
+    },
+  });
+});
+
 // Title refs for split text animation
 const textRefs = ref<HTMLElement[]>([]);
 
@@ -148,6 +176,12 @@ const initializeTitleAnimation = () => {
         }
         if (titleAnimation && titleAnimation.kill) {
           titleAnimation.kill();
+        }
+        if (logoScrollTrigger && logoScrollTrigger.scrollTrigger) {
+          logoScrollTrigger.scrollTrigger.kill();
+        }
+        if (logoScrollTrigger && logoScrollTrigger.kill) {
+          logoScrollTrigger.kill();
         }
         if (revert) {
           revert();
