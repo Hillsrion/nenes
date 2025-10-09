@@ -19,34 +19,41 @@
         />
       </div>
 
-      <!-- Loading text and percentage -->
-      <div class="flex items-center justify-between w-full max-w-4xl px-16">
-        <!-- CHARGEMENT text -->
+      <!-- Absolutely positioned CHARGEMENT text to the left -->
+      <div
+        class="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2"
+      >
         <div
           ref="chargementTextRef"
-          class="text-nenes-pink-light font-medium text-[24px] tracking-[3.84px] uppercase opacity-0"
+          class="text-nenes-pink-light font-medium text-[24px] tracking-[3.84px] uppercase opacity-0 -translate-x-72"
         >
           CHARGEMENT
         </div>
+      </div>
 
-        <!-- Image sequence container -->
-        <div class="flex items-center justify-center flex-1 mx-8">
-          <div ref="imageContainerRef" class="relative w-36 h-36 opacity-0">
-            <img
-              ref="currentImageRef"
-              :src="currentImage.src"
-              :alt="`Illustration ${currentImage.id}`"
-              class="w-full h-full object-contain"
-            />
-          </div>
-        </div>
-
-        <!-- Percentage text -->
+      <!-- Absolutely positioned percentage text to the right -->
+      <div
+        class="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2"
+      >
         <div
           ref="percentageTextRef"
-          class="text-nenes-pink-light font-medium text-[24px] tracking-[3.84px] uppercase opacity-0 min-w-[80px] text-right"
+          class="text-nenes-pink-light font-medium text-[24px] tracking-[3.84px] uppercase opacity-0 min-w-[80px] text-right translate-x-72"
         >
           {{ progress }}%
+        </div>
+      </div>
+
+      <!-- Absolutely positioned image in center -->
+      <div
+        class="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2"
+      >
+        <div ref="imageContainerRef" class="relative w-36 h-36 opacity-0">
+          <img
+            ref="currentImageRef"
+            :src="currentImage.src"
+            :alt="`Illustration ${currentImage.id}`"
+            class="w-full h-full object-contain"
+          />
         </div>
       </div>
     </div>
