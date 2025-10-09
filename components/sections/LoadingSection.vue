@@ -61,6 +61,7 @@
 import { gsap } from "gsap";
 import Logo from "~/components/ui/Logo.vue";
 import { useAnimationsStore } from "~/stores";
+import { useAssetPreloader } from "~/composables/useAssetPreloader";
 
 const progress = ref(0);
 const isComplete = ref(false);
@@ -156,7 +157,7 @@ const updateImageSequence = (progressValue) => {
   }
 };
 
-onMounted(() => {
+onMounted(async () => {
   // Initial setup
   gsap.set(
     [chargementTextRef.value, percentageTextRef.value, imageContainerRef.value],
@@ -165,8 +166,34 @@ onMounted(() => {
     }
   );
 
-  // Start the coordinated loading sequence
-  startLoadingSequence();
+  try {
+    // Preload all critical assets before starting the loading sequence
+    const { preloadAllAssets, isComplete } = useAssetPreloader({
+      onProgress: (loaded, total) => {
+        console.log(`Preloading assets: ${loaded}/${total}`);
+      },
+      onComplete: () => {
+        console.log("All critical assets preloaded successfully");
+      },
+      onError: (error) => {
+        console.warn("Asset preloading failed:", error);
+        // Continue with loading sequence even if preloading fails
+      },
+    });
+
+    // Wait for assets to be preloaded
+    await preloadAllAssets();
+
+    // Start the coordinated loading sequence after preloading is complete
+    startLoadingSequence();
+  } catch (error) {
+    console.warn(
+      "Asset preloading encountered issues, continuing with loading sequence:",
+      error
+    );
+    // Start loading sequence even if preloading fails
+    startLoadingSequence();
+  }
 });
 
 const startProgressCounter = () => {

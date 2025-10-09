@@ -78,6 +78,22 @@ useHead({
   bodyAttrs: {
     class: computed(() => (!isLoadingComplete.value ? "overflow-hidden" : "")),
   },
+  link: [
+    // Preload critical illustrations that appear in loading sequence
+    { rel: "preload", href: "/images/illustrations/1.svg", as: "image" },
+    { rel: "preload", href: "/images/illustrations/2.svg", as: "image" },
+    { rel: "preload", href: "/images/illustrations/3.svg", as: "image" },
+    { rel: "preload", href: "/images/illustrations/4.svg", as: "image" },
+    { rel: "preload", href: "/images/illustrations/5.svg", as: "image" },
+    { rel: "preload", href: "/images/illustrations/6.svg", as: "image" },
+    { rel: "preload", href: "/images/illustrations/7.svg", as: "image" },
+    { rel: "preload", href: "/images/illustrations/8.svg", as: "image" },
+    // Preload entry cover image
+    { rel: "preload", href: "/images/entry-cover.jpg", as: "image" },
+    // DNS prefetch for external resources
+    { rel: "dns-prefetch", href: "//fonts.googleapis.com" },
+    { rel: "dns-prefetch", href: "//fonts.gstatic.com" },
+  ],
 });
 
 const globalContainer = ref(null);

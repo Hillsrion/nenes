@@ -51,4 +51,58 @@ export default defineNuxtConfig({
   build: {
     transpile: ["gsap"],
   },
+
+  // Nitro configuration for prerendering and resource optimization
+  nitro: {
+    // Prerender configuration for better performance
+    prerender: {
+      // Preload critical assets that appear in the loading sequence
+      routes: ["/"],
+    },
+    // Optimize resource loading
+    experimental: {
+      wasm: true,
+    },
+  },
+
+  // Vite configuration for resource hints and optimization
+  vite: {
+    build: {
+      rollupOptions: {
+        output: {
+          // Ensure assets are properly named and cached
+          assetFileNames: (assetInfo) => {
+            const info = assetInfo.name!.split(".");
+            const ext = info[info.length - 1];
+            if (/png|jpe?g|svg|gif|tiff|bmp|ico/i.test(ext)) {
+              return `images/[name]-[hash][extname]`;
+            }
+            return `[name]-[hash][extname]`;
+          },
+        },
+      },
+    },
+    // Optimize dependencies
+    optimizeDeps: {
+      include: ["gsap", "gsap/ScrollTrigger"],
+    },
+  },
+
+  // Runtime configuration for asset optimization
+  runtimeConfig: {
+    public: {
+      // Critical assets that should be preloaded
+      criticalAssets: [
+        "/images/illustrations/1.svg",
+        "/images/illustrations/2.svg",
+        "/images/illustrations/3.svg",
+        "/images/illustrations/4.svg",
+        "/images/illustrations/5.svg",
+        "/images/illustrations/6.svg",
+        "/images/illustrations/7.svg",
+        "/images/illustrations/8.svg",
+        "/images/entry-cover.jpg",
+      ],
+    },
+  },
 });
