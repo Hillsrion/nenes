@@ -6,7 +6,7 @@
     <!-- Blue background section -->
     <div
       ref="blueSectionRef"
-      class="absolute inset-0 flex items-center justify-center"
+      class="absolute inset-0 flex items-center justify-center flex-col gap-8"
     >
       <!-- Logo in blue section -->
       <div ref="logoBlueRef" class="absolute top-8 left-1/2 -translate-x-1/2">
@@ -14,7 +14,9 @@
       </div>
 
       <!-- Absolutely positioned CHARGEMENT text to the left -->
-      <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+      <div
+        class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 sm:block hidden"
+      >
         <div
           ref="chargementTextRef"
           class="text-nenes-pink-light font-medium lg:text-2xl text-xl tracking-[3.84px] uppercase opacity-0 lg:-translate-x-72 md:-translate-x-60 -translate-x-50"
@@ -23,18 +25,10 @@
         </div>
       </div>
 
-      <!-- Absolutely positioned percentage text to the right -->
-      <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-        <div
-          ref="percentageTextRef"
-          class="text-nenes-pink-light font-medium lg:text-2xl text-xl tracking-[3.84px] uppercase opacity-0 min-w-[80px] text-right lg:translate-x-72 md:translate-x-60 translate-x-50"
-        >
-          {{ progress }}%
-        </div>
-      </div>
-
       <!-- Absolutely positioned image in center -->
-      <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+      <div
+        class="sm:absolute left-1/2 top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2"
+      >
         <div
           ref="imageContainerRef"
           class="relative lg:size-36 md:size-30 sm:size-28 size-36 opacity-0"
@@ -45,6 +39,18 @@
             :alt="`Illustration ${currentImage.id}`"
             class="w-full h-full object-contain"
           />
+        </div>
+      </div>
+
+      <!-- Absolutely positioned percentage text to the right -->
+      <div
+        class="sm:absolute left-1/2 top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2"
+      >
+        <div
+          ref="percentageTextRef"
+          class="text-nenes-pink-light font-medium lg:text-2xl text-xl tracking-[3.84px] uppercase opacity-0 min-w-[80px] text-right lg:translate-x-72 md:translate-x-60 sm:translate-x-50"
+        >
+          {{ progress }}%
         </div>
       </div>
     </div>
@@ -182,7 +188,7 @@ const startProgressCounter = () => {
       },
       onComplete: function () {
         progress.value = 100;
-        // store.updateSectionState("loading", "isAnimating");
+        store.updateSectionState("loading", "isAnimating");
       },
     }
   );
