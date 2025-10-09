@@ -9,45 +9,36 @@
       class="absolute inset-0 flex items-center justify-center"
     >
       <!-- Logo in blue section -->
-      <div
-        ref="logoBlueRef"
-        class="absolute top-8 left-1/2 transform -translate-x-1/2"
-      >
-        <Logo
-          color="var(--color-nenes-pink-light)"
-          class="w-[113px] h-[32px]"
-        />
+      <div ref="logoBlueRef" class="absolute top-8 left-1/2 -translate-x-1/2">
+        <Logo color="var(--color-nenes-pink-light)" class="w-[113px] h-8" />
       </div>
 
       <!-- Absolutely positioned CHARGEMENT text to the left -->
-      <div
-        class="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2"
-      >
+      <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
         <div
           ref="chargementTextRef"
-          class="text-nenes-pink-light font-medium text-[24px] tracking-[3.84px] uppercase opacity-0 -translate-x-72"
+          class="text-nenes-pink-light font-medium lg:text-2xl text-xl tracking-[3.84px] uppercase opacity-0 lg:-translate-x-72 md:-translate-x-60 -translate-x-50"
         >
           CHARGEMENT
         </div>
       </div>
 
       <!-- Absolutely positioned percentage text to the right -->
-      <div
-        class="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2"
-      >
+      <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
         <div
           ref="percentageTextRef"
-          class="text-nenes-pink-light font-medium text-[24px] tracking-[3.84px] uppercase opacity-0 min-w-[80px] text-right translate-x-72"
+          class="text-nenes-pink-light font-medium lg:text-2xl text-xl tracking-[3.84px] uppercase opacity-0 min-w-[80px] text-right lg:translate-x-72 md:translate-x-60 translate-x-50"
         >
           {{ progress }}%
         </div>
       </div>
 
       <!-- Absolutely positioned image in center -->
-      <div
-        class="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2"
-      >
-        <div ref="imageContainerRef" class="relative w-36 h-36 opacity-0">
+      <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+        <div
+          ref="imageContainerRef"
+          class="relative lg:size-36 md:size-30 sm:size-28 size-36 opacity-0"
+        >
           <img
             ref="currentImageRef"
             :src="currentImage.src"
