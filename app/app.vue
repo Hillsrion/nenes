@@ -2,10 +2,15 @@
   <div ref="globalContainer">
     <VueLenis root />
 
-    <MainLayout class="relative">
+    <MainLayout>
       <!-- Loading Section -->
       <LoadingSection />
-      <div class="transition-transform duration-1000 ease-out sticky top-full">
+      <div
+        class="transition-transform duration-1000 ease-out"
+        :class="{
+          'translate-y-[100vh]': !isLoadingComplete,
+        }"
+      >
         <!-- Unified Statistics and Content Section -->
         <EntrySection
           :statistics-text="statisticsText"
@@ -54,6 +59,18 @@ const {
 
 // Reactive state for loading completion
 const isLoadingComplete = ref(false);
+
+// Prevent scroll during loading using useHead with Tailwind classes on both html and body
+useHead({
+  htmlAttrs: {
+    class: computed(() =>
+      !isLoadingComplete.value ? "overflow-hidden h-screen" : ""
+    ),
+  },
+  bodyAttrs: {
+    class: computed(() => (!isLoadingComplete.value ? "overflow-hidden" : "")),
+  },
+});
 
 const globalContainer = ref(null);
 
