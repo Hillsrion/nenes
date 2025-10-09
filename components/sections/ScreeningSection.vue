@@ -125,17 +125,16 @@ const initializeTitleAnimation = () => {
       const titleAnimation = $gsap.fromTo(
         split.lines,
         {
-          opacity: 0.4, // Start at 50% opacity
+          opacity: 0.4,
         },
         {
-          opacity: 1, // Animate to 100% opacity
-          duration: 0.2,
+          opacity: 1,
           ease: "power2.out",
           stagger: 0.05, // Stagger each line
           scrollTrigger: {
             trigger: sectionRef.value,
             start: "top 80%", // Start when section enters viewport
-            end: "center 60%", // End when section reaches center
+            end: "center center", // End when section reaches center
             scrub: 1, // Smooth scrubbing
             markers: true,
           },
@@ -163,8 +162,9 @@ watch(
   () => store.getSectionState("loading"),
   (loadingState) => {
     if (loadingState === "isComplete" && sectionRef.value) {
-      console.log("initializeTitleAnimation");
-      initializeTitleAnimation();
+      setTimeout(() => {
+        initializeTitleAnimation();
+      }, 1000);
     }
   }
 );

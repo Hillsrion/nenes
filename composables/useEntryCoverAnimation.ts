@@ -115,18 +115,18 @@ export const useEntryCoverAnimation = ({
     // Apply the transform to position the image correctly
     imageElement.style.transform = `translate(${translateX}px, ${0}px) scale(${scale})`;
 
-    // Debug logging to understand positioning
-    console.log("Image positioning:", {
-      targetX,
-      targetY,
-      viewportWidth,
-      viewportHeight,
-      actualViewportHeight,
-      translateX,
-      translateY,
-      scale,
-      bodyRect: document.body.getBoundingClientRect(),
-    });
+    // // Debug logging to understand positioning
+    // console.log("Image positioning:", {
+    //   targetX,
+    //   targetY,
+    //   viewportWidth,
+    //   viewportHeight,
+    //   actualViewportHeight,
+    //   translateX,
+    //   translateY,
+    //   scale,
+    //   bodyRect: document.body.getBoundingClientRect(),
+    // });
   };
 
   /**
@@ -194,7 +194,7 @@ export const useEntryCoverAnimation = ({
 
             // Scale grows from the delayed progress point
             const scaleValue = Math.min(delayedProgress, 1); // Faster scaling after delay
-            console.log("Scale value:", scaleValue);
+            // console.log("Scale value:", scaleValue);
 
             // Get current position for image placement
             const currentPos = calculateImagePosition();

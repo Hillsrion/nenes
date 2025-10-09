@@ -11,6 +11,11 @@
           'translate-y-[100vh]': !isLoadingComplete,
         }"
       >
+        <Logo
+          class="fixed top-8 left-1/2 transform -translate-x-1/2 z-150"
+          :color="'var(--color-nenes-pink-light)'"
+        />
+
         <!-- Unified Statistics and Content Section -->
         <EntrySection
           :statistics-text="statisticsText"
@@ -43,6 +48,7 @@ import ScreeningSection from "~/components/sections/ScreeningSection.vue";
 import SelfExaminationSection from "~/components/sections/SelfExaminationSection.vue";
 import SymptomsSection from "~/components/sections/SymptomsSection.vue";
 import ResourcesSection from "~/components/sections/ResourcesSection.vue";
+import Logo from "~/components/ui/Logo.vue";
 import { useAnimationsStore } from "~/stores";
 import { useContent } from "~/composables/useContent";
 

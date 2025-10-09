@@ -24,15 +24,6 @@
       ref="whiteSectionRef"
       :class="{ 'rounded-t-4xl': !isLoadingComplete }"
     >
-      <Logo
-        class="fixed top-8 left-1/2 transform -translate-x-1/2"
-        :color="
-          isCoverFullyVisible
-            ? 'var(--color-nenes-pink-light)'
-            : 'var(--color-primary)'
-        "
-      />
-
       <div
         class="max-w-[42rem] h-[100svh] w-full px-8 sticky top-0 left-1/2 transform -translate-x-1/2 z-10 mx-auto flex flex-col justify-center"
       >
