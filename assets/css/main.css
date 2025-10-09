@@ -143,16 +143,17 @@
   }
 }
 
-/* Global styles */
-html {
-  scroll-behavior: smooth;
-}
-
 body {
   margin: 0;
   padding: 0;
   font-family: var(--font-family-sans);
   overflow-x: hidden;
+}
+
+/* Additional scroll reset for maximum compatibility */
+html,
+body {
+  scroll-behavior: auto !important;
 }
 
 /* Custom scrollbar */

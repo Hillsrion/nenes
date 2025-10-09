@@ -101,11 +101,11 @@ export default {
 
 ### Lenis Smooth Scroll
 
-- **Custom Composable**: `composables/useLenis.ts` for Vue 3 integration
+- **Package**: `lenis/vue` for Vue 3 integration
+- **Composable**: `useLenis()` from lenis/vue package
 - **Duration**: 1.2s (configurable)
-- **Custom Easing**: Exponential decay function
 - **Smooth**: Hardware-accelerated scrolling
-- **Global Access**: `scrollTo` function available on window object
+- **Global Access**: Integrated with VueLenis component
 
 ### Intersection Observer Animations
 
