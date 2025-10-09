@@ -32,14 +32,12 @@
         <!-- Image sequence container -->
         <div class="flex items-center justify-center flex-1 mx-8">
           <div ref="imageContainerRef" class="relative w-36 h-36 opacity-0">
-            <Transition name="image-fade" mode="out-in">
-              <img
-                :key="currentImageIndex"
-                :src="currentImage.src"
-                :alt="`Illustration ${currentImage.id}`"
-                class="w-full h-full object-contain"
-              />
-            </Transition>
+            <img
+              ref="currentImageRef"
+              :src="currentImage.src"
+              :alt="`Illustration ${currentImage.id}`"
+              class="w-full h-full object-contain"
+            />
           </div>
         </div>
 
@@ -73,6 +71,7 @@ const logoBlueRef = ref(null);
 const chargementTextRef = ref(null);
 const percentageTextRef = ref(null);
 const imageContainerRef = ref(null);
+const currentImageRef = ref(null);
 
 // Image sequence state
 const currentImageIndex = ref(0);
@@ -92,26 +91,43 @@ const currentImage = computed(
   () => imageSequence.value[currentImageIndex.value]
 );
 
-// Track if we're currently transitioning to prevent conflicts
-let isTransitioning = false;
-
-// Function to update image with non-linear timing
+// Function to update image with GSAP bounce animation (2 turns through 8 images)
 const updateImageSequence = (progressValue) => {
-  // Don't update if we're currently transitioning
-  if (isTransitioning) return;
+  // Calculate which image to show for 2 full cycles through 8 images
+  // Progress 0-100% maps to 0-15 (16 positions), then mod 8 gives us 2 cycles
+  const cyclePosition = Math.floor((progressValue / 100) * 16); // 0-15 range for 16 steps
+  const imageIndex = cyclePosition % 8; // Modulo 8 gives us 2 full cycles: 0-7, 0-7
 
-  // Calculate which image to show (0-7 range for 8 images)
-  // Use direct linear progression for now to ensure all images show
-  const imageIndex = Math.min(Math.floor((progressValue / 100) * 8), 7);
-
-  if (imageIndex !== currentImageIndex.value) {
-    isTransitioning = true;
+  if (imageIndex !== currentImageIndex.value && currentImageRef.value) {
+    const previousIndex = currentImageIndex.value;
     currentImageIndex.value = imageIndex;
 
-    // Allow transition to complete before allowing next update
-    setTimeout(() => {
-      isTransitioning = false;
-    }, 100); // Slightly longer than CSS transition (80ms)
+    // Create bounce animation with GSAP
+    const tl = gsap.timeline();
+
+    // Bounce out the current image and bounce in the new one simultaneously
+    if (previousIndex !== imageIndex) {
+      // Update image source immediately
+      currentImageRef.value.src = currentImage.value.src;
+      currentImageRef.value.alt = `Illustration ${currentImage.value.id}`;
+
+      // Bounce out the old image while bouncing in the new one
+      tl.to(currentImageRef.value, {
+        scale: 1.2,
+        duration: 0.3,
+        ease: "power3.in",
+      })
+        // Immediately bounce in the new image
+        .to(
+          currentImageRef.value,
+          {
+            scale: 1,
+            duration: 0.4,
+            ease: "power3.out",
+          },
+          0 // Start at the same time as the bounce out
+        );
+    }
   }
 };
 
@@ -123,6 +139,14 @@ onMounted(() => {
       opacity: 0,
     }
   );
+
+  // Set initial image state
+  if (currentImageRef.value) {
+    gsap.set(currentImageRef.value, {
+      scale: 1,
+      opacity: 1,
+    });
+  }
 
   // Start loading animation
   startLoadingSequence();
@@ -154,6 +178,7 @@ const startLoadingSequence = () => {
       },
       "-=0.6"
     )
+    // Initial image is already visible, no need to animate it
     // Animate percentage text fade in (starts after progress begins)
     .to(
       percentageTextRef.value,
@@ -189,22 +214,5 @@ const startProgressCounter = () => {
 </script>
 
 <style scoped>
-/* Image transition animations - Fast scale effect */
-.image-fade-enter-active,
-.image-fade-leave-active {
-  transition: transform 0.08s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-}
-
-.image-fade-enter-from {
-  transform: scale(0.85) translateZ(0);
-}
-
-.image-fade-leave-to {
-  transform: scale(1.05) translateZ(0);
-}
-
-.image-fade-enter-to,
-.image-fade-leave-from {
-  transform: scale(1) translateZ(0);
-}
+/* GSAP handles all animations now */
 </style>
