@@ -192,24 +192,28 @@ const startLoadingSequence = () => {
 };
 
 const startProgressCounter = () => {
-  const duration = 2500; // 2.5 seconds - faster but still shows all images
-  const steps = 25; // Enough steps to show all 8 images
-  const increment = 100 / steps;
-  let currentStep = 0;
+  const duration = 2500; // 2.5 seconds total
 
-  const interval = setInterval(() => {
-    currentStep++;
-    progress.value = Math.round(currentStep * increment);
+  // Use GSAP to animate progress from 0 to 100
+  gsap.to(
+    { progress: 0 },
+    {
+      progress: 100,
+      duration: duration / 1000, // Convert to seconds
+      ease: "none", // Linear progression
+      onUpdate: function () {
+        // Update progress value
+        progress.value = Math.round(this.targets()[0].progress);
 
-    // Update image sequence based on progression
-    updateImageSequence(progress.value);
-
-    if (currentStep >= steps) {
-      progress.value = 100;
-      // store.updateSectionState("loading", "isAnimating");
-      clearInterval(interval);
+        // Update image sequence based on progression
+        updateImageSequence(progress.value);
+      },
+      onComplete: function () {
+        progress.value = 100;
+        // store.updateSectionState("loading", "isAnimating");
+      },
     }
-  }, duration / steps);
+  );
 };
 </script>
 
