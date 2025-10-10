@@ -6,9 +6,10 @@
       <!-- Loading Section -->
       <LoadingSection />
       <div
-        class="transition-all duration-1000 ease-out"
+        class="transition-transform duration-1000 ease-out"
         :class="{
-          'mt-[100vh]': store.sections.loading?.state === 'idle',
+          'translate-y-[100vh]':
+            store.sections.loading?.state === 'idle' && !isLoadingComplete,
         }"
       >
         <Logo
