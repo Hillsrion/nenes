@@ -1,5 +1,8 @@
 <template>
-  <section class="flex items-center justify-center relative" ref="sectionRef">
+  <section
+    class="flex items-center justify-center bg-white rounded-t-4xl sticky top-0 z-30 py-27"
+    ref="sectionRef"
+  >
     <div
       class="container mx-auto px-4 flex flex-col lg:flex-row gap-8 xl:gap-12"
     >

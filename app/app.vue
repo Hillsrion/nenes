@@ -6,9 +6,9 @@
       <!-- Loading Section -->
       <LoadingSection />
       <div
-        class="transition-transform duration-1000 ease-out"
+        class="transition-all duration-1000 ease-out"
         :class="{
-          'translate-y-[100vh]': store.sections.loading?.state === 'idle',
+          'mt-[100vh]': store.sections.loading?.state === 'idle',
         }"
       >
         <Logo
@@ -21,20 +21,18 @@
           :statistics-text="statisticsText"
           :content-elements="mainContentElements"
         />
-        <div class="bg-white rounded-t-4xl sticky top-0 z-30 py-27">
-          <ScreeningSection
-            :sidebar-elements="screeningContentElements"
-            :title="screeningMainTitle"
-          />
-        </div>
+        <ScreeningSection
+          :sidebar-elements="screeningContentElements"
+          :title="screeningMainTitle"
+        />
         <!-- Symptoms Section -->
-        <!-- <SymptomsSection /> -->
+        <SymptomsSection />
 
         <!-- Self-Examination Section -->
-        <!-- <SelfExaminationSection /> -->
+        <SelfExaminationSection />
 
         <!-- Resources Section -->
-        <!-- <ResourcesSection /> -->
+        <ResourcesSection />
       </div>
     </MainLayout>
   </div>
