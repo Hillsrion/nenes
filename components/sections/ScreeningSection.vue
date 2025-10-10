@@ -157,7 +157,6 @@ const initializeTitleAnimation = () => {
     // Set initial state and create scroll trigger animation
     nextTick(() => {
       if (!split?.lines?.length || !sectionRef?.value) return;
-      console.log("split", split.lines);
       // Create scroll trigger animation that goes from 50% to 100% opacity line by line
       const titleAnimation = $gsap.fromTo(
         split.lines,
@@ -213,26 +212,48 @@ const initializeTitleAnimation = () => {
 
 // Initialize fade out animation for the container
 const initializeFadeOutAnimation = () => {
-  if (!containerRef.value) return;
+  if (!containerRef.value || !sidebarRef.value) return;
 
-  // Create scroll trigger animation that starts after sidebar animation ends
-  fadeOutScrollTrigger = $gsap.fromTo(
+  // Get all sidebar elements except the last one
+  const sidebarElements = Array.from(sidebarRef.value.children);
+  const otherElements = sidebarElements.slice(0, -1); // All except last
+
+  // Get the last element's title and paragraph
+  const lastElement = sidebarElements[sidebarElements.length - 1];
+  const lastElementTitle = lastElement?.querySelector("h3");
+  const lastElementParagraph = lastElement?.querySelector("p");
+
+  // Create timeline for fade out sequence
+  fadeOutScrollTrigger = $gsap.timeline({
+    scrollTrigger: {
+      trigger: containerRef.value,
+      start: "center top", // Start where sidebar animation ends
+      end: "bottom top", // End when section bottom reaches viewport top
+      scrub: true, // Smooth scrubbing
+    },
+  });
+
+  // First: fade out other sidebar elements and last element's title/paragraph
+  fadeOutScrollTrigger.to(
+    [otherElements, lastElementTitle, lastElementParagraph],
+    {
+      opacity: 0,
+      duration: 0.5, // Half the timeline duration
+      ease: "power2.out",
+    },
+    0 // Start at beginning of timeline
+  );
+
+  // Then: scale down and fade out the container
+  fadeOutScrollTrigger.to(
     containerRef.value,
     {
-      scale: 1, // Start at full scale
-      opacity: 1, // Start at full opacity
-    },
-    {
-      scale: 0, // Scale down to disappear
+      scale: 0.5, // Scale down to disappear
       opacity: 0, // Fade out to transparent
-      ease: "power2.out", // Smooth easing
-      scrollTrigger: {
-        trigger: containerRef.value,
-        start: "center top", // Start where sidebar animation ends
-        end: "bottom top", // End when section bottom reaches viewport top
-        scrub: true, // Smooth scrubbing
-      },
-    }
+      duration: 0.5, // Half the timeline duration
+      ease: "power2.out",
+    },
+    0.5 // Start after the opacity animation
   );
 };
 
