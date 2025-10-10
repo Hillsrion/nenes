@@ -19,7 +19,7 @@
       </div>
 
       <!-- Sidebar elements -->
-      <div class="flex flex-col lg:w-1/4 gap-8 lg:gap-16">
+      <div ref="sidebarRef" class="flex flex-col lg:w-1/4 gap-8 lg:gap-16">
         <div
           v-for="(element, index) in sidebarElements"
           :key="index"
@@ -86,12 +86,17 @@ const props = withDefaults(defineProps<Props>(), {
 
 // Animation store
 const store = useAnimationsStore();
-const { $gsap } = useNuxtApp();
+const { $gsap } = useNuxtApp() as any;
 
-// ScrollTrigger timeline ref for cleanup
+// Register ScrollTrigger
+$gsap.registerPlugin($gsap.ScrollTrigger);
+
+// ScrollTrigger timeline refs for cleanup
 let logoScrollTrigger: any = null;
+let sidebarScrollTrigger: any = null;
 
 const sectionRef = ref<HTMLElement | null>(null);
+const sidebarRef = ref<HTMLElement | null>(null);
 
 // Title refs for split text animation
 const textRefs = ref<HTMLElement[]>([]);
@@ -128,7 +133,6 @@ const initializeTitleAnimation = () => {
     // Set initial state and create scroll trigger animation
     nextTick(() => {
       if (!split?.lines?.length || !sectionRef?.value) return;
-      const { $gsap } = useNuxtApp();
       console.log("split", split.lines);
       // Create scroll trigger animation that goes from 50% to 100% opacity line by line
       const titleAnimation = $gsap.fromTo(
@@ -163,12 +167,42 @@ const initializeTitleAnimation = () => {
         if (logoScrollTrigger && logoScrollTrigger.kill) {
           logoScrollTrigger.kill();
         }
+        if (sidebarScrollTrigger && sidebarScrollTrigger.scrollTrigger) {
+          sidebarScrollTrigger.scrollTrigger.kill();
+        }
+        if (sidebarScrollTrigger && sidebarScrollTrigger.kill) {
+          sidebarScrollTrigger.kill();
+        }
         if (revert) {
           revert();
         }
       });
     });
   });
+};
+
+// Initialize sidebar scroll animation
+const initializeSidebarAnimation = () => {
+  if (!sidebarRef.value || !sectionRef.value) return;
+
+  // Create scroll trigger animation for sidebar movement
+  sidebarScrollTrigger = $gsap.fromTo(
+    sidebarRef.value,
+    {
+      y: "0%", // Start position (0%)
+    },
+    {
+      y: "-100%", // Move up by 100% of element height
+      ease: "none", // Linear movement with scroll
+      scrollTrigger: {
+        trigger: sectionRef.value,
+        start: "top top", // Start when section top reaches viewport top
+        end: "bottom top", // End when section bottom reaches viewport top
+        scrub: true, // Smooth scrubbing
+        pin: false, // Don't pin, just transform
+      },
+    }
+  );
 };
 
 watch(
@@ -181,6 +215,7 @@ watch(
     ) {
       setTimeout(() => {
         initializeTitleAnimation();
+        initializeSidebarAnimation();
         logoScrollTrigger = $gsap.timeline({
           scrollTrigger: {
             trigger: sectionRef.value?.parentElement,
@@ -200,5 +235,4 @@ watch(
 );
 
 // Auto-imported composables
-declare const useNuxtApp: () => { $gsap: any };
 </script>
