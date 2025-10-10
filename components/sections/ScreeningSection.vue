@@ -10,7 +10,7 @@
       <div class="flex-1 lg:w-3/5">
         <div class="max-w-2xl">
           <p
-            :ref="(el) => setTextRef(el, 0)"
+            :ref="setTitleRef"
             class="text-primary font-medium text-3xl md:text-4xl lg:text-5xl leading-[1.33] mb-8"
           >
             {{ title }}
@@ -38,6 +38,7 @@
               </p>
               <div class="relative overflow-hidden mt-8">
                 <img
+                  :ref="(el) => setLastImageRef(el, index)"
                   :src="element.image"
                   :alt="element.title"
                   class="w-full object-cover transition-transform duration-500 group-hover:scale-105"
@@ -97,6 +98,8 @@ let sidebarScrollTrigger: any = null;
 
 const sectionRef = ref<HTMLElement | null>(null);
 const sidebarRef = ref<HTMLElement | null>(null);
+const titleRef = ref<HTMLElement | null>(null);
+const lastImageRef = ref<HTMLImageElement | null>(null);
 
 // Title refs for split text animation
 const textRefs = ref<HTMLElement[]>([]);
@@ -108,6 +111,24 @@ const setTextRef = (
 ) => {
   if (el && el instanceof HTMLElement) {
     textRefs.value[index] = el;
+  }
+};
+
+// Set last image ref function
+const setLastImageRef = (el: any, index: number) => {
+  if (
+    el instanceof HTMLImageElement &&
+    index === props.sidebarElements.length - 1
+  ) {
+    lastImageRef.value = el;
+  }
+};
+
+// Set title ref function
+const setTitleRef = (el: any) => {
+  if (el) {
+    titleRef.value = el;
+    setTextRef(el, 0);
   }
 };
 
@@ -183,16 +204,35 @@ const initializeTitleAnimation = () => {
 
 // Initialize sidebar scroll animation
 const initializeSidebarAnimation = () => {
-  if (!sidebarRef.value || !sectionRef.value) return;
+  if (
+    !sidebarRef.value ||
+    !sectionRef.value ||
+    !titleRef.value ||
+    !lastImageRef.value
+  )
+    return;
+
+  // Calculate the maximum y offset needed to align the last image top with title top
+  const titleRect = titleRef.value.getBoundingClientRect();
+  const lastImageRect = lastImageRef.value.getBoundingClientRect();
+  const sidebarRect = sidebarRef.value.getBoundingClientRect();
+
+  // Calculate how much the sidebar needs to move up so that the last image top aligns with title top
+  // The title top is relative to viewport, last image top is relative to its container
+  const titleTopRelativeToSidebar = titleRect.top - sidebarRect.top;
+  const lastImageTopRelativeToSidebar = lastImageRect.top - sidebarRect.top;
+
+  // The offset needed is the difference between these positions
+  const maxOffset = lastImageTopRelativeToSidebar - titleTopRelativeToSidebar;
 
   // Create scroll trigger animation for sidebar movement
   sidebarScrollTrigger = $gsap.fromTo(
     sidebarRef.value,
     {
-      y: "0%", // Start position (0%)
+      y: 0, // Start position (0px)
     },
     {
-      y: "-100%", // Move up by 100% of element height
+      y: -maxOffset, // Move up by calculated offset to align last image with title
       ease: "none", // Linear movement with scroll
       scrollTrigger: {
         trigger: sectionRef.value,
