@@ -4,7 +4,8 @@
     ref="sectionRef"
   >
     <div
-      class="container mx-auto px-4 flex flex-col lg:flex-row gap-8 xl:gap-12"
+      class="container mx-auto px-4 flex flex-col lg:flex-row gap-8 xl:gap-12 origin-top"
+      ref="containerRef"
     >
       <!-- Main content -->
       <div class="flex-1 lg:w-3/5">
@@ -95,9 +96,11 @@ $gsap.registerPlugin($gsap.ScrollTrigger);
 // ScrollTrigger timeline refs for cleanup
 let logoScrollTrigger: any = null;
 let sidebarScrollTrigger: any = null;
+let fadeOutScrollTrigger: any = null;
 
 const sectionRef = ref<HTMLElement | null>(null);
 const sidebarRef = ref<HTMLElement | null>(null);
+const containerRef = ref<HTMLElement | null>(null);
 const titleRef = ref<HTMLElement | null>(null);
 const lastImageRef = ref<HTMLImageElement | null>(null);
 
@@ -194,12 +197,43 @@ const initializeTitleAnimation = () => {
         if (sidebarScrollTrigger && sidebarScrollTrigger.kill) {
           sidebarScrollTrigger.kill();
         }
+        if (fadeOutScrollTrigger && fadeOutScrollTrigger.scrollTrigger) {
+          fadeOutScrollTrigger.scrollTrigger.kill();
+        }
+        if (fadeOutScrollTrigger && fadeOutScrollTrigger.kill) {
+          fadeOutScrollTrigger.kill();
+        }
         if (revert) {
           revert();
         }
       });
     });
   });
+};
+
+// Initialize fade out animation for the container
+const initializeFadeOutAnimation = () => {
+  if (!containerRef.value) return;
+
+  // Create scroll trigger animation that starts after sidebar animation ends
+  fadeOutScrollTrigger = $gsap.fromTo(
+    containerRef.value,
+    {
+      scale: 1, // Start at full scale
+      opacity: 1, // Start at full opacity
+    },
+    {
+      scale: 0, // Scale down to disappear
+      opacity: 0, // Fade out to transparent
+      ease: "power2.out", // Smooth easing
+      scrollTrigger: {
+        trigger: containerRef.value,
+        start: "center top", // Start where sidebar animation ends
+        end: "bottom top", // End when section bottom reaches viewport top
+        scrub: true, // Smooth scrubbing
+      },
+    }
+  );
 };
 
 // Initialize sidebar scroll animation
@@ -237,7 +271,7 @@ const initializeSidebarAnimation = () => {
       scrollTrigger: {
         trigger: sectionRef.value,
         start: "top top", // Start when section top reaches viewport top
-        end: "bottom top", // End when section bottom reaches viewport top
+        end: "center top", // End when section bottom reaches viewport top
         scrub: true, // Smooth scrubbing
         pin: false, // Don't pin, just transform
       },
@@ -256,6 +290,7 @@ watch(
       setTimeout(() => {
         initializeTitleAnimation();
         initializeSidebarAnimation();
+        initializeFadeOutAnimation();
         logoScrollTrigger = $gsap.timeline({
           scrollTrigger: {
             trigger: sectionRef.value?.parentElement,
