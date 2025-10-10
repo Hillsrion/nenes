@@ -65,9 +65,7 @@
 
 <script setup>
 import Logo from "~/components/ui/Logo.vue";
-import { useSectionVisibility } from "~/composables/useSectionVisibility";
-
-const { sectionRef, isVisible } = useSectionVisibility(0.3);
+const sectionRef = ref(null);
 const activeStep = ref(0);
 
 const examSteps = ref([
@@ -106,7 +104,7 @@ const examSteps = ref([
 const guideImages = ref([...Array(4)]); // 4 guide images
 
 // Auto-advance through steps when section becomes visible
-watch(isVisible, (visible) => {
+watch(sectionRef, (visible) => {
   if (visible) {
     let stepIndex = 0;
     const interval = setInterval(() => {

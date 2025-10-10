@@ -82,7 +82,6 @@
 
 <script setup>
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { useSectionVisibility } from "~/composables/useSectionVisibility";
 import { useTextUtils } from "~/composables/useTextUtils";
 import { useStatisticsAnimation } from "~/composables/useStatisticsAnimation";
 import { useEntryCoverAnimation } from "~/composables/useEntryCoverAnimation";
@@ -112,7 +111,7 @@ const props = defineProps({
 });
 
 // Refs
-const { sectionRef, isVisible } = useSectionVisibility(0.2);
+const sectionRef = ref(null);
 const whiteSectionRef = ref(null);
 const statisticsTextRef = ref(null);
 const entryCoverRef = ref(null);

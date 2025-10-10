@@ -34,10 +34,13 @@ export const useContent = () => {
   const screeningMainTitle =
     "Détecté à un stade précoce, le cancer du sein est guéri dans plus de 9 cas sur 10. C'est pourquoi il est essentiel d'agir et de se sensibiliser aux gestes qui sauvent.";
 
+  const symptomsMainTitle = "Les symptômes";
+
   return {
     mainContentElements,
     statisticsText,
     screeningContentElements,
     screeningMainTitle,
+    symptomsMainTitle,
   };
 };

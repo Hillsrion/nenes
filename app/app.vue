@@ -27,7 +27,7 @@
           :title="screeningMainTitle"
         />
         <!-- Symptoms Section -->
-        <SymptomsSection />
+        <SymptomsSection :title="symptomsMainTitle" />
 
         <!-- Self-Examination Section -->
         <SelfExaminationSection />
@@ -60,6 +60,7 @@ const {
   statisticsText,
   screeningContentElements,
   screeningMainTitle,
+  symptomsMainTitle,
 } = useContent();
 
 // Reactive state for loading completion

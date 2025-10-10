@@ -1,75 +1,66 @@
 <template>
   <section
-    class="min-h-screen py-16 bg-gradient-to-br from-nenes-orange-light to-nenes-orange-dark relative"
+    class="min-h-screen py-16 h-[100svh] relative z-30 flex justify-center mt-[200svh] bg-red"
     ref="sectionRef"
   >
     <div class="max-w-6xl mx-auto px-8">
-      <div class="mt-24">
-        <div class="text-center mb-16">
-          <h2 class="text-5xl font-bold text-gray-800 mb-4">Les symptômes</h2>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-16">
-          <div
-            v-for="(symptom, index) in symptoms"
-            :key="index"
-            class="bg-white/90 rounded-3xl p-8 shadow-lg backdrop-blur-md border border-white/50 opacity-0 translate-y-8 transition-all duration-700 ease-out"
-            :class="{ 'opacity-100 translate-y-0 animate-slide-up': isVisible }"
-            :style="{ animationDelay: `${index * 0.2}s` }"
-          >
-            <div
-              class="w-16 h-16 rounded-full bg-gradient-to-br from-blue-400 to-purple-600 flex items-center justify-center mb-6"
-            >
-              <div class="w-8 h-8 rounded-full bg-white/30"></div>
-            </div>
-            <div>
-              <h3 class="text-2xl font-semibold mb-4 text-gray-800">
-                {{ symptom.title }}
-              </h3>
-              <p class="text-gray-600 leading-relaxed">
-                {{ symptom.description }}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div class="text-center">
-          <div class="inline-block max-w-2xl w-full">
-            <div
-              class="bg-white/30 rounded-3xl p-8 backdrop-blur-md border border-white/50"
-            >
-              <div class="w-full h-64 rounded-xl bg-white/30"></div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <Title ref="titleRef" :title="title" />
     </div>
   </section>
 </template>
 
-<script setup>
-import Logo from "~/components/ui/Logo.vue";
-import { useSectionVisibility } from "~/composables/useSectionVisibility";
+<script setup lang="ts">
+import { ref, onMounted, onUnmounted } from "vue";
+import { gsap } from "gsap";
+import Title from "~/components/ui/Title.vue";
 
-const { sectionRef, isVisible } = useSectionVisibility(0.2);
+const props = defineProps({
+  title: {
+    type: String,
+    required: true,
+  },
+});
 
-const symptoms = ref([
-  {
-    title: "L'observation visuelle",
-    description: "Modification de la taille, de la forme ou de la symétrie.",
-  },
-  {
-    title: "La palpation circulaire",
-    description:
-      "Changement d'aspect de la peau (rougeur, aspect de \"peau d'orange\", plis)",
-  },
-  {
-    title: "La zone sous l'aisselle",
-    description: "Apparition de fossettes ou de croûtes",
-  },
-  {
-    title: "Le mamelon",
-    description: "Écoulement ou modification du mamelon",
-  },
-]);
-</script>
+const sectionRef = ref<HTMLElement | null>(null);
+const titleRef = ref<{ titleElement: HTMLElement } | null>(null);
+
+let titleAnimation: any = null;
+
+onMounted(() => {
+  if (!sectionRef.value || !titleRef.value?.titleElement) return;
+
+  // Register ScrollTrigger
+  gsap.registerPlugin(gsap.ScrollTrigger);
+
+  // Create scroll-triggered animation
+  titleAnimation = gsap.fromTo(
+    titleRef.value.titleElement,
+    {
+      scale: 2,
+      opacity: 0,
+    },
+    {
+      scale: 1,
+      opacity: 1,
+      duration: 0.8,
+      ease: "cubic-bezier(0.25, 0.46, 0.45, 0.94)",
+      scrollTrigger: {
+        trigger: sectionRef.value,
+        start: "top 50%", // Start when section top reaches 80% of viewport height
+        end: "top 50%+=300px", // End when section center reaches viewport center
+        scrub: 1,
+        markers: true,
+      },
+    }
+  );
+});
+
+onUnmounted(() => {
+  if (titleAnimation && titleAnimation.scrollTrigger) {
+    titleAnimation.scrollTrigger.kill();
+  }
+  if (titleAnimation && titleAnimation.kill) {
+    titleAnimation.kill();
+  }
+});
+</script> 
