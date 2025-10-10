@@ -211,7 +211,7 @@ const initializeTitleAnimation = () => {
 };
 
 // Initialize logo scroll trigger for color change
-const initializeLogoScrollTrigger = () => {
+const initializeLogoColorChangeAnimation = () => {
   if (!sectionRef.value?.parentElement) return;
 
   logoScrollTrigger = $gsap.timeline({
@@ -331,7 +331,7 @@ watch(
         initializeTitleAnimation();
         initializeSidebarAnimation();
         initializeFadeOutAnimation();
-        initializeLogoScrollTrigger();
+        initializeLogoColorChangeAnimation();
       }, 1000);
     }
   }
