@@ -210,6 +210,25 @@ const initializeTitleAnimation = () => {
   });
 };
 
+// Initialize logo scroll trigger for color change
+const initializeLogoScrollTrigger = () => {
+  if (!sectionRef.value?.parentElement) return;
+
+  logoScrollTrigger = $gsap.timeline({
+    scrollTrigger: {
+      trigger: sectionRef.value.parentElement,
+      start: "top +=100px",
+      end: "bottom bottom",
+      onEnter: () => {
+        store.updateLogoColor(true);
+      },
+      onLeaveBack: () => {
+        store.updateLogoColor(false);
+      },
+    },
+  });
+};
+
 // Initialize fade out animation for the container
 const initializeFadeOutAnimation = () => {
   if (!containerRef.value || !sidebarRef.value) return;
@@ -312,19 +331,7 @@ watch(
         initializeTitleAnimation();
         initializeSidebarAnimation();
         initializeFadeOutAnimation();
-        logoScrollTrigger = $gsap.timeline({
-          scrollTrigger: {
-            trigger: sectionRef.value?.parentElement,
-            start: "top +=100px",
-            end: "bottom bottom",
-            onEnter: () => {
-              store.updateLogoColor(true);
-            },
-            onLeaveBack: () => {
-              store.updateLogoColor(false);
-            },
-          },
-        });
+        initializeLogoScrollTrigger();
       }, 1000);
     }
   }
