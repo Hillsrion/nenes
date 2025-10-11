@@ -27,7 +27,7 @@
           :title="screeningMainTitle"
         />
         <!-- Symptoms Section -->
-        <SymptomsSection :title="symptomsMainTitle" />
+        <SymptomsSection :title="symptomsMainTitle" :cards="symptomsCards" />
 
         <!-- Self-Examination Section -->
         <!-- <SelfExaminationSection /> -->
@@ -61,6 +61,7 @@ const {
   screeningContentElements,
   screeningMainTitle,
   symptomsMainTitle,
+  symptomsCards,
 } = useContent();
 
 // Reactive state for loading completion
@@ -100,9 +101,7 @@ const globalContainer = ref(null);
 
 // Computed logo color based on store state
 const logoColor = computed(() => {
-  return store.getLogoState
-    ? "var(--color-primary)"
-    : "var(--color-nenes-pink-light)";
+  return store.getLogoState ? "var(--color-primary)" : "var(--color-secondary)";
 });
 
 // Watch for loading completion

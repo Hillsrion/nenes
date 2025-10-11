@@ -1,7 +1,7 @@
 <template>
   <h2
     ref="titleElement"
-    class="font-medium text-primary lg:text-5xl/16 text-3xl/16 text-center origin-center"
+    class="font-medium text-primary lg:text-5xl text-3xl text-center origin-center leading-title"
   >
     {{ title }}
   </h2>

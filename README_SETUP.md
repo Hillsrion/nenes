@@ -56,7 +56,7 @@ The Tailwind CSS configuration uses `@theme` directive for custom colors extract
 @theme {
   --color-nenes-blue-light: #667eea;
   --color-nenes-blue-dark: #764ba2;
-  --color-nenes-pink-light: #f093fb;
+  --color-secondary: #f093fb;
   --color-nenes-pink-medium: #ff9ff3;
   --color-nenes-pink-dark: #f5576c;
   --color-nenes-pink-accent: #ff6b9d;
@@ -74,7 +74,7 @@ The Tailwind CSS configuration uses `@theme` directive for custom colors extract
 ### Utility Classes
 
 - **Glass Morphism**: `bg-white/10 backdrop-blur-md border-2 border-white/30`
-- **Gradient Text**: `bg-gradient-to-r from-nenes-pink-light to-nenes-pink-dark bg-clip-text text-transparent`
+- **Gradient Text**: `bg-gradient-to-r from-secondary to-nenes-pink-dark bg-clip-text text-transparent`
 - **Section Backgrounds**: `bg-gradient-to-br from-nenes-blue-light to-nenes-blue-dark`
 - **Animations**: `opacity-0 translate-y-8 transition-all duration-700 ease-out` with `:class` bindings
 

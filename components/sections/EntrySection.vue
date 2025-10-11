@@ -64,9 +64,7 @@
                 : 'col-start-2 col-span-2 row-start-2 pr-4',
             ]"
           >
-            <p
-              class="text-nenes-pink-light font-medium text-5xl leading-[1.33]"
-            >
+            <p class="text-secondary font-medium text-5xl leading-title">
               {{ element.content }}
             </p>
           </div>

@@ -13,7 +13,7 @@
           <div class="max-w-2xl">
             <p
               :ref="setTitleRef"
-              class="text-primary font-medium text-3xl md:text-4xl lg:text-5xl leading-[1.33] mb-8"
+              class="text-primary font-medium text-3xl md:text-4xl lg:text-5xl leading-title mb-8"
             >
               {{ title }}
             </p>
@@ -31,7 +31,7 @@
               <!-- Content -->
               <div class="flex flex-col gap-4">
                 <h3
-                  class="text-primary uppercase leading-[1.33] lg:text-base text-sm tracking-[.16rem]"
+                  class="text-primary uppercase leading-title lg:text-base text-sm tracking-title-sm"
                 >
                   {{ element.title }}
                 </h3>

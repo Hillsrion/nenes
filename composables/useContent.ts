@@ -36,11 +36,36 @@ export const useContent = () => {
 
   const symptomsMainTitle = "Les symptômes";
 
+  const symptomsCards = [
+    {
+      title: "L'observation visuelle",
+      description:
+        "Placez-vous devant un miroir, les bras le long du corps, puis les mains sur les hanches, et enfin les bras levés au-dessus de la tête. Observez vos seins pour détecter tout changement inhabituel.",
+    },
+    {
+      title: "Modification de la taille, de la forme ou de la symétrie.",
+      image: "/images/symptoms/symptoms-01.jpg",
+    },
+    {
+      title: `Changement d'aspect de la peau (rougeur, aspect de "peau d'orange", plis)`,
+      image: "/images/symptoms/symptoms-02.jpg",
+    },
+    {
+      title: "Apparition de fossettes ou de croûtes",
+      image: "/images/symptoms/symptoms-03.jpg",
+    },
+    {
+      title: "Écoulement ou modification du mamelon",
+      image: "/images/symptoms/symptoms-04.jpg",
+    },
+  ];
+
   return {
     mainContentElements,
     statisticsText,
     screeningContentElements,
     screeningMainTitle,
     symptomsMainTitle,
+    symptomsCards,
   };
 };

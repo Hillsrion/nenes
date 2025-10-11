@@ -1,7 +1,6 @@
 <template>
   <section
     class="min-h-screen flex items-center py-16 relative"
-    :class="getBackgroundGradient"
     ref="sectionRef"
   >
     <div class="max-w-6xl w-full mx-auto px-8 relative">
@@ -62,21 +61,4 @@ const props = defineProps({
 });
 
 const { sectionRef, isVisible } = useSectionVisibility(0.2);
-
-const getBackgroundGradient = computed(() => {
-  const gradientMap = {
-    "linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)": "bg-gray-50",
-    "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)":
-      "bg-gradient-to-br from-nenes-pink-light to-nenes-pink-dark",
-    "linear-gradient(135deg, #667eea 0%, #764ba2 100%)":
-      "bg-gradient-to-br from-nenes-blue-light to-nenes-blue-dark",
-    "linear-gradient(135deg, #ff9ff3 0%, #f368e0 100%)":
-      "bg-gradient-to-br from-nenes-pink-medium to-nenes-pink-purple",
-    "linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)":
-      "bg-gradient-to-br from-nenes-orange-light to-nenes-orange-dark",
-    "linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)":
-      "bg-gradient-to-br from-nenes-sky-light to-nenes-sky-dark",
-  };
-  return gradientMap[props.backgroundGradient] || "bg-gray-50";
-});
 </script>

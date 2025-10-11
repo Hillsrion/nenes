@@ -9,7 +9,7 @@
         class="absolute top-8 left-1/2 transform -translate-x-1/2"
         :color="
           isCoverFullyVisible
-            ? 'var(--color-nenes-pink-light)'
+            ? 'var(--color-secondary)'
             : 'var(--color-primary)'
         "
       />

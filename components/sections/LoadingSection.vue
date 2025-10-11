@@ -10,7 +10,7 @@
     >
       <!-- Logo in blue section -->
       <div ref="logoBlueRef" class="absolute top-8 left-1/2 -translate-x-1/2">
-        <Logo color="var(--color-nenes-pink-light)" class="w-[113px] h-8" />
+        <Logo color="var(--color-secondary)" class="w-[113px] h-8" />
       </div>
 
       <!-- Absolutely positioned CHARGEMENT text to the left -->
@@ -19,7 +19,7 @@
       >
         <div
           ref="chargementTextRef"
-          class="text-nenes-pink-light font-medium lg:text-2xl text-xl tracking-[3.84px] uppercase opacity-0 lg:-translate-x-72 md:-translate-x-60 -translate-x-50"
+          class="text-secondary font-medium lg:text-2xl text-xl tracking-[3.84px] uppercase opacity-0 lg:-translate-x-72 md:-translate-x-60 -translate-x-50"
         >
           CHARGEMENT
         </div>
@@ -48,7 +48,7 @@
       >
         <div
           ref="percentageTextRef"
-          class="text-nenes-pink-light font-medium lg:text-2xl text-xl tracking-[3.84px] uppercase opacity-0 min-w-[80px] text-right lg:translate-x-72 md:translate-x-60 sm:translate-x-50"
+          class="text-secondary font-medium lg:text-2xl text-xl tracking-[3.84px] uppercase opacity-0 min-w-[80px] text-right lg:translate-x-72 md:translate-x-60 sm:translate-x-50"
         >
           {{ progress }}%
         </div>

@@ -2,36 +2,13 @@
 
 /* Theme Configuration - Tailwind CSS v4 */
 @theme {
-  /* Custom colors extracted from Figma gradients */
   --color-primary: #335ede;
-  --color-nenes-blue-light: #667eea;
-  --color-nenes-blue-dark: #764ba2;
-
-  --color-nenes-pink-light: #ffdde2;
-  --color-nenes-pink-medium: #ff9ff3;
-  --color-nenes-pink-dark: #f5576c;
-  --color-nenes-pink-accent: #ff6b9d;
-  --color-nenes-pink-deep: #c44569;
-  --color-nenes-pink-purple: #f368e0;
-
-  --color-nenes-orange-light: #ffecd2;
-  --color-nenes-orange-dark: #fcb69f;
-
-  --color-nenes-sky-light: #a8edea;
-  --color-nenes-sky-dark: #fed6e3;
-
-  --color-nenes-yellow: #ffd93d;
-  --color-nenes-purple: #764ba2;
+  --color-secondary: #ffdde2;
+  --color-secondary-light: #fff4f5;
 
   /* Font families */
   --font-family-sans: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI",
     Roboto, sans-serif;
-
-  /* Font sizes */
-  --font-size-18: 4.5rem;
-  --font-size-88: 22rem;
-  --font-size-128: 32rem;
-  --font-size-144: 36rem;
 
   /* Animations */
   --animate-fade-in: fadeIn 0.8s ease-out forwards;
@@ -49,10 +26,11 @@
   /* Border radius */
   --radius-4xl: 2.5rem;
 
-  /* Box shadows */
-  --shadow-soft: 0 2px 15px rgba(0, 0, 0, 0.08);
-  --shadow-medium: 0 4px 25px rgba(0, 0, 0, 0.12);
-  --shadow-large: 0 8px 40px rgba(0, 0, 0, 0.16);
+  /* Text shadows */
+  --text-shadow-title: 0 6px 6px rgba(51, 94, 222, 0.2);
+
+  --tracking-title-sm: 0.16rem;
+  --leading-title: 1.33;
 }
 
 /* Animation utilities */
@@ -172,17 +150,4 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.5);
-}
-
-/* Glass morphism utilities */
-.glass {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.glass-dark {
-  background: rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
 }

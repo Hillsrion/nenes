@@ -8,18 +8,33 @@
     >
       <Title ref="titleRef" :title="title" />
     </div>
+    <ul class="relative z-20">
+      <SymptomCard
+        v-for="card in cards"
+        :key="card.title"
+        :title="card.title"
+        :description="card.description"
+        :image="card.image"
+      />
+    </ul>
   </section>
 </template>
 
 <script setup lang="ts">
 import { useNuxtApp } from "nuxt/app";
-import { ref, onUnmounted, watch } from "vue";
+import { ref, onUnmounted, watch, PropType } from "vue";
 import Title from "~/components/ui/Title.vue";
 import { useAnimationsStore } from "~/stores";
+import { Card } from "~/types";
+import SymptomCard from "~/components/ui/SymptomCard.vue";
 
 const props = defineProps({
   title: {
     type: String,
+    required: true,
+  },
+  cards: {
+    type: Array as PropType<Card[]>,
     required: true,
   },
 });
@@ -44,13 +59,12 @@ const initializeTitleAnimation = () => {
       scale: 1,
       opacity: 1,
       duration: 0.8,
-      ease: "cubic-bezier(0.25, 0.46, 0.45, 0.94)",
+      ease: "power2.out",
       scrollTrigger: {
         trigger: sectionRef.value,
         start: "top 30%",
         end: "30% bottom",
         scrub: 1,
-        markers: true,
       },
     }
   );
