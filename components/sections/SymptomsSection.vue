@@ -57,6 +57,7 @@ const titleRef = ref<{ titleElement: HTMLElement } | null>(null);
 const cardRefs = ref<(HTMLElement | null)[]>([]);
 let titleAnimation: any = null;
 let carouselAnimation: any = null;
+let titleHideAnimation: any = null;
 
 const store = useAnimationsStore();
 
@@ -112,6 +113,39 @@ const initializeCarouselAnimation = () => {
         end: "bottom bottom",
         scrub: true, // Animation progresses with scrolling
         // markers: true, // Uncomment for debugging
+        onUpdate: (self) => {
+          // Get the actual rotation of the first card element (card at index 0)
+          if (!cardRefs.value[0] || !titleRef.value?.titleElement) return;
+
+          const firstCardElement = cardRefs.value[0];
+          const currentRotation = $gsap.getProperty(
+            firstCardElement,
+            "rotation"
+          ) as number;
+
+          // Hide title when first card reaches approximately 0° (covering the title)
+          // Using a precise threshold of ±2° for exact timing
+          if (currentRotation <= 2 && currentRotation >= -2) {
+            if (!titleHideAnimation) {
+              titleHideAnimation = $gsap.to(titleRef.value.titleElement, {
+                opacity: 0,
+                duration: 0.3,
+                ease: "power2.out",
+              });
+            }
+          } else if (currentRotation >= 28) {
+            // Show title again only when first card returns to starting position (rotation ≈ 30°)
+            if (titleHideAnimation) {
+              titleHideAnimation.kill();
+              titleHideAnimation = null;
+            }
+            $gsap.to(titleRef.value.titleElement, {
+              opacity: 1,
+              duration: 0.3,
+              ease: "power2.out",
+            });
+          }
+        },
       },
     }
   );
@@ -133,6 +167,10 @@ onUnmounted(() => {
   }
   if (titleAnimation && titleAnimation.kill) {
     titleAnimation.kill();
+  }
+
+  if (titleHideAnimation && titleHideAnimation.kill) {
+    titleHideAnimation.kill();
   }
 
   if (carouselAnimation && carouselAnimation.scrollTrigger) {
