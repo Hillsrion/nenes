@@ -1,6 +1,6 @@
 <template>
   <li class="w-90 h-130 flex p-8 relative" :class="classes">
-    <h3 class="relative z-1 text-2xl" :class="titleClasses">
+    <h3 class="relative z-1" :class="titleClasses">
       {{ title }}
     </h3>
     <p
@@ -21,9 +21,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
-
-const props = defineProps({
+const { image } = defineProps({
   title: {
     type: String,
     required: true,
@@ -36,18 +34,12 @@ const props = defineProps({
     required: true,
   },
 });
-const hasImage = !!props.image;
-const classes = computed(() => {
-  return {
-    "bg-secondary-light justify-center flex-col": !hasImage,
-    "items-end": hasImage,
-  };
-});
-const titleClasses = computed(() => {
-  return {
-    "text-primary": !hasImage,
-    "text-secondary uppercase font-semibold tracking-title-sm text-shadow-title":
-      hasImage,
-  };
-});
+const hasImage = !!image;
+const classes = !hasImage
+  ? "bg-secondary-light justify-center flex-col"
+  : "items-end";
+
+const titleClasses = !hasImage
+  ? "text-primary text-2xl"
+  : "text-secondary uppercase font-semibold tracking-title-sm text-shadow-title text-base";
 </script>
