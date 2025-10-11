@@ -1,6 +1,11 @@
 <template>
-  <section class="py-16 h-[300svh] relative z-30 bg-white" ref="sectionRef">
-    <div class="max-w-6xl mx-auto px-8">
+  <section
+    class="py-16 h-[300svh] relative z-20 bg-white -mt-[25svh]"
+    ref="sectionRef"
+  >
+    <div
+      class="h-[100svh] w-full px-8 sticky top-0 left-1/2 z-10 mx-auto flex flex-col justify-center"
+    >
       <Title ref="titleRef" :title="title" />
     </div>
   </section>
@@ -32,7 +37,7 @@ const initializeTitleAnimation = () => {
   titleAnimation = $gsap.fromTo(
     titleRef.value.titleElement,
     {
-      scale: 2,
+      scale: 5,
       opacity: 0,
     },
     {
@@ -42,8 +47,8 @@ const initializeTitleAnimation = () => {
       ease: "cubic-bezier(0.25, 0.46, 0.45, 0.94)",
       scrollTrigger: {
         trigger: sectionRef.value,
-        start: "top 50%", // Start when section top reaches 80% of viewport height
-        end: "center center", // End when section center reaches viewport center
+        start: "top 30%",
+        end: "30% bottom",
         scrub: 1,
         markers: true,
       },
