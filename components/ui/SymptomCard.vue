@@ -34,12 +34,21 @@ const { image } = defineProps({
     required: true,
   },
 });
-const hasImage = !!image;
-const classes = !hasImage
-  ? "bg-secondary-light justify-center flex-col"
-  : "items-end";
 
-const titleClasses = !hasImage
-  ? "text-primary text-2xl"
-  : "text-secondary uppercase font-semibold tracking-title-sm text-shadow-title text-base";
+const hasImage = computed(() => !!image);
+
+const classes = computed(() => {
+  return {
+    "bg-secondary-light justify-center flex-col": !hasImage.value,
+    "items-end": hasImage.value,
+  };
+});
+
+const titleClasses = computed(() => {
+  return {
+    "text-primary text-2xl": !hasImage.value,
+    "text-secondary uppercase font-semibold tracking-title-sm text-shadow-title text-base":
+      hasImage.value,
+  };
+});
 </script>
