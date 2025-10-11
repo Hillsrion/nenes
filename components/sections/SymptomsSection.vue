@@ -55,6 +55,7 @@ const { $gsap } = useNuxtApp();
 const sectionRef = ref<HTMLElement | null>(null);
 const titleRef = ref<{ titleElement: HTMLElement } | null>(null);
 const cardRefs = ref<(HTMLElement | null)[]>([]);
+const isTitleHidden = ref(false);
 let titleAnimation: any = null;
 let carouselAnimation: any = null;
 let titleHideAnimation: any = null;
@@ -124,17 +125,24 @@ const initializeCarouselAnimation = () => {
           ) as number;
 
           // Hide title when first card reaches approximately 0° (covering the title)
-          // Using a precise threshold of ±2° for exact timing
-          if (currentRotation <= 2 && currentRotation >= -2) {
-            if (!titleHideAnimation) {
-              titleHideAnimation = $gsap.to(titleRef.value.titleElement, {
-                opacity: 0,
-                duration: 0.3,
-                ease: "power2.out",
-              });
+          // Using a wider threshold of ±5° to reliably catch fast scrolling
+          if (
+            currentRotation <= 5 &&
+            currentRotation >= -5 &&
+            !isTitleHidden.value
+          ) {
+            isTitleHidden.value = true;
+            if (titleHideAnimation) {
+              titleHideAnimation.kill();
             }
-          } else if (currentRotation >= 28) {
+            titleHideAnimation = $gsap.to(titleRef.value.titleElement, {
+              opacity: 0,
+              duration: 0.3,
+              ease: "power2.out",
+            });
+          } else if (currentRotation >= 25 && isTitleHidden.value) {
             // Show title again only when first card returns to starting position (rotation ≈ 30°)
+            isTitleHidden.value = false;
             if (titleHideAnimation) {
               titleHideAnimation.kill();
               titleHideAnimation = null;
@@ -179,5 +187,8 @@ onUnmounted(() => {
   if (carouselAnimation && carouselAnimation.kill) {
     carouselAnimation.kill();
   }
+
+  // Reset state flag
+  isTitleHidden.value = false;
 });
 </script> 
