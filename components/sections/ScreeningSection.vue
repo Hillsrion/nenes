@@ -1,59 +1,61 @@
 <template>
-  <section
-    class="flex items-center justify-center bg-white rounded-t-4xl sticky top-0 z-30 py-27"
-    ref="sectionRef"
-  >
-    <div
-      class="container mx-auto px-4 flex flex-col lg:flex-row gap-8 xl:gap-12 origin-top"
-      ref="containerRef"
+  <div class="h-[150svh] relative">
+    <section
+      class="flex h-screen items-center justify-center bg-white rounded-t-4xl sticky top-0 z-30"
+      ref="sectionRef"
     >
-      <!-- Main content -->
-      <div class="flex-1 lg:w-3/5">
-        <div class="max-w-2xl">
-          <p
-            :ref="setTitleRef"
-            class="text-primary font-medium text-3xl md:text-4xl lg:text-5xl leading-[1.33] mb-8"
-          >
-            {{ title }}
-          </p>
+      <div
+        class="container mx-auto px-4 flex flex-col lg:flex-row gap-8 xl:gap-12 origin-top h-[100svh] py-27"
+        ref="containerRef"
+      >
+        <!-- Main content -->
+        <div class="flex-1 lg:w-3/5">
+          <div class="max-w-2xl">
+            <p
+              :ref="setTitleRef"
+              class="text-primary font-medium text-3xl md:text-4xl lg:text-5xl leading-[1.33] mb-8"
+            >
+              {{ title }}
+            </p>
+          </div>
         </div>
-      </div>
 
-      <!-- Sidebar elements -->
-      <div ref="sidebarRef" class="flex flex-col lg:w-1/4 gap-8 lg:gap-16">
-        <div
-          v-for="(element, index) in sidebarElements"
-          :key="index"
-          class="group"
-        >
-          <div class="flex flex-col gap-4">
-            <!-- Content -->
+        <!-- Sidebar elements -->
+        <div ref="sidebarRef" class="flex flex-col lg:w-1/4 gap-8 lg:gap-16">
+          <div
+            v-for="(element, index) in sidebarElements"
+            :key="index"
+            class="group"
+          >
             <div class="flex flex-col gap-4">
-              <h3
-                class="text-primary uppercase leading-[1.33] lg:text-base text-sm tracking-[.16rem]"
-              >
-                {{ element.title }}
-              </h3>
-              <p class="text-primary text-base lg:text-xl leading-7.5">
-                {{ element.content }}
-              </p>
-              <div class="relative overflow-hidden mt-8">
-                <img
-                  :ref="(el) => setLastImageRef(el, index)"
-                  :src="element.image"
-                  :alt="element.title"
-                  class="w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                />
-                <div
-                  class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                ></div>
+              <!-- Content -->
+              <div class="flex flex-col gap-4">
+                <h3
+                  class="text-primary uppercase leading-[1.33] lg:text-base text-sm tracking-[.16rem]"
+                >
+                  {{ element.title }}
+                </h3>
+                <p class="text-primary text-base lg:text-xl leading-7.5">
+                  {{ element.content }}
+                </p>
+                <div class="relative overflow-hidden mt-8">
+                  <img
+                    :ref="(el) => setLastImageRef(el, index)"
+                    :src="element.image"
+                    :alt="element.title"
+                    class="w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                  <div
+                    class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                  ></div>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
-  </section>
+    </section>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -168,7 +170,7 @@ const initializeTitleAnimation = () => {
           ease: "power2.out",
           stagger: 0.05, // Stagger each line
           scrollTrigger: {
-            trigger: sectionRef.value,
+            trigger: sectionRef.value.parentElement,
             start: "top 80%", // Start when section enters viewport
             end: "center center", // End when section reaches center
             scrub: 1, // Smooth scrubbing
@@ -245,10 +247,11 @@ const initializeFadeOutAnimation = () => {
   // Create timeline for fade out sequence
   fadeOutScrollTrigger = $gsap.timeline({
     scrollTrigger: {
-      trigger: containerRef.value,
-      start: "center top", // Start where sidebar animation ends
+      trigger: containerRef.value?.parentElement, // Use same trigger as sidebar animation
+      start: "center top", // Start exactly where sidebar animation ends
       end: "bottom top", // End when section bottom reaches viewport top
       scrub: true, // Smooth scrubbing
+      markers: true,
     },
   });
 
@@ -309,7 +312,7 @@ const initializeSidebarAnimation = () => {
       y: -maxOffset, // Move up by calculated offset to align last image with title
       ease: "none", // Linear movement with scroll
       scrollTrigger: {
-        trigger: sectionRef.value,
+        trigger: containerRef.value?.parentElement,
         start: "top top", // Start when section top reaches viewport top
         end: "center top", // End when section bottom reaches viewport top
         scrub: true, // Smooth scrubbing

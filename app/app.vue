@@ -4,7 +4,7 @@
 
     <MainLayout>
       <!-- Loading Section -->
-      <LoadingSection />
+      <LoadingSection v-show="!isLoadingComplete" />
       <div
         class="transition-transform duration-1000 ease-out"
         :class="{
@@ -30,10 +30,10 @@
         <SymptomsSection :title="symptomsMainTitle" />
 
         <!-- Self-Examination Section -->
-        <SelfExaminationSection />
+        <!-- <SelfExaminationSection /> -->
 
         <!-- Resources Section -->
-        <ResourcesSection />
+        <!-- <ResourcesSection /> -->
       </div>
     </MainLayout>
   </div>

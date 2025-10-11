@@ -1,6 +1,6 @@
 <template>
   <section
-    class="min-h-screen py-16 h-[100svh] relative z-30 flex justify-center mt-[200svh] bg-red"
+    class="min-h-screen py-16 h-[100svh] relative z-30 flex justify-center bg-white"
     ref="sectionRef"
   >
     <div class="max-w-6xl mx-auto px-8">
@@ -49,7 +49,6 @@ onMounted(() => {
         start: "top 50%", // Start when section top reaches 80% of viewport height
         end: "top 50%+=300px", // End when section center reaches viewport center
         scrub: 1,
-        markers: true,
       },
     }
   );

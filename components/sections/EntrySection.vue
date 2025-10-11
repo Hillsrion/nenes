@@ -20,7 +20,7 @@
     <!-- Statistics Section -->
     <div class="absolute -top-2 left-0 w-full h-16 bg-primary -z-1"></div>
     <div
-      class="relative h-[300svh] w-full min-h-screen bg-white transition-all duration-300 ease-out rounded-t-4xl"
+      class="relative h-[250svh] w-full min-h-screen bg-white transition-all duration-300 ease-out rounded-t-4xl"
       ref="whiteSectionRef"
       :class="{ 'rounded-t-4xl': !store.sections.loading?.state === 'idle' }"
     >
