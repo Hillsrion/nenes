@@ -26,10 +26,8 @@
           :sidebar-elements="screeningContentElements"
           :title="screeningMainTitle"
         />
-        <!-- Symptoms Section -->
         <SymptomsSection :title="symptomsMainTitle" :cards="symptomsCards" />
 
-        <!-- Self-Examination Section -->
         <!-- <SelfExaminationSection /> -->
 
         <!-- Resources Section -->

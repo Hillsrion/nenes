@@ -140,8 +140,8 @@ const initializeCarouselAnimation = () => {
               duration: 0.3,
               ease: "power2.out",
             });
-          } else if (currentRotation >= 25 && isTitleHidden.value) {
-            // Show title again only when first card returns to starting position (rotation ≈ 30°)
+          } else if (currentRotation >= 15 && isTitleHidden.value) {
+            // Show title again when first card starts moving back up (rotation ≈ 15°)
             isTitleHidden.value = false;
             if (titleHideAnimation) {
               titleHideAnimation.kill();
