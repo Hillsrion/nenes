@@ -260,22 +260,20 @@ const initializeFadeOutAnimation = () => {
     [otherElements, lastElementTitle, lastElementParagraph],
     {
       opacity: 0,
-      duration: 0.5, // Half the timeline duration
       ease: "power2.out",
-    },
-    0 // Start at beginning of timeline
+    }
   );
 
   // Then: scale down and fade out the container
   fadeOutScrollTrigger.to(
     containerRef.value,
     {
-      scale: 0.5, // Scale down to disappear
+      scale: 0.7, // Scale down to disappear
       opacity: 0, // Fade out to transparent
-      duration: 0.5, // Half the timeline duration
+      y: 600,
       ease: "power2.out",
     },
-    0.5 // Start after the opacity animation
+    0
   );
 };
 
