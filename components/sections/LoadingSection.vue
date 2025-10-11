@@ -211,7 +211,7 @@ onMounted(async () => {
 });
 
 const startProgressCounter = () => {
-  const duration = 2500; // 2.5 seconds total
+  const duration = 2500;
 
   // Use GSAP to animate progress from 0 to 100
   return gsap.to(

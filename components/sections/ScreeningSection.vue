@@ -259,11 +259,10 @@ const initializeFadeOutAnimation = () => {
     opacity: 0,
     ease: "power2.out",
     scrollTrigger: {
-      trigger: containerRef.value?.parentElement, // Use same trigger as sidebar animation
+      trigger: sectionRef.value,
       start: `center top+=${vh(20)}`, // Start 26vh after center reaches top
       end: `bottom top+=${vh(35)}`, // End when section bottom reaches viewport top
       scrub: true, // Smooth scrubbing
-      markers: true,
     },
   });
 
@@ -271,14 +270,13 @@ const initializeFadeOutAnimation = () => {
   $gsap.to(containerRef.value, {
     scale: 0.7, // Scale down to disappear
     opacity: 0, // Fade out to transparent
-    y: 600,
+    y: vh(55),
     ease: "power2.out",
     scrollTrigger: {
-      trigger: containerRef.value?.parentElement, // Use same trigger as sidebar animation
+      trigger: sectionRef.value,
       start: "center top", // Start 200px before sidebar animation ends
       end: "bottom top", // End when section bottom reaches viewport top
       scrub: true, // Smooth scrubbing
-      markers: true,
     },
   });
 };
