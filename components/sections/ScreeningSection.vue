@@ -95,6 +95,16 @@ const { $gsap } = useNuxtApp() as any;
 // Register ScrollTrigger
 $gsap.registerPlugin($gsap.ScrollTrigger);
 
+// Utility function to convert vh percentage to px string
+const vh = (percentage: number): string => {
+  if (percentage < 0 || percentage > 100) {
+    throw new Error("Percentage must be between 0 and 100");
+  }
+  const viewportHeight = window.innerHeight;
+  const pixels = (viewportHeight * percentage) / 100;
+  return `${Math.round(pixels)}px`;
+};
+
 // ScrollTrigger timeline refs for cleanup
 let logoScrollTrigger: any = null;
 let sidebarScrollTrigger: any = null;
@@ -244,37 +254,33 @@ const initializeFadeOutAnimation = () => {
   const lastElementTitle = lastElement?.querySelector("h3");
   const lastElementParagraph = lastElement?.querySelector("p");
 
-  // Create timeline for fade out sequence
-  fadeOutScrollTrigger = $gsap.timeline({
+  // First ScrollTrigger: fade out other sidebar elements and last element's title/paragraph
+  $gsap.to([otherElements, lastElementTitle, lastElementParagraph], {
+    opacity: 0,
+    ease: "power2.out",
     scrollTrigger: {
       trigger: containerRef.value?.parentElement, // Use same trigger as sidebar animation
-      start: "center top", // Start exactly where sidebar animation ends
-      end: "bottom top", // End when section bottom reaches viewport top
+      start: `center top+=${vh(20)}`, // Start 26vh after center reaches top
+      end: `bottom top+=${vh(35)}`, // End when section bottom reaches viewport top
       scrub: true, // Smooth scrubbing
       markers: true,
     },
   });
 
-  // First: fade out other sidebar elements and last element's title/paragraph
-  fadeOutScrollTrigger.to(
-    [otherElements, lastElementTitle, lastElementParagraph],
-    {
-      opacity: 0,
-      ease: "power2.out",
-    }
-  );
-
-  // Then: scale down and fade out the container
-  fadeOutScrollTrigger.to(
-    containerRef.value,
-    {
-      scale: 0.7, // Scale down to disappear
-      opacity: 0, // Fade out to transparent
-      y: 600,
-      ease: "power2.out",
+  // Second ScrollTrigger: scale down and fade out the container
+  $gsap.to(containerRef.value, {
+    scale: 0.7, // Scale down to disappear
+    opacity: 0, // Fade out to transparent
+    y: 600,
+    ease: "power2.out",
+    scrollTrigger: {
+      trigger: containerRef.value?.parentElement, // Use same trigger as sidebar animation
+      start: "center top", // Start 200px before sidebar animation ends
+      end: "bottom top", // End when section bottom reaches viewport top
+      scrub: true, // Smooth scrubbing
+      markers: true,
     },
-    0
-  );
+  });
 };
 
 // Initialize sidebar scroll animation
