@@ -3,7 +3,7 @@
     class="h-[100svh] w-full sticky top-0 flex flex-col justify-center items-center px-8 overflow-hidden"
     ref="stickyContainerRef"
   >
-    <div ref="contentRef" class="text-center max-w-4xl mx-auto">
+    <div ref="contentRef" class="text-center max-w-4xl mx-auto relative">
       <h2
         ref="titleRef"
         class="text-4xl md:text-5xl font-medium text-primary leading-title"
@@ -31,9 +31,9 @@ interface Props {
  * RevealingSectionHeader Component
  *
  * A sticky full viewport component that reveals content with sophisticated text animations:
- * - First line scales down from 3x and fades in
- * - Subsequent lines fade in with staggered timing
- * - Content maintains vertical centering as lines appear
+ * - First line scales down from 3x and fades in, centered as if alone
+ * - Subsequent lines reveal word by word with opacity changes only (no Y translation)
+ * - Container moves up dynamically to keep visible content centered
  * - Uses SplitType for precise text splitting by lines and words
  * - Animations trigger when parent section (with bg-secondary-light) reaches viewport top
  *
@@ -87,7 +87,6 @@ const triggerElement = computed(() => {
 // Animation instances
 let splitTypeInstance: SplitType | null = null;
 let timelineAnimation: any = null;
-let centeringAnimation: any = null;
 
 // Split text into lines and words
 const initializeSplitText = () => {
@@ -99,10 +98,68 @@ const initializeSplitText = () => {
   }
 
   splitTypeInstance = new SplitType(titleRef.value, {
-    types: "lines",
+    types: "lines,words",
     lineClass: "split-line",
     wordClass: "split-word",
     tagName: "span",
+  });
+};
+
+// Calculate visible height based on word opacities
+const calculateVisibleHeight = () => {
+  if (!splitTypeInstance?.lines) return 0;
+
+  let visibleHeight = 0;
+
+  splitTypeInstance.lines.forEach((line, lineIndex) => {
+    const lineHeight = line.offsetHeight;
+    const marginBottom = parseFloat(getComputedStyle(line).marginBottom) || 0;
+
+    if (lineIndex === 0) {
+      // First line is always fully visible
+      visibleHeight += lineHeight + marginBottom;
+    } else {
+      // For subsequent lines, check word opacities
+      const words = Array.from(
+        line.querySelectorAll(".split-word")
+      ) as HTMLElement[];
+      if (words.length > 0) {
+        // Get average opacity of words in this line
+        const avgOpacity =
+          words.reduce((sum, word) => {
+            const opacity = parseFloat(getComputedStyle(word).opacity) || 0;
+            return sum + opacity;
+          }, 0) / words.length;
+
+        // Add proportional height based on visibility
+        if (avgOpacity > 0) {
+          visibleHeight += (lineHeight + marginBottom) * avgOpacity;
+        }
+      }
+    }
+  });
+
+  return visibleHeight;
+};
+
+// Update container position to keep content centered
+const updateCentering = () => {
+  const container = contentRef.value;
+  if (!container) return;
+
+  const visibleHeight = calculateVisibleHeight();
+  const viewportHeight = window.innerHeight;
+
+  // Calculate offset to center the visible content
+  const offset =
+    (viewportHeight - visibleHeight) / 2 -
+    container.getBoundingClientRect().top;
+
+  $gsap.to(container, {
+    y: offset,
+    duration: 0.1,
+    ease: "none",
+    overwrite: "auto",
   });
 };
 
@@ -114,18 +171,31 @@ const initializeTimelineAnimation = () => {
   const container = contentRef.value;
   if (!container) return;
 
-  // Calculate total height for centering
-  const calculateTotalHeight = () => {
-    if (!splitTypeInstance?.lines) return 0;
+  // Position subsequent lines absolutely so first line is truly centered alone
+  if (allLines.length > 1) {
+    const firstLine = allLines[0] as HTMLElement;
+    const subsequentLines = allLines.slice(1) as HTMLElement[];
 
-    let totalHeight = 0;
-    splitTypeInstance.lines.forEach((line) => {
+    // Calculate positions for each subsequent line
+    let cumulativeTop = firstLine.offsetHeight;
+    const firstLineMarginBottom =
+      parseFloat(getComputedStyle(firstLine).marginBottom) || 0;
+    cumulativeTop += firstLineMarginBottom;
+
+    subsequentLines.forEach((line, index) => {
+      // Make the line absolutely positioned
+      line.style.position = "absolute";
+      line.style.left = "50%";
+      line.style.transform = "translateX(-50%)";
+      line.style.top = `${cumulativeTop}px`;
+      line.style.width = "100%";
+
+      // Add to cumulative top for next line
       const lineHeight = line.offsetHeight;
       const marginBottom = parseFloat(getComputedStyle(line).marginBottom) || 0;
-      totalHeight += lineHeight + marginBottom;
+      cumulativeTop += lineHeight + marginBottom;
     });
-    return totalHeight;
-  };
+  }
 
   // Create a timeline that controls the entire animation sequence
   const tl = $gsap.timeline({
@@ -134,11 +204,14 @@ const initializeTimelineAnimation = () => {
       start: "top top",
       end: "center 30%",
       scrub: 1,
-      markers: true,
+      onUpdate: () => {
+        // Update centering on every scroll update
+        updateCentering();
+      },
     },
   });
 
-  // First line animation - scale down from 3x over longer scroll distance
+  // First line animation: scale down and fade in
   tl.fromTo(
     allLines[0],
     {
@@ -153,38 +226,34 @@ const initializeTimelineAnimation = () => {
     0 // Start at beginning of timeline
   );
 
-  // Subsequent lines animation - wait for first line to complete
+  // Subsequent lines animation - word by word with opacity only
   if (allLines.length > 1) {
     const subsequentLines = allLines.slice(1);
 
-    tl.fromTo(
-      subsequentLines,
-      {
-        opacity: 0,
-        y: 50,
-      },
+    // Get all words from subsequent lines
+    let allWords: HTMLElement[] = [];
+    subsequentLines.forEach((line) => {
+      const words = Array.from(
+        line.querySelectorAll(".split-word")
+      ) as HTMLElement[];
+      allWords = allWords.concat(words);
+    });
+
+    // Set initial state for all subsequent line words
+    $gsap.set(allWords, {
+      opacity: 0,
+    });
+
+    // Animate words with staggered opacity only
+    tl.to(
+      allWords,
       {
         opacity: 1,
-        y: 0,
-        duration: 0.8,
+        duration: 0.6,
         ease: "power2.out",
-        stagger: 0.15,
-        onUpdate: () => {
-          // Update vertical centering as lines appear
-          if (container && splitTypeInstance?.lines) {
-            const totalHeight = calculateTotalHeight();
-            const containerHeight = container.offsetHeight;
-            const offset = (containerHeight - totalHeight) / 2;
-
-            centeringAnimation = $gsap.to(container, {
-              y: -offset,
-              duration: 0.3,
-              ease: "power2.out",
-            });
-          }
-        },
+        stagger: 0.08, // Stagger between each word
       },
-      0.8 // Start after first line animation begins (0.8 seconds in)
+      0.6 // Start after first line begins to appear
     );
   }
 
@@ -214,20 +283,20 @@ watch(
 
 // Cleanup animations
 onUnmounted(() => {
+  // Clean up split text (this will also reset the styling)
   if (splitTypeInstance) {
     splitTypeInstance.revert();
   }
 
-  [timelineAnimation, centeringAnimation].forEach((animation) => {
-    if (animation) {
-      if (animation.scrollTrigger) {
-        animation.scrollTrigger.kill();
-      }
-      if (animation.kill) {
-        animation.kill();
-      }
+  // Clean up timeline animations
+  if (timelineAnimation) {
+    if (timelineAnimation.scrollTrigger) {
+      timelineAnimation.scrollTrigger.kill();
     }
-  });
+    if (timelineAnimation.kill) {
+      timelineAnimation.kill();
+    }
+  }
 });
 </script>
 
