@@ -104,64 +104,6 @@ const initializeSplitText = () => {
   });
 };
 
-// Calculate visible height based on word opacities
-const calculateVisibleHeight = () => {
-  if (!splitTypeInstance?.lines) return 0;
-
-  let visibleHeight = 0;
-
-  splitTypeInstance.lines.forEach((line, lineIndex) => {
-    const lineHeight = line.offsetHeight;
-    const marginBottom = parseFloat(getComputedStyle(line).marginBottom) || 0;
-
-    if (lineIndex === 0) {
-      // First line is always fully visible
-      visibleHeight += lineHeight + marginBottom;
-    } else {
-      // For subsequent lines, check word opacities
-      const words = Array.from(
-        line.querySelectorAll(".split-word")
-      ) as HTMLElement[];
-      if (words.length > 0) {
-        // Get average opacity of words in this line
-        const avgOpacity =
-          words.reduce((sum, word) => {
-            const opacity = parseFloat(getComputedStyle(word).opacity) || 0;
-            return sum + opacity;
-          }, 0) / words.length;
-
-        // Add proportional height based on visibility
-        if (avgOpacity > 0) {
-          visibleHeight += (lineHeight + marginBottom) * avgOpacity;
-        }
-      }
-    }
-  });
-
-  return visibleHeight;
-};
-
-// Update container position to keep content centered
-const updateCentering = () => {
-  const container = contentRef.value;
-  if (!container) return;
-
-  const visibleHeight = calculateVisibleHeight();
-  const viewportHeight = window.innerHeight;
-
-  // Calculate offset to center the visible content
-  const offset =
-    (viewportHeight - visibleHeight) / 2 -
-    container.getBoundingClientRect().top;
-
-  $gsap.to(container, {
-    y: offset,
-    duration: 0.1,
-    ease: "none",
-    overwrite: "auto",
-  });
-};
-
 // Combined timeline animation for all lines
 const initializeTimelineAnimation = () => {
   if (!splitTypeInstance?.lines?.length || !triggerElement.value) return;
@@ -188,32 +130,9 @@ const initializeTimelineAnimation = () => {
     });
   }
 
-  // Calculate how much to shift container up so first line appears centered
-  // The container currently has all lines, so it's centered on the full block
-  // We need to shift it up to center on just the first line
-  const calculateInitialOffset = () => {
-    if (!allLines[0] || !container) return 0;
-
-    // Calculate total height of all subsequent lines (they're invisible but take space)
-    let subsequentLinesHeight = 0;
-    if (allLines.length > 1) {
-      for (let i = 1; i < allLines.length; i++) {
-        const line = allLines[i] as HTMLElement;
-        subsequentLinesHeight += line.offsetHeight;
-        const marginBottom =
-          parseFloat(getComputedStyle(line).marginBottom) || 0;
-        subsequentLinesHeight += marginBottom;
-      }
-    }
-
-    // Shift container up by half the height of invisible lines
-    // This centers the first line as if it were alone
-    return -subsequentLinesHeight / 2;
-  };
-
-  // Set initial container position to center first line only
-  const initialOffset = calculateInitialOffset();
-  $gsap.set(container, { y: initialOffset });
+  // Set initial container position with percentage-based transform
+  // Moving down by 50% naturally centers the first line
+  $gsap.set(container, { yPercent: 50 });
 
   // Create a timeline that controls the entire animation sequence
   const tl = $gsap.timeline({
@@ -222,14 +141,10 @@ const initializeTimelineAnimation = () => {
       start: "top top",
       end: "center 30%",
       scrub: 1,
-      onUpdate: () => {
-        // Update centering on every scroll update to account for revealing content
-        updateCentering();
-      },
     },
   });
 
-  // First line animation: scale down and fade in
+  // First line animation: scale down and fade in (stays centered)
   tl.fromTo(
     allLines[0],
     {
@@ -239,9 +154,21 @@ const initializeTimelineAnimation = () => {
     {
       scale: 1,
       opacity: 1,
+      duration: 0.5,
       ease: "power2.out",
     },
     0 // Start at beginning of timeline
+  );
+
+  // Animate container back to natural position AFTER unscaling
+  tl.to(
+    container,
+    {
+      yPercent: 0,
+      duration: 0.8,
+      ease: "power2.out",
+    },
+    0.5 // Start after the scale animation completes
   );
 
   // Subsequent lines animation - word by word with opacity only
