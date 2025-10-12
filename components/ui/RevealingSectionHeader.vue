@@ -112,21 +112,19 @@ const initializeTimelineAnimation = () => {
   const container = contentRef.value;
   if (!container) return;
 
-  // Collect all words from subsequent lines first
-  let allSubsequentWords: HTMLElement[] = [];
+  // Organize words by line for subsequent lines
+  const lineWordGroups: HTMLElement[][] = [];
   if (allLines.length > 1) {
     const subsequentLines = allLines.slice(1);
     subsequentLines.forEach((line) => {
       const words = Array.from(
         line.querySelectorAll(".split-word")
       ) as HTMLElement[];
-      allSubsequentWords = allSubsequentWords.concat(words);
-    });
-
-    // Set initial state for subsequent words to 0 opacity
-    // This must happen BEFORE calculating initial offset
-    $gsap.set(allSubsequentWords, {
-      opacity: 0,
+      if (words.length > 0) {
+        lineWordGroups.push(words);
+        // Set initial state for words to 0 opacity
+        $gsap.set(words, { opacity: 0 });
+      }
     });
   }
 
@@ -160,30 +158,43 @@ const initializeTimelineAnimation = () => {
     0 // Start at beginning of timeline
   );
 
-  // Animate container back to natural position AFTER unscaling
-  tl.to(
-    container,
-    {
-      yPercent: 0,
-      duration: 0.8,
-      ease: "power2.out",
-    },
-    0.5 // Start after the scale animation completes
-  );
+  // Animate subsequent lines with coupled container movement
+  if (lineWordGroups.length > 0) {
+    const numLines = lineWordGroups.length;
+    const yPercentPerLine = 50 / numLines; // Divide movement equally among lines
+    let currentTime = 0.5; // Start after first line scale animation
 
-  // Subsequent lines animation - word by word with opacity only
-  if (allSubsequentWords.length > 0) {
-    // Animate words with staggered opacity only
-    tl.to(
-      allSubsequentWords,
-      {
-        opacity: 1,
-        duration: 0.6,
-        ease: "power2.out",
-        stagger: 0.08, // Stagger between each word
-      },
-      0.6 // Start after first line begins to appear
-    );
+    lineWordGroups.forEach((words, lineIndex) => {
+      // Calculate yPercent values for this line's reveal
+      const yPercentFrom = 50 - yPercentPerLine * lineIndex;
+      const yPercentTo = 50 - yPercentPerLine * (lineIndex + 1);
+
+      // Animate this line's words
+      tl.to(
+        words,
+        {
+          opacity: 1,
+          duration: 0.4,
+          ease: "power2.out",
+          stagger: 0.06, // Stagger between words in this line
+        },
+        currentTime
+      );
+
+      // Simultaneously move container up by one "step"
+      tl.to(
+        container,
+        {
+          yPercent: yPercentTo,
+          duration: 0.4,
+          ease: "power2.out",
+        },
+        currentTime
+      );
+
+      // Advance time for next line
+      currentTime += 0.4;
+    });
   }
 
   // Store the timeline reference for cleanup
