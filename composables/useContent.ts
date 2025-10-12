@@ -61,7 +61,7 @@ export const useContent = () => {
   ];
 
   const selfExaminationHeader =
-    "L’autopalpation est à réaliser une fois par mois, de préférence quelques jours après la fin de vos règles, lorsque vos seins sont moins sensibles";
+    "L'autopalpation<br>est à réaliser une fois par mois, de préférence quelques jours<br>après la fin de vos règles, lorsque vos seins sont moins sensibles";
 
   return {
     mainContentElements,

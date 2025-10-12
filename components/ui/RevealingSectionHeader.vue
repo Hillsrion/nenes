@@ -3,13 +3,12 @@
     class="h-[100svh] w-full sticky top-0 flex flex-col justify-center items-center px-8 overflow-hidden"
     ref="stickyContainerRef"
   >
-    <div ref="contentRef" class="text-center max-w-4xl mx-auto relative">
+    <div ref="contentRef" class="text-center max-w-4xl mx-auto">
       <h2
         ref="titleRef"
         class="text-4xl md:text-5xl font-medium text-primary leading-title"
-      >
-        {{ title }}
-      </h2>
+        v-html="title"
+      ></h2>
     </div>
   </div>
 </template>
@@ -171,31 +170,50 @@ const initializeTimelineAnimation = () => {
   const container = contentRef.value;
   if (!container) return;
 
-  // Position subsequent lines absolutely so first line is truly centered alone
+  // Collect all words from subsequent lines first
+  let allSubsequentWords: HTMLElement[] = [];
   if (allLines.length > 1) {
-    const firstLine = allLines[0] as HTMLElement;
-    const subsequentLines = allLines.slice(1) as HTMLElement[];
+    const subsequentLines = allLines.slice(1);
+    subsequentLines.forEach((line) => {
+      const words = Array.from(
+        line.querySelectorAll(".split-word")
+      ) as HTMLElement[];
+      allSubsequentWords = allSubsequentWords.concat(words);
+    });
 
-    // Calculate positions for each subsequent line
-    let cumulativeTop = firstLine.offsetHeight;
-    const firstLineMarginBottom =
-      parseFloat(getComputedStyle(firstLine).marginBottom) || 0;
-    cumulativeTop += firstLineMarginBottom;
-
-    subsequentLines.forEach((line, index) => {
-      // Make the line absolutely positioned
-      line.style.position = "absolute";
-      line.style.left = "50%";
-      line.style.transform = "translateX(-50%)";
-      line.style.top = `${cumulativeTop}px`;
-      line.style.width = "100%";
-
-      // Add to cumulative top for next line
-      const lineHeight = line.offsetHeight;
-      const marginBottom = parseFloat(getComputedStyle(line).marginBottom) || 0;
-      cumulativeTop += lineHeight + marginBottom;
+    // Set initial state for subsequent words to 0 opacity
+    // This must happen BEFORE calculating initial offset
+    $gsap.set(allSubsequentWords, {
+      opacity: 0,
     });
   }
+
+  // Calculate how much to shift container up so first line appears centered
+  // The container currently has all lines, so it's centered on the full block
+  // We need to shift it up to center on just the first line
+  const calculateInitialOffset = () => {
+    if (!allLines[0] || !container) return 0;
+
+    // Calculate total height of all subsequent lines (they're invisible but take space)
+    let subsequentLinesHeight = 0;
+    if (allLines.length > 1) {
+      for (let i = 1; i < allLines.length; i++) {
+        const line = allLines[i] as HTMLElement;
+        subsequentLinesHeight += line.offsetHeight;
+        const marginBottom =
+          parseFloat(getComputedStyle(line).marginBottom) || 0;
+        subsequentLinesHeight += marginBottom;
+      }
+    }
+
+    // Shift container up by half the height of invisible lines
+    // This centers the first line as if it were alone
+    return -subsequentLinesHeight / 2;
+  };
+
+  // Set initial container position to center first line only
+  const initialOffset = calculateInitialOffset();
+  $gsap.set(container, { y: initialOffset });
 
   // Create a timeline that controls the entire animation sequence
   const tl = $gsap.timeline({
@@ -205,7 +223,7 @@ const initializeTimelineAnimation = () => {
       end: "center 30%",
       scrub: 1,
       onUpdate: () => {
-        // Update centering on every scroll update
+        // Update centering on every scroll update to account for revealing content
         updateCentering();
       },
     },
@@ -227,26 +245,10 @@ const initializeTimelineAnimation = () => {
   );
 
   // Subsequent lines animation - word by word with opacity only
-  if (allLines.length > 1) {
-    const subsequentLines = allLines.slice(1);
-
-    // Get all words from subsequent lines
-    let allWords: HTMLElement[] = [];
-    subsequentLines.forEach((line) => {
-      const words = Array.from(
-        line.querySelectorAll(".split-word")
-      ) as HTMLElement[];
-      allWords = allWords.concat(words);
-    });
-
-    // Set initial state for all subsequent line words
-    $gsap.set(allWords, {
-      opacity: 0,
-    });
-
+  if (allSubsequentWords.length > 0) {
     // Animate words with staggered opacity only
     tl.to(
-      allWords,
+      allSubsequentWords,
       {
         opacity: 1,
         duration: 0.6,
@@ -305,6 +307,8 @@ onUnmounted(() => {
 .split-line {
   display: block;
   overflow: visible;
+  text-align: center;
+  transition: height 0.3s ease, margin 0.3s ease;
 }
 
 .split-word {
