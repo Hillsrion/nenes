@@ -1,19 +1,17 @@
 <template>
-  <section class="h-[200svh] relative z-20" ref="sectionRef">
-    <div
-      class="h-[100svh] w-full sticky top-0 flex flex-col justify-center items-center px-8 overflow-hidden"
-      ref="stickyContainerRef"
-    >
-      <div ref="contentRef" class="text-center max-w-4xl mx-auto">
-        <h2
-          ref="titleRef"
-          class="text-4xl md:text-5xl font-medium text-primary leading-title"
-        >
-          {{ title }}
-        </h2>
-      </div>
+  <div
+    class="h-[100svh] w-full sticky top-0 flex flex-col justify-center items-center px-8 overflow-hidden"
+    ref="stickyContainerRef"
+  >
+    <div ref="contentRef" class="text-center max-w-4xl mx-auto">
+      <h2
+        ref="titleRef"
+        class="text-4xl md:text-5xl font-medium text-primary leading-title"
+      >
+        {{ title }}
+      </h2>
     </div>
-  </section>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -88,8 +86,7 @@ const triggerElement = computed(() => {
 
 // Animation instances
 let splitTypeInstance: SplitType | null = null;
-let firstLineAnimation: any = null;
-let linesAnimation: any = null;
+let timelineAnimation: any = null;
 let centeringAnimation: any = null;
 
 // Split text into lines and words
@@ -109,44 +106,11 @@ const initializeSplitText = () => {
   });
 };
 
-// First line animation (scale and opacity)
-const initializeFirstLineAnimation = () => {
+// Combined timeline animation for all lines
+const initializeTimelineAnimation = () => {
   if (!splitTypeInstance?.lines?.length || !triggerElement.value) return;
 
-  const firstLine = splitTypeInstance.lines[0];
-
-  firstLineAnimation = $gsap.fromTo(
-    firstLine,
-    {
-      scale: 3,
-      opacity: 0,
-    },
-    {
-      scale: 1,
-      opacity: 1,
-      duration: 1.2,
-      ease: "power2.out",
-      scrollTrigger: {
-        trigger: triggerElement.value,
-        start: "top top",
-        end: "top bottom",
-        scrub: 1,
-        markers: true,
-      },
-    }
-  );
-};
-
-// Animate subsequent lines and maintain vertical centering
-const initializeLinesAnimation = () => {
-  if (
-    !splitTypeInstance?.lines ||
-    splitTypeInstance.lines.length <= 1 ||
-    !triggerElement.value
-  )
-    return;
-
-  const lines = splitTypeInstance.lines.slice(1); // Skip first line (already animated)
+  const allLines = splitTypeInstance.lines;
   const container = contentRef.value;
   if (!container) return;
 
@@ -163,29 +127,51 @@ const initializeLinesAnimation = () => {
     return totalHeight;
   };
 
-  linesAnimation = $gsap.fromTo(
-    lines,
+  // Create a timeline that controls the entire animation sequence
+  const tl = $gsap.timeline({
+    scrollTrigger: {
+      trigger: triggerElement.value,
+      start: "top top",
+      end: "center 30%",
+      scrub: 1,
+      markers: true,
+    },
+  });
+
+  // First line animation - scale down from 3x over longer scroll distance
+  tl.fromTo(
+    allLines[0],
     {
+      scale: 3,
       opacity: 0,
-      y: 50,
     },
     {
+      scale: 1,
       opacity: 1,
-      y: 0,
-      duration: 0.8,
       ease: "power2.out",
-      stagger: 0.15,
-      scrollTrigger: {
-        trigger: triggerElement.value,
-        start: "top center+=100px",
-        end: "bottom center",
-        scrub: 1,
-        onUpdate: (self) => {
-          // Update vertical centering based on progress
-          const progress = self.progress;
-          const visibleLines = Math.floor(progress * lines.length) + 1; // +1 for first line
+    },
+    0 // Start at beginning of timeline
+  );
 
-          if (visibleLines > 1 && container && splitTypeInstance?.lines) {
+  // Subsequent lines animation - wait for first line to complete
+  if (allLines.length > 1) {
+    const subsequentLines = allLines.slice(1);
+
+    tl.fromTo(
+      subsequentLines,
+      {
+        opacity: 0,
+        y: 50,
+      },
+      {
+        opacity: 1,
+        y: 0,
+        duration: 0.8,
+        ease: "power2.out",
+        stagger: 0.15,
+        onUpdate: () => {
+          // Update vertical centering as lines appear
+          if (container && splitTypeInstance?.lines) {
             const totalHeight = calculateTotalHeight();
             const containerHeight = container.offsetHeight;
             const offset = (containerHeight - totalHeight) / 2;
@@ -198,8 +184,12 @@ const initializeLinesAnimation = () => {
           }
         },
       },
-    }
-  );
+      0.8 // Start after first line animation begins (0.8 seconds in)
+    );
+  }
+
+  // Store the timeline reference for cleanup
+  timelineAnimation = tl;
 };
 
 // Initialize all animations
@@ -208,8 +198,7 @@ const initializeAnimations = () => {
 
   nextTick(() => {
     initializeSplitText();
-    initializeFirstLineAnimation();
-    initializeLinesAnimation();
+    initializeTimelineAnimation();
   });
 };
 
@@ -229,18 +218,16 @@ onUnmounted(() => {
     splitTypeInstance.revert();
   }
 
-  [firstLineAnimation, linesAnimation, centeringAnimation].forEach(
-    (animation) => {
-      if (animation) {
-        if (animation.scrollTrigger) {
-          animation.scrollTrigger.kill();
-        }
-        if (animation.kill) {
-          animation.kill();
-        }
+  [timelineAnimation, centeringAnimation].forEach((animation) => {
+    if (animation) {
+      if (animation.scrollTrigger) {
+        animation.scrollTrigger.kill();
+      }
+      if (animation.kill) {
+        animation.kill();
       }
     }
-  );
+  });
 });
 </script>
 
