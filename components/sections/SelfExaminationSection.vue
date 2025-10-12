@@ -1,5 +1,5 @@
 <template>
-  <section class="py-16 h-[400svh] relative z-20 -mt-[25svh]">
+  <section class="py-16 relative z-20 -mt-[25svh]">
     <div
       class="bg-secondary-light rounded-t-4xl h-full w-full"
       ref="containerRef"
@@ -8,16 +8,25 @@
         :title="selfExaminationHeader"
         :parent-section="containerRef"
       />
+      <ExaminationSteps :steps="steps" />
     </div>
   </section>
 </template>
 
 <script setup>
 import RevealingSectionHeader from "~/components/ui/RevealingSectionHeader.vue";
+import ExaminationSteps from "~/components/ui/ExaminationSteps.vue";
 import { useContent } from "~/composables/useContent";
 import { ref } from "vue";
 
 const { selfExaminationHeader } = useContent();
+
+const { steps } = defineProps({
+  steps: {
+    type: Array,
+    required: true,
+  },
+});
 
 const containerRef = ref(null);
 </script>

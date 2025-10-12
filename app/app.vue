@@ -28,7 +28,7 @@
         />
         <SymptomsSection :title="symptomsMainTitle" :cards="symptomsCards" />
 
-        <SelfExaminationSection />
+        <SelfExaminationSection :steps="selfExaminationSteps" />
 
         <!-- Resources Section -->
         <!-- <ResourcesSection /> -->
@@ -60,6 +60,7 @@ const {
   screeningMainTitle,
   symptomsMainTitle,
   symptomsCards,
+  selfExaminationSteps,
 } = useContent();
 
 // Reactive state for loading completion

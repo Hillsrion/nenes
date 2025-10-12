@@ -177,6 +177,10 @@ const initializeTimelineAnimation = () => {
       opacity: 0,
       duration: 0.3,
       ease: "power2.out",
+      onComplete: () => {
+        // Signal completion to the animations store
+        store.updateSectionState("self-examination-header", "isComplete");
+      },
     },
     currentTime + 0.5 // Wait a bit more after the last line animation
   );

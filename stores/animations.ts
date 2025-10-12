@@ -4,6 +4,7 @@ type TSection =
   | "loading"
   | "statistics"
   | "content"
+  | "self-examination-header"
   | "self-examination"
   | "symptoms"
   | "resources";
@@ -14,6 +15,7 @@ const sections: Record<TSection, { state: TSectionAnimationState }> = {
   loading: { state: "idle" },
   statistics: { state: "idle" },
   content: { state: "idle" },
+  "self-examination-header": { state: "idle" },
   "self-examination": { state: "idle" },
   symptoms: { state: "idle" },
   resources: { state: "idle" },

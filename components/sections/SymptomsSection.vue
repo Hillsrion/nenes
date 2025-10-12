@@ -7,14 +7,12 @@
       class="h-[100svh] w-full px-8 sticky top-0 left-1/2 z-10 mx-auto flex flex-col justify-center overflow-hidden"
     >
       <Title ref="titleRef" :title="title" />
-
-      <!-- Cards Container -->
       <div class="absolute inset-0">
         <div
           v-for="(card, index) in cards"
           :key="card.title"
           :ref="(el) => setCardRef(el, index)"
-          class="testimonial-wrapper w-[600%] aspect-square absolute top-1/2 -left-[250%] sm:w-[500%] sm:-left-[200%] lg:w-[300%] lg:-left-[100%]"
+          class="w-[600%] aspect-square absolute top-1/2 -left-[250%] sm:w-[500%] sm:-left-[200%] lg:w-[300%] lg:-left-[100%]"
         >
           <div
             class="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[25vw] min-w-[400px]"
@@ -34,9 +32,9 @@
 <script setup lang="ts">
 import { useNuxtApp } from "nuxt/app";
 import { ref, onUnmounted, watch, PropType } from "vue";
-import Title from "~/components/ui/Title.vue";
 import { useAnimationsStore } from "~/stores";
 import { Card } from "~/types";
+import Title from "~/components/ui/Title.vue";
 import SymptomCard from "~/components/ui/SymptomCard.vue";
 
 const props = defineProps({
