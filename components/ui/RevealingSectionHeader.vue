@@ -1,7 +1,6 @@
 <template>
   <div
     class="h-[100svh] w-full sticky top-0 flex flex-col justify-center items-center px-8 overflow-hidden"
-    ref="stickyContainerRef"
   >
     <div ref="contentRef" class="text-center max-w-4xl mx-auto">
       <h2
@@ -26,29 +25,6 @@ interface Props {
   parentSection?: HTMLElement;
 }
 
-/**
- * RevealingSectionHeader Component
- *
- * A sticky full viewport component that reveals content with sophisticated text animations:
- * - First line scales down from 3x and fades in, centered as if alone
- * - Subsequent lines reveal word by word with opacity changes only (no Y translation)
- * - Container moves up dynamically to keep visible content centered
- * - Uses SplitType for precise text splitting by lines and words
- * - Animations trigger when parent section (with bg-secondary-light) reaches viewport top
- *
- * Props:
- * - title: The text content to animate (can be multi-line)
- * - parentSection: Optional parent section element to use as scroll trigger
- *                  If not provided, automatically finds parent with bg-secondary-light class
- *
- * Usage:
- * <RevealingSectionHeader title="Your Title Here" />
- * <RevealingSectionHeader title="Your Title Here" :parent-section="parentRef" />
- *
- * The component integrates with the animation store and triggers animations
- * when the loading sequence completes and the parent section hits the viewport top.
- */
-
 // Define props with proper typing for template access
 const props = defineProps<Props>();
 
@@ -57,7 +33,6 @@ const store = useAnimationsStore();
 
 // Refs
 const sectionRef = ref<HTMLElement | null>(null);
-const stickyContainerRef = ref<HTMLElement | null>(null);
 const contentRef = ref<HTMLElement | null>(null);
 const titleRef = ref<HTMLElement | null>(null);
 
@@ -159,14 +134,12 @@ const initializeTimelineAnimation = () => {
   );
 
   // Animate subsequent lines with coupled container movement
+  let currentTime = 0.5; // Start after first line scale animation
   if (lineWordGroups.length > 0) {
     const numLines = lineWordGroups.length;
     const yPercentPerLine = 50 / numLines; // Divide movement equally among lines
-    let currentTime = 0.5; // Start after first line scale animation
 
     lineWordGroups.forEach((words, lineIndex) => {
-      // Calculate yPercent values for this line's reveal
-      const yPercentFrom = 50 - yPercentPerLine * lineIndex;
       const yPercentTo = 50 - yPercentPerLine * (lineIndex + 1);
 
       // Animate this line's words
@@ -196,6 +169,17 @@ const initializeTimelineAnimation = () => {
       currentTime += 0.4;
     });
   }
+
+  // Final animation: fade out title to opacity 0
+  tl.to(
+    titleRef.value,
+    {
+      opacity: 0,
+      duration: 0.3,
+      ease: "power2.out",
+    },
+    currentTime + 0.5 // Wait a bit more after the last line animation
+  );
 
   // Store the timeline reference for cleanup
   timelineAnimation = tl;
