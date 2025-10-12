@@ -4,11 +4,7 @@
       class="h-[100svh] w-full sticky top-0 flex flex-col justify-center items-center px-8 overflow-hidden"
       ref="stickyContainerRef"
     >
-      <div
-        ref="contentRef"
-        class="text-center max-w-4xl mx-auto"
-        :class="contentClass"
-      >
+      <div ref="contentRef" class="text-center max-w-4xl mx-auto">
         <h2
           ref="titleRef"
           class="text-4xl md:text-5xl font-medium text-primary leading-title"
@@ -21,7 +17,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onUnmounted, watch, nextTick } from "vue";
+import { ref, onUnmounted, watch, nextTick, computed } from "vue";
 import SplitType from "split-type";
 import { useAnimationsStore } from "../../stores";
 
@@ -30,7 +26,7 @@ declare const useNuxtApp: () => { $gsap: any };
 
 interface Props {
   title: string;
-  contentClass?: string;
+  parentSection?: HTMLElement;
 }
 
 /**
@@ -41,17 +37,23 @@ interface Props {
  * - Subsequent lines fade in with staggered timing
  * - Content maintains vertical centering as lines appear
  * - Uses SplitType for precise text splitting by lines and words
+ * - Animations trigger when parent section (with bg-secondary-light) reaches viewport top
+ *
+ * Props:
+ * - title: The text content to animate (can be multi-line)
+ * - parentSection: Optional parent section element to use as scroll trigger
+ *                  If not provided, automatically finds parent with bg-secondary-light class
  *
  * Usage:
  * <RevealingSectionHeader title="Your Title Here" />
+ * <RevealingSectionHeader title="Your Title Here" :parent-section="parentRef" />
  *
  * The component integrates with the animation store and triggers animations
- * when the loading sequence completes.
+ * when the loading sequence completes and the parent section hits the viewport top.
  */
 
-const props = withDefaults(defineProps<Props>(), {
-  contentClass: "",
-});
+// Define props with proper typing for template access
+const props = defineProps<Props>();
 
 const { $gsap } = useNuxtApp();
 const store = useAnimationsStore();
@@ -61,6 +63,28 @@ const sectionRef = ref<HTMLElement | null>(null);
 const stickyContainerRef = ref<HTMLElement | null>(null);
 const contentRef = ref<HTMLElement | null>(null);
 const titleRef = ref<HTMLElement | null>(null);
+
+// Computed trigger element (parent section or current section)
+const triggerElement = computed(() => {
+  // If parentSection prop is provided, use it
+  if (props.parentSection) {
+    return props.parentSection;
+  }
+
+  // Otherwise, try to find parent with bg-secondary-light class
+  if (sectionRef.value) {
+    let parent = sectionRef.value.parentElement;
+    while (parent && !parent.classList.contains("bg-secondary-light")) {
+      parent = parent.parentElement;
+    }
+    if (parent) {
+      return parent;
+    }
+  }
+
+  // Fallback to current section
+  return sectionRef.value;
+});
 
 // Animation instances
 let splitTypeInstance: SplitType | null = null;
@@ -87,7 +111,7 @@ const initializeSplitText = () => {
 
 // First line animation (scale and opacity)
 const initializeFirstLineAnimation = () => {
-  if (!splitTypeInstance?.lines?.length) return;
+  if (!splitTypeInstance?.lines?.length || !triggerElement.value) return;
 
   const firstLine = splitTypeInstance.lines[0];
 
@@ -103,10 +127,11 @@ const initializeFirstLineAnimation = () => {
       duration: 1.2,
       ease: "power2.out",
       scrollTrigger: {
-        trigger: sectionRef.value,
-        start: "top 80%",
-        end: "top 20%",
+        trigger: triggerElement.value,
+        start: "top top",
+        end: "top bottom",
         scrub: 1,
+        markers: true,
       },
     }
   );
@@ -114,7 +139,12 @@ const initializeFirstLineAnimation = () => {
 
 // Animate subsequent lines and maintain vertical centering
 const initializeLinesAnimation = () => {
-  if (!splitTypeInstance?.lines || splitTypeInstance.lines.length <= 1) return;
+  if (
+    !splitTypeInstance?.lines ||
+    splitTypeInstance.lines.length <= 1 ||
+    !triggerElement.value
+  )
+    return;
 
   const lines = splitTypeInstance.lines.slice(1); // Skip first line (already animated)
   const container = contentRef.value;
@@ -146,9 +176,9 @@ const initializeLinesAnimation = () => {
       ease: "power2.out",
       stagger: 0.15,
       scrollTrigger: {
-        trigger: sectionRef.value,
-        start: "top 60%",
-        end: "top -100%",
+        trigger: triggerElement.value,
+        start: "top center+=100px",
+        end: "bottom center",
         scrub: 1,
         onUpdate: (self) => {
           // Update vertical centering based on progress
@@ -174,7 +204,7 @@ const initializeLinesAnimation = () => {
 
 // Initialize all animations
 const initializeAnimations = () => {
-  if (!sectionRef.value) return;
+  if (!triggerElement.value) return;
 
   nextTick(() => {
     initializeSplitText();
@@ -187,7 +217,7 @@ const initializeAnimations = () => {
 watch(
   () => store.getSectionState("loading"),
   (loadingState) => {
-    if (loadingState === "isComplete" && sectionRef.value) {
+    if (loadingState === "isComplete" && triggerElement.value) {
       initializeAnimations();
     }
   }
