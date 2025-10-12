@@ -3,12 +3,7 @@
     <h3 class="relative z-1" :class="titleClasses">
       {{ title }}
     </h3>
-    <p
-      v-if="description"
-      class="text-primary text-base lg:text-xl leading-normal mt-2"
-    >
-      {{ description }}
-    </p>
+    <CardContent v-if="description" :content="description" />
     <img
       v-if="hasImage"
       :src="image"
@@ -21,6 +16,9 @@
 </template>
 
 <script setup lang="ts">
+import CardContent from "~/components/ui/CardContent.vue";
+import { computed } from "vue";
+
 const { image } = defineProps({
   title: {
     type: String,
