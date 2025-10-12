@@ -28,7 +28,7 @@
         />
         <SymptomsSection :title="symptomsMainTitle" :cards="symptomsCards" />
 
-        <!-- <SelfExaminationSection /> -->
+        <SelfExaminationSection />
 
         <!-- Resources Section -->
         <!-- <ResourcesSection /> -->
