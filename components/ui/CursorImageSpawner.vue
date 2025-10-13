@@ -568,12 +568,23 @@ watch(
   }
 );
 
-// Watch for entry cover scaling - stop animation when cover starts to grow
+// Watch for entry cover scaling - stop animation when cover starts to grow, restart when scrolling back
 watch(
   () => animationsStore.getCoverScaling,
   (isScaling) => {
     if (isScaling && isActive.value) {
+      // Cover is growing - stop the animation
       stopAnimation();
+    } else if (
+      !isScaling &&
+      !isActive.value &&
+      !props.disabled &&
+      !isMobileOrTouch.value &&
+      isLoaded.value &&
+      animationsStore.getSectionState("loading") === "isComplete"
+    ) {
+      // Cover is no longer scaling (scrolled back) - restart the animation
+      startAnimation(false); // Don't reinitialize position, use current cursor position
     }
   }
 );
