@@ -98,7 +98,7 @@ const detectMobileOrTouch = (): boolean => {
   return hasTouch || hasCoarsePointer || noHover || smallScreen;
 };
 
-// Mouse tracking
+// Mouse tracking - will be initialized to center or current cursor position
 const mouse = reactive({ x: 0, y: 0, nX: 0, nY: 0 });
 const target = reactive({ x: 0, y: 0 });
 
@@ -140,10 +140,11 @@ const onResize = () => {
     wasMobileOrTouch &&
     !isMobileOrTouch.value &&
     !props.disabled &&
-    isLoaded.value
+    isLoaded.value &&
+    animationsStore.getSectionState("loading") === "isComplete"
   ) {
     startMouse();
-    startAnimation();
+    startAnimation(true);
   }
 };
 
@@ -158,6 +159,19 @@ const onMouseMove = (event: MouseEvent) => {
   mouse.y = clamp(event.clientY - rect.top, 0, canvasState.value.height);
   mouse.nX = (mouse.x / canvasState.value.width) * 2 - 1;
   mouse.nY = -(mouse.y / canvasState.value.height) * 2 + 1;
+};
+
+/**
+ * Initialize mouse position to center of canvas
+ */
+const initializeMousePosition = () => {
+  // Initialize to center of canvas
+  mouse.x = canvasState.value.width / 2;
+  mouse.y = canvasState.value.height / 2;
+  mouse.nX = 0;
+  mouse.nY = 0;
+  target.x = mouse.x;
+  target.y = mouse.y;
 };
 
 /**
@@ -397,8 +411,9 @@ const animate = (timestamp: number) => {
 
 /**
  * Start animation with force scale fade in
+ * @param initializePosition - Whether to initialize mouse position before starting
  */
-const startAnimation = () => {
+const startAnimation = (initializePosition = false) => {
   if (
     isActive.value ||
     !canvasComposable?.context.value ||
@@ -408,6 +423,11 @@ const startAnimation = () => {
     return;
 
   isActive.value = true;
+
+  // Initialize mouse position to center before starting (if requested)
+  if (initializePosition) {
+    initializeMousePosition();
+  }
 
   // Animate force scale from 0 to 1
   const startTime = performance.now();
@@ -481,11 +501,18 @@ onMounted(async () => {
   await loadImages();
   setupCanvas();
 
-  // Only start mouse tracking and animation on non-touch devices
+  // Only start mouse tracking on non-touch devices
+  // Don't start animation yet - wait for loading section to complete
   if (!isMobileOrTouch.value) {
     startMouse();
-    if (!props.disabled) {
-      startAnimation();
+
+    // If loading section is already complete, start animation immediately
+    if (
+      !props.disabled &&
+      animationsStore.getSectionState("loading") === "isComplete"
+    ) {
+      // Initialize position and start animation
+      startAnimation(true);
     }
   }
 
@@ -510,26 +537,36 @@ watch(
   async (disabled) => {
     if (disabled || isMobileOrTouch.value) {
       stopAnimation();
-    } else if (isLoaded.value) {
-      startAnimation();
+    } else if (
+      isLoaded.value &&
+      animationsStore.getSectionState("loading") === "isComplete"
+    ) {
+      // Only start if loading section is complete
+      startAnimation(true);
     } else if (assetPreloader.isComplete.value) {
-      // If not loaded but assets are preloaded, load images and start
+      // If not loaded but assets are preloaded, load images
       await loadImages();
-      startAnimation();
+      // Don't start yet if loading is not complete
+      if (animationsStore.getSectionState("loading") === "isComplete") {
+        startAnimation(true);
+      }
     }
   }
 );
 
-// Watch for cover scaling state changes
+// Watch for loading section state changes
 watch(
-  () => animationsStore.getCoverScaling,
-  (isCoverScaling) => {
-    if (isCoverScaling) {
-      // Stop animation when cover starts scaling
-      stopAnimation();
-    } else if (!props.disabled && !isMobileOrTouch.value && isLoaded.value) {
-      // Restart animation when cover stops scaling (if other conditions allow)
-      startAnimation();
+  () => animationsStore.getSectionState("loading"),
+  (loadingState) => {
+    if (
+      loadingState === "isComplete" &&
+      !props.disabled &&
+      !isMobileOrTouch.value &&
+      isLoaded.value
+    ) {
+      // When loading section completes (including translate animation),
+      // initialize mouse position and start animation
+      startAnimation(true);
     }
   }
 );
