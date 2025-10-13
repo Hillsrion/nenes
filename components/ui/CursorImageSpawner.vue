@@ -72,6 +72,28 @@ const imageArray = ref<ImageItem[]>([]);
 // Asset preloader
 const assetPreloader = useAssetPreloader();
 
+// Device detection - disable on mobile/touch devices
+const isMobileOrTouch = ref(false);
+
+/**
+ * Detect if device is mobile or touch-enabled
+ */
+const detectMobileOrTouch = (): boolean => {
+  // Check for touch capability
+  const hasTouch = "ontouchstart" in window || navigator.maxTouchPoints > 0;
+
+  // Check for coarse pointer (typical of touch devices)
+  const hasCoarsePointer = window.matchMedia("(pointer: coarse)").matches;
+
+  // Check for no hover capability (typical of touch devices)
+  const noHover = window.matchMedia("(hover: none)").matches;
+
+  // Check screen width as fallback
+  const smallScreen = window.innerWidth < 768;
+
+  return hasTouch || hasCoarsePointer || noHover || smallScreen;
+};
+
 // Mouse tracking
 const mouse = reactive({ x: 0, y: 0, nX: 0, nY: 0 });
 const target = reactive({ x: 0, y: 0 });
@@ -97,8 +119,32 @@ const grid = reactive<GridSettings>({
 // Force scale animation
 const forceScaleState = reactive({ value: 0 });
 
+/**
+ * Handle window resize - re-detect device type
+ */
+const onResize = () => {
+  const wasMobileOrTouch = isMobileOrTouch.value;
+  isMobileOrTouch.value = detectMobileOrTouch();
+
+  // If device type changed from non-touch to touch, stop animation
+  if (!wasMobileOrTouch && isMobileOrTouch.value) {
+    stopAnimation();
+    stopMouse();
+  }
+  // If device type changed from touch to non-touch, start animation
+  else if (
+    wasMobileOrTouch &&
+    !isMobileOrTouch.value &&
+    !props.disabled &&
+    isLoaded.value
+  ) {
+    startMouse();
+    startAnimation();
+  }
+};
+
 const onMouseMove = (event: MouseEvent) => {
-  if (props.disabled) return;
+  if (props.disabled || isMobileOrTouch.value) return;
 
   // Get mouse position relative to the canvas container
   const rect = containerRef.value?.getBoundingClientRect();
@@ -256,6 +302,7 @@ const animate = (timestamp: number) => {
     !canvasComposable?.canvas.value ||
     !isLoaded.value ||
     props.disabled ||
+    isMobileOrTouch.value ||
     !canvasState.value.width ||
     !canvasState.value.height
   ) {
@@ -351,7 +398,8 @@ const startAnimation = () => {
   if (
     isActive.value ||
     !canvasComposable?.context.value ||
-    !canvasComposable?.canvas.value
+    !canvasComposable?.canvas.value ||
+    isMobileOrTouch.value
   )
     return;
 
@@ -418,6 +466,9 @@ const stopAnimation = () => {
 
 // Lifecycle
 onMounted(async () => {
+  // Detect mobile/touch devices
+  isMobileOrTouch.value = detectMobileOrTouch();
+
   // Wait for asset preloading to complete (if not already done)
   if (!assetPreloader.isComplete.value) {
     await assetPreloader.preloadAllAssets();
@@ -425,15 +476,22 @@ onMounted(async () => {
 
   await loadImages();
   setupCanvas();
-  startMouse();
 
-  if (!props.disabled) {
-    startAnimation();
+  // Only start mouse tracking and animation on non-touch devices
+  if (!isMobileOrTouch.value) {
+    startMouse();
+    if (!props.disabled) {
+      startAnimation();
+    }
   }
+
+  // Listen for resize events to re-detect device type
+  window.addEventListener("resize", onResize, { passive: true });
 });
 
 onUnmounted(() => {
   stopMouse();
+  window.removeEventListener("resize", onResize);
   if (animationId) {
     cancelAnimationFrame(animationId);
   }
@@ -446,7 +504,7 @@ onUnmounted(() => {
 watch(
   () => props.disabled,
   async (disabled) => {
-    if (disabled) {
+    if (disabled || isMobileOrTouch.value) {
       stopAnimation();
     } else if (isLoaded.value) {
       startAnimation();
