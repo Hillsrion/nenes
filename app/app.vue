@@ -32,6 +32,7 @@
 
         <!-- Resources Section -->
         <ResourcesSection />
+        <CursorImageSpawner />
       </div>
     </MainLayout>
   </div>
@@ -46,6 +47,7 @@ import SelfExaminationSection from "~/components/sections/SelfExaminationSection
 import SymptomsSection from "~/components/sections/SymptomsSection.vue";
 import ResourcesSection from "~/components/sections/ResourcesSection.vue";
 import Logo from "~/components/ui/Logo.vue";
+import CursorImageSpawner from "~/components/ui/CursorImageSpawner.vue";
 import { useAnimationsStore } from "~/stores";
 import { useContent } from "~/composables/useContent";
 

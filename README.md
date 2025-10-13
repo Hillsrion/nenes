@@ -2,16 +2,49 @@
 
 A French breast cancer awareness website built with Nuxt 4, focusing on education, self-examination guidance, and essential resources for breast cancer awareness and prevention.
 
-## Setup
+## ✨ Features
 
-Make sure to install dependencies:
+- **Interactive UI Components**: Canvas-based cursor tracking effects with floating animations
+- **Responsive Design**: Mobile-first approach with smooth scroll animations
+- **French Content**: Culturally appropriate health education content
+- **Performance Optimized**: Hardware-accelerated animations and efficient rendering
+- **Accessibility Focused**: Screen reader support and keyboard navigation
+
+### 🎨 CursorImageSpawner Component
+
+A high-performance canvas-based image particle system that creates floating animations following cursor movement with distance-based scaling.
+
+**Key Features:**
+
+- 60fps canvas rendering with mouse tracking
+- Distance-based image scaling (closer = larger)
+- Responsive grid system with parallax effects
+- Smooth fade in/out animations
+
+**Basic Usage:**
+
+```vue
+<template>
+  <CursorImageSpawner :images="['/images/illustrations/1.svg']" />
+</template>
+```
+
+**Props:**
+
+- `images` (string[]): Array of image URLs (default: illustrations 1-8)
+- `disabled` (boolean): Disable effect for mobile (default: false)
+- `forceScale` (number): Scaling multiplier (default: 1)
+
+## 🚀 Quick Start
+
+### Installation
 
 ```bash
+# pnpm (recommended)
+pnpm install
+
 # npm
 npm install
-
-# pnpm
-pnpm install
 
 # yarn
 yarn install
@@ -20,56 +53,68 @@ yarn install
 bun install
 ```
 
-## Development Server
-
-Start the development server on `http://localhost:3000`:
+### Development
 
 ```bash
-# npm
-npm run dev
-
-# pnpm
+# Start development server
 pnpm dev
-
-# yarn
-yarn dev
-
-# bun
-bun run dev
+# Open http://localhost:3000
 ```
 
-## Production
-
-Build the application for production:
+### Production
 
 ```bash
-# npm
-npm run build
-
-# pnpm
+# Build for production
 pnpm build
 
-# yarn
-yarn build
-
-# bun
-bun run build
-```
-
-Locally preview production build:
-
-```bash
-# npm
-npm run preview
-
-# pnpm
+# Preview production build
 pnpm preview
-
-# yarn
-yarn preview
-
-# bun
-bun run preview
 ```
 
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
+## 📁 Project Structure
+
+```
+components/
+├── sections/        # Full-height page sections with animations
+├── ui/             # Reusable UI components
+│   └── CursorImageSpawner.vue  # Interactive cursor effects
+└── layout/         # Layout components
+
+composables/        # Vue 3 composables for animations & utilities
+assets/            # CSS, images, and static assets
+public/            # Static files served directly
+```
+
+## 🎯 Key Components
+
+### Section Components
+
+- **LoadingSection**: Animated loading screen with progress
+- **StatisticsSection**: Interactive statistics with floating animations
+- **SelfExaminationSection**: Step-by-step self-examination guide
+- **SymptomsSection**: Visual symptom awareness cards
+- **ResourcesSection**: Contact information and resources
+
+### Animation System
+
+- Intersection Observer-based scroll triggers
+- GSAP-powered animations with ScrollTrigger
+- Lenis smooth scrolling integration
+- Hardware-accelerated CSS transforms
+
+## 🛠️ Tech Stack
+
+- **Framework**: Nuxt 4 with Vue 3 Composition API
+- **Language**: TypeScript with strict typing
+- **Styling**: Tailwind CSS v4
+- **Animation**: GSAP with ScrollTrigger
+- **Performance**: Canvas API for complex effects
+
+## 📝 Content Guidelines
+
+- **Language**: French throughout the application
+- **Medical Accuracy**: Content reviewed for medical precision
+- **Cultural Sensitivity**: Appropriate tone for health education
+- **Accessibility**: WCAG compliant design patterns
+
+Check out the [Nuxt deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
