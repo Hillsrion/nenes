@@ -431,17 +431,14 @@ const startAnimation = (initializePosition = false) => {
 
   // Animate force scale from 0 to 1
   const startTime = performance.now();
-  const duration = 300;
+  const duration = 800;
 
   const animateForceScale = (currentTime: number) => {
     const elapsed = currentTime - startTime;
     const progress = Math.min(elapsed / duration, 1);
 
-    // Ease power2.inOut approximation
-    const eased =
-      progress < 0.5
-        ? 2 * progress * progress
-        : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+    // Ease cubic.out for smoother, natural fade-in
+    const eased = 1 - Math.pow(1 - progress, 3);
 
     forceScaleState.value = eased;
 
