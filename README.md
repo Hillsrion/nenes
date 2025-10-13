@@ -151,6 +151,32 @@ export function useMyCanvas(container: Ref<HTMLElement | null>) {
 - `init(canvasElement)` - Initialize with a canvas element
 - `resize()` - Manually trigger resize
 
+#### Math Utils (`utils/mathUtils.ts`)
+
+A collection of mathematical utility functions commonly used in animations and graphics programming.
+
+**Functions:**
+
+- `clamp(value, min, max)` - Clamps a value between min and max bounds
+- `modulo(value, modulus)` - Modulo operation that handles negative numbers correctly
+- `lerp(start, end, factor)` - Linear interpolation between two values
+- `wrap(min, max, value)` - Wraps a value within a specified range
+
+**Usage:**
+
+```typescript
+import { clamp, lerp, wrap } from "~/utils/mathUtils";
+
+// Clamp a value between 0 and 100
+const clampedValue = clamp(someValue, 0, 100);
+
+// Linear interpolation
+const interpolated = lerp(startValue, endValue, 0.5);
+
+// Wrap value within range
+const wrapped = wrap(0, 360, angleValue);
+```
+
 ## 🛠️ Tech Stack
 
 - **Framework**: Nuxt 4 with Vue 3 Composition API

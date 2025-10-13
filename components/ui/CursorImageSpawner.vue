@@ -19,8 +19,10 @@
  */
 
 // @ts-ignore - Nuxt auto-imports
-import { ref, reactive, onMounted, onUnmounted, watch } from "vue";
+import { ref, reactive, onMounted, onUnmounted, watch, type Ref } from "vue";
 import { useCanvas } from "../../composables/useCanvas";
+import { useAssetPreloader } from "../../composables/useAssetPreloader";
+import { clamp, modulo, lerp, wrap } from "../../utils/mathUtils";
 
 interface ImageItem {
   img: HTMLImageElement;
@@ -59,23 +61,25 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 // Refs
-const containerRef = ref<HTMLElement>();
-const canvasRef = ref<HTMLCanvasElement>();
+const containerRef = ref<HTMLElement | null>(null);
+const canvasRef = ref<HTMLCanvasElement | null>(null);
 
 // State
 const isActive = ref(false);
 const isLoaded = ref(false);
 const imageArray = ref<ImageItem[]>([]);
 
+// Asset preloader
+const assetPreloader = useAssetPreloader();
+
 // Mouse tracking
 const mouse = reactive({ x: 0, y: 0, nX: 0, nY: 0 });
 const target = reactive({ x: 0, y: 0 });
 
 // Canvas variables
-let canvas: HTMLCanvasElement | null = null;
-let ctx: CanvasRenderingContext2D | null = null;
 let animationId: number | null = null;
 let canvasDispose: (() => void) | null = null;
+let canvasComposable: ReturnType<typeof useCanvas> | null = null;
 
 // Canvas state
 const canvasState = ref({ width: 0, height: 0 });
@@ -92,32 +96,6 @@ const grid = reactive<GridSettings>({
 
 // Force scale animation
 const forceScaleState = reactive({ value: 0 });
-
-/**
- * Utility: Clamp value between min and max
- */
-const clamp = (value: number, min: number, max: number): number =>
-  value < min ? min : value > max ? max : value;
-
-/**
- * Utility: Modulo operation that handles negative numbers
- */
-const modulo = (value: number, modulus: number): number =>
-  ((value % modulus) + modulus) % modulus;
-
-/**
- * Utility: Linear interpolation
- */
-const lerp = (start: number, end: number, factor: number): number =>
-  start + (end - start) * factor;
-
-/**
- * Utility: Wrap value within range
- */
-const wrap = (min: number, max: number, value: number): number => {
-  const range = max - min;
-  return min + modulo(value - min, range);
-};
 
 const onMouseMove = (event: MouseEvent) => {
   if (props.disabled) return;
@@ -150,7 +128,7 @@ const loadImages = async (): Promise<void> => {
   // Create image categories with ratios
   const imageCategories = props.images.map((url, index) => ({
     id: `image${index}`,
-    ratio: 600 / 600,
+    ratio: 1, // Default ratio, will be updated when image loads
     url,
   }));
 
@@ -164,7 +142,7 @@ const loadImages = async (): Promise<void> => {
       }))
   );
 
-  // Shuffle array
+  // Shuffle array for visual variety
   for (let i = expandedImages.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [expandedImages[i], expandedImages[j]] = [
@@ -173,13 +151,20 @@ const loadImages = async (): Promise<void> => {
     ];
   }
 
-  // Load images and store them
-  let loadedCount = 0;
+  // Load images (should be fast since asset preloader handles caching)
   const loadedImages: ImageItem[] = [];
 
   await new Promise<void>((resolve) => {
+    let loadedCount = 0;
+
     expandedImages.forEach((imageData, index) => {
       const img = new Image();
+
+      // Set crossOrigin for external assets if needed
+      if (imageData.url.startsWith("http")) {
+        img.crossOrigin = "anonymous";
+      }
+
       img.onload = () => {
         // Calculate actual ratio from loaded image
         const ratio = img.width / img.height;
@@ -193,6 +178,15 @@ const loadImages = async (): Promise<void> => {
           resolve();
         }
       };
+
+      img.onerror = () => {
+        console.warn(`Failed to load image: ${imageData.url}`);
+        loadedCount++;
+        if (loadedCount === expandedImages.length) {
+          resolve();
+        }
+      };
+
       img.src = imageData.url;
     });
   });
@@ -228,35 +222,28 @@ const setupCanvas = () => {
   if (!containerRef.value || !canvasRef.value) return;
 
   // Initialize canvas using the composable
-  const {
-    init,
-    canvas: canvasElement,
-    context,
-    dispose: disposeCanvas,
-    state,
-  } = useCanvas(containerRef, {
+  const canvasComp = useCanvas(containerRef, {
     autoResize: true,
     onResize: () => {
       // Update canvas state when canvas is resized
       canvasState.value = {
-        width: state.value.width,
-        height: state.value.height,
+        width: canvasComp.state.value.width,
+        height: canvasComp.state.value.height,
       };
       updateGridSettings();
     },
   });
 
-  init(canvasRef.value);
+  canvasComp.init(canvasRef.value);
 
-  // Set the canvas and context variables for use in animations
-  canvas = canvasElement.value;
-  ctx = context.value;
-  canvasDispose = disposeCanvas;
+  // Store the composable for use in animations
+  canvasComposable = canvasComp;
+  canvasDispose = canvasComp.dispose;
 
   // Update canvas state initially
   canvasState.value = {
-    width: state.value.width,
-    height: state.value.height,
+    width: canvasComp.state.value.width,
+    height: canvasComp.state.value.height,
   };
 };
 
@@ -265,8 +252,8 @@ const setupCanvas = () => {
  */
 const animate = (timestamp: number) => {
   if (
-    !ctx ||
-    !canvas ||
+    !canvasComposable?.context.value ||
+    !canvasComposable?.canvas.value ||
     !isLoaded.value ||
     props.disabled ||
     !canvasState.value.width ||
@@ -275,6 +262,9 @@ const animate = (timestamp: number) => {
     animationId = requestAnimationFrame(animate);
     return;
   }
+
+  const ctx = canvasComposable.context.value;
+  const canvas = canvasComposable.canvas.value;
 
   // Clear canvas
   ctx.clearRect(0, 0, canvasState.value.width, canvasState.value.height);
@@ -358,7 +348,12 @@ const animate = (timestamp: number) => {
  * Start animation with force scale fade in
  */
 const startAnimation = () => {
-  if (isActive.value || !ctx || !canvas) return;
+  if (
+    isActive.value ||
+    !canvasComposable?.context.value ||
+    !canvasComposable?.canvas.value
+  )
+    return;
 
   isActive.value = true;
 
@@ -423,6 +418,11 @@ const stopAnimation = () => {
 
 // Lifecycle
 onMounted(async () => {
+  // Wait for asset preloading to complete (if not already done)
+  if (!assetPreloader.isComplete.value) {
+    await assetPreloader.preloadAllAssets();
+  }
+
   await loadImages();
   setupCanvas();
   startMouse();
@@ -445,10 +445,14 @@ onUnmounted(() => {
 // Watch for disabled prop changes
 watch(
   () => props.disabled,
-  (disabled) => {
+  async (disabled) => {
     if (disabled) {
       stopAnimation();
     } else if (isLoaded.value) {
+      startAnimation();
+    } else if (assetPreloader.isComplete.value) {
+      // If not loaded but assets are preloaded, load images and start
+      await loadImages();
       startAnimation();
     }
   }
