@@ -4,7 +4,7 @@
     <video
       ref="videoRef"
       :src="currentVideoUrl"
-      class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full h-full object-cover"
+      class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full h-full object-cover scale-0 origin-center"
       autoplay
       muted
       loop
@@ -49,8 +49,7 @@ const props = defineProps<Props>();
 const { $gsap } = useNuxtApp();
 const store = useAnimationsStore();
 
-// Register ScrollTrigger plugin
-const ScrollTrigger = $gsap.ScrollTrigger;
+// GSAP with ScrollTrigger is registered globally in the app
 
 // Refs
 const videoRef = ref<HTMLVideoElement | null>(null);
@@ -70,98 +69,120 @@ const currentVideoUrl = computed(() => {
   return "";
 });
 
-// Animation instances
-let masterTimeline: any = null;
-
-// Initialize all animations with ScrollTrigger
+// Initialize all animations with GSAP ScrollTrigger
 const initializeAnimations = () => {
   if (!containerRef.value || !videoRef.value) return;
-
-  // Kill any existing timeline
-  if (masterTimeline) {
-    masterTimeline.kill();
-  }
 
   // Set initial video state
   $gsap.set(videoRef.value, { scale: 0 });
 
-  // Video entrance animation
-  $gsap.to(videoRef.value, {
-    scale: 1,
-    duration: 0.8,
-    ease: "power2.out",
-  });
+  // Video entrance animation using GSAP with ScrollTrigger
+  $gsap.fromTo(
+    videoRef.value,
+    { scale: 0 },
+    {
+      scale: 1,
+      duration: 0.8,
+      ease: "power2.out",
+      scrollTrigger: {
+        trigger: containerRef.value,
+        start: "top center",
+        end: "center center",
+        scrub: false,
+      },
+    }
+  );
 
-  // Card entrance animations - trigger when each card comes into view
+  // Card entrance animations using GSAP with ScrollTrigger
   nextTick(() => {
     cardRefs.value.forEach((card, index) => {
       if (card) {
         $gsap.set(card, { opacity: 0, y: 32 });
 
-        ScrollTrigger.create({
-          trigger: card,
-          start: "top 80%",
-          end: "top 60%",
-          onEnter: () => {
-            $gsap.to(card, {
-              opacity: 1,
-              y: 0,
-              duration: 0.6,
-              ease: "power2.out",
-            });
-          },
-          onLeaveBack: () => {
-            $gsap.to(card, {
-              opacity: 0,
-              y: 32,
-              duration: 0.3,
-              ease: "power2.out",
-            });
-          },
-        });
+        // Card entrance animation
+        $gsap.fromTo(
+          card,
+          { opacity: 0, y: 32 },
+          {
+            opacity: 1,
+            y: 0,
+            duration: 0.6,
+            ease: "power2.out",
+            scrollTrigger: {
+              trigger: card,
+              start: "top 80%",
+              end: "top 60%",
+              scrub: false,
+            },
+          }
+        );
+
+        // Card exit animation when scrolling back
+        $gsap.fromTo(
+          card,
+          { opacity: 1, y: 0 },
+          {
+            opacity: 0,
+            y: 32,
+            duration: 0.3,
+            ease: "power2.out",
+            scrollTrigger: {
+              trigger: card,
+              start: "top 60%",
+              end: "top 80%",
+              scrub: false,
+            },
+          }
+        );
       }
     });
 
-    // Video URL switching - trigger when each card section is in view
+    // Video URL switching using GSAP with ScrollTrigger
     props.steps.forEach((_, index) => {
       const cardElement = cardRefs.value[index];
       if (cardElement) {
-        ScrollTrigger.create({
-          trigger: cardElement,
-          start: "top 50%",
-          end: "bottom 50%",
-          onEnter: () => {
-            currentStepIndex.value = index;
-          },
-          onEnterBack: () => {
-            currentStepIndex.value = index;
-          },
-        });
+        $gsap.fromTo(
+          {},
+          {},
+          {
+            scrollTrigger: {
+              trigger: cardElement,
+              start: "top 50%",
+              end: "bottom 50%",
+              onEnter: () => {
+                currentStepIndex.value = index;
+              },
+              onEnterBack: () => {
+                currentStepIndex.value = index;
+              },
+            },
+          }
+        );
       }
     });
   });
 };
 
-// Watch for header completion to start entry animation
+// Watch for loading completion to start animations
 watch(
-  () => store.getSectionState("self-examination-header"),
-  (headerState) => {
-    if (headerState === "isComplete") {
-      nextTick(() => {
+  () => store.getSectionState("loading"),
+  (loadingState) => {
+    if (
+      loadingState === "isComplete" &&
+      containerRef.value &&
+      containerRef.value.parentElement
+    ) {
+      setTimeout(() => {
         initializeAnimations();
-      });
+      }, 1000);
     }
   }
 );
 
 // Cleanup
 onUnmounted(() => {
-  // Kill all ScrollTriggers associated with this component
-  ScrollTrigger.getAll().forEach((trigger) => {
-    if (trigger.vars.trigger && cardRefs.value.includes(trigger.vars.trigger)) {
-      trigger.kill();
-    }
-  });
+  // Kill all GSAP animations and ScrollTriggers
+  $gsap.killTweensOf([videoRef.value, ...cardRefs.value]);
 });
 </script>
 
