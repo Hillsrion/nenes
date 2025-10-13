@@ -20,6 +20,7 @@
 
 // @ts-ignore - Nuxt auto-imports
 import { ref, reactive, onMounted, onUnmounted, watch } from "vue";
+import { useCanvas } from "../../composables/useCanvas";
 
 interface ImageItem {
   img: HTMLImageElement;
@@ -76,6 +77,9 @@ let ctx: CanvasRenderingContext2D | null = null;
 let animationId: number | null = null;
 let canvasDispose: (() => void) | null = null;
 
+// Canvas state
+const canvasState = ref({ width: 0, height: 0 });
+
 // Grid settings
 const grid = reactive<GridSettings>({
   imgSize: 75,
@@ -118,10 +122,14 @@ const wrap = (min: number, max: number, value: number): number => {
 const onMouseMove = (event: MouseEvent) => {
   if (props.disabled) return;
 
-  mouse.x = clamp(event.clientX, 0, window.innerWidth);
-  mouse.y = clamp(event.clientY, 0, window.innerHeight);
-  mouse.nX = (mouse.x / window.innerWidth) * 2 - 1;
-  mouse.nY = -(mouse.y / window.innerHeight) * 2 + 1;
+  // Get mouse position relative to the canvas container
+  const rect = containerRef.value?.getBoundingClientRect();
+  if (!rect) return;
+
+  mouse.x = clamp(event.clientX - rect.left, 0, canvasState.value.width);
+  mouse.y = clamp(event.clientY - rect.top, 0, canvasState.value.height);
+  mouse.nX = (mouse.x / canvasState.value.width) * 2 - 1;
+  mouse.nY = -(mouse.y / canvasState.value.height) * 2 + 1;
 };
 
 /**
@@ -199,66 +207,18 @@ const loadImages = async (): Promise<void> => {
  */
 const updateGridSettings = () => {
   // Responsive sizing
-  if (window.innerWidth >= 1024) {
-    grid.imgSize = window.innerHeight * 0.075;
-    grid.maxDistance = window.innerHeight * 0.3;
+  if (canvasState.value.width >= 1024) {
+    grid.imgSize = canvasState.value.height * 0.075;
+    grid.maxDistance = canvasState.value.height * 0.3;
   } else {
-    grid.imgSize = window.innerHeight * 0.05;
-    grid.maxDistance = window.innerHeight * 0.2;
+    grid.imgSize = canvasState.value.height * 0.05;
+    grid.maxDistance = canvasState.value.height * 0.2;
   }
 
-  grid.gap = window.innerHeight * 0.06;
+  grid.gap = canvasState.value.height * 0.06;
   grid.step = grid.imgSize + grid.gap;
-  grid.cols = Math.ceil(window.innerWidth / (grid.imgSize + grid.gap));
-  grid.rows = Math.ceil(window.innerHeight / (grid.imgSize + grid.gap));
-};
-
-/**
- * Create canvas
- */
-const createCanvas = (options: {
-  wrapper: HTMLElement;
-  canvas: HTMLCanvasElement;
-  autoResize: boolean;
-  onResizeCallback?: () => void;
-}) => {
-  let context: CanvasRenderingContext2D | null = null;
-  let dpr = 0;
-  let width = 0;
-  let height = 0;
-
-  const resize = () => {
-    context = options.canvas.getContext("2d");
-    if (!context) return;
-
-    dpr = Math.min(window.devicePixelRatio, 2);
-    width = options.wrapper.offsetWidth;
-    height = options.wrapper.offsetHeight;
-    options.canvas.width = width * dpr;
-    options.canvas.height = height * dpr;
-    options.canvas.style.width = `${width}px`;
-    options.canvas.style.height = `${height}px`;
-    context.scale(dpr, dpr);
-    options.onResizeCallback?.();
-  };
-
-  if (options.autoResize) {
-    window.addEventListener("resize", resize);
-  }
-
-  resize();
-
-  return {
-    canvas: options.canvas,
-    wW: width,
-    wH: height,
-    getContext: () => context,
-    dispose: () => {
-      if (options.autoResize) {
-        window.removeEventListener("resize", resize);
-      }
-    },
-  };
+  grid.cols = Math.ceil(canvasState.value.width / (grid.imgSize + grid.gap));
+  grid.rows = Math.ceil(canvasState.value.height / (grid.imgSize + grid.gap));
 };
 
 /**
@@ -267,31 +227,57 @@ const createCanvas = (options: {
 const setupCanvas = () => {
   if (!containerRef.value || !canvasRef.value) return;
 
-  const canvasData = createCanvas({
-    wrapper: containerRef.value,
-    canvas: canvasRef.value,
+  // Initialize canvas using the composable
+  const {
+    init,
+    canvas: canvasElement,
+    context,
+    dispose: disposeCanvas,
+    state,
+  } = useCanvas(containerRef, {
     autoResize: true,
-    onResizeCallback: updateGridSettings,
+    onResize: () => {
+      // Update canvas state when canvas is resized
+      canvasState.value = {
+        width: state.value.width,
+        height: state.value.height,
+      };
+      updateGridSettings();
+    },
   });
 
-  canvas = canvasData.canvas;
-  ctx = canvasData.getContext();
-  canvasDispose = canvasData.dispose;
+  init(canvasRef.value);
 
-  updateGridSettings();
+  // Set the canvas and context variables for use in animations
+  canvas = canvasElement.value;
+  ctx = context.value;
+  canvasDispose = disposeCanvas;
+
+  // Update canvas state initially
+  canvasState.value = {
+    width: state.value.width,
+    height: state.value.height,
+  };
 };
 
 /**
  * Animation loop
  */
 const animate = (timestamp: number) => {
-  if (!ctx || !canvas || !isLoaded.value || props.disabled) {
+  if (
+    !ctx ||
+    !canvas ||
+    !isLoaded.value ||
+    props.disabled ||
+    !canvasState.value.width ||
+    !canvasState.value.height
+  ) {
     animationId = requestAnimationFrame(animate);
     return;
   }
 
   // Clear canvas
-  ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+  ctx.clearRect(0, 0, canvasState.value.width, canvasState.value.height);
 
   // Smooth mouse interpolation
   target.x = lerp(target.x, mouse.x, 0.005);
@@ -320,13 +306,13 @@ const animate = (timestamp: number) => {
       // Calculate position with parallax effect
       const x = wrap(
         -grid.step - grid.gap,
-        window.innerWidth + grid.step,
+        canvasState.value.width + grid.step,
         col * grid.step + timestamp * 0.1
       );
 
       const y = wrap(
         -grid.step - grid.gap,
-        window.innerHeight + grid.step,
+        canvasState.value.height + grid.step,
         row * grid.step - timestamp * 0.1
       );
 
@@ -372,7 +358,7 @@ const animate = (timestamp: number) => {
  * Start animation with force scale fade in
  */
 const startAnimation = () => {
-  if (isActive.value) return;
+  if (isActive.value || !ctx || !canvas) return;
 
   isActive.value = true;
 

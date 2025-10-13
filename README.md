@@ -102,6 +102,55 @@ public/            # Static files served directly
 - Lenis smooth scrolling integration
 - Hardware-accelerated CSS transforms
 
+### 🎯 Composables
+
+#### useCanvas
+
+A Vue composable for managing HTML5 Canvas elements with automatic resizing, device pixel ratio handling, and proper cleanup.
+
+**Features:**
+
+- Automatic canvas resizing with DPR (device pixel ratio) support
+- Context management and cleanup
+- Responsive to container size changes
+- Memory leak prevention
+
+**Basic Usage:**
+
+```typescript
+import { useCanvas } from "~/composables/useCanvas";
+
+export function useMyCanvas(container: Ref<HTMLElement | null>) {
+  const { canvas, context, dispose } = useCanvas(container, {
+    autoResize: true,
+    dpr: Math.min(window.devicePixelRatio, 2),
+    onResize: () => {
+      // Handle resize if needed
+    },
+  });
+
+  onUnmounted(() => {
+    dispose();
+  });
+
+  return {
+    canvas,
+    context,
+    draw: (ctx: CanvasRenderingContext2D) => {
+      // Your drawing logic here
+    },
+  };
+}
+```
+
+**API:**
+
+- `canvas` - The HTMLCanvasElement reference
+- `context` - The 2D rendering context
+- `dispose()` - Cleanup function for event listeners
+- `init(canvasElement)` - Initialize with a canvas element
+- `resize()` - Manually trigger resize
+
 ## 🛠️ Tech Stack
 
 - **Framework**: Nuxt 4 with Vue 3 Composition API
