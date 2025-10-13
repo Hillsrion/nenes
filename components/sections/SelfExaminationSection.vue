@@ -1,7 +1,7 @@
 <template>
-  <section class="py-16 relative z-20 -mt-[25svh]">
+  <section class="relative z-20 -mt-[25svh]">
     <div
-      class="bg-secondary-light rounded-t-4xl h-full w-full"
+      class="bg-secondary-light py-16 rounded-t-4xl h-full w-full"
       ref="containerRef"
     >
       <RevealingSectionHeader

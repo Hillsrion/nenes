@@ -1,8 +1,5 @@
 <template>
-  <section
-    class="h-screen py-9 bg-primary rounded-t-4xl sticky top-0 z-30"
-    ref="sectionRef"
-  >
+  <section class="h-screen py-9 bg-primary rounded-t-4xl sticky top-0 z-30">
     <div class="container mx-auto px-8 h-full flex flex-col justify-between">
       <div class="flex items-center justify-between flex-1 pt-15">
         <div class="flex flex-col w-3/5">
@@ -28,9 +25,17 @@
               <p class="lg:text-xl leading-normal">
                 {{ resource.description }}
               </p>
-              <p class="text-xl text-secondary" v-if="resource.phone">
+              <a
+                class="text-xl text-secondary"
+                :title="`Appeler le numéro ${resource.phone}`"
+                v-if="resource.phone"
+                :href="`tel:${resource.phone}`"
+              >
                 {{ resource.phone }}
-              </p>
+                <span class="italic text-base"
+                  >(appel et service gratuits)</span
+                >
+              </a>
               <a
                 class="text-xl text-secondary underline"
                 :href="resource.website"
@@ -78,33 +83,29 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
-
-const sectionRef = ref(null);
-
-const resources = ref([
+const resources = [
   {
     title: "Numéro national Cancer Info",
-    phone: "0 805 123 124 (appel et service gratuits)",
+    phone: "0 805 123 124",
     description:
       "Pour obtenir des informations fiables et échanger avec des spécialistes.",
   },
   {
     title: "Ruban rose",
-    website: "www.cancerdusein.org",
+    website: "https://www.cancerdusein.org",
     description:
       "Association dédiée à la sensibilisation et au financement de la recherche.",
   },
   {
     title: "La Ligue contre le cancer",
-    website: "www.ligue-cancer.net",
+    website: "https://www.ligue-cancer.net",
     description:
       "Informations, soutien psychologique, accompagnement et groupes de parole.",
   },
   {
     title: "Santé publique France",
-    website: "www.santepubliquefrance.fr",
+    website: "https://www.santepubliquefrance.fr",
     description: "Recommandations officielles et ressources sur le dépistage.",
   },
-]);
+];
 </script>

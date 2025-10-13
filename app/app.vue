@@ -31,7 +31,7 @@
         <SelfExaminationSection :steps="selfExaminationSteps" />
 
         <!-- Resources Section -->
-        <!-- <ResourcesSection /> -->
+        <ResourcesSection />
       </div>
     </MainLayout>
   </div>
