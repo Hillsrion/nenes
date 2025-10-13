@@ -568,6 +568,16 @@ watch(
   }
 );
 
+// Watch for entry cover scaling - stop animation when cover starts to grow
+watch(
+  () => animationsStore.getCoverScaling,
+  (isScaling) => {
+    if (isScaling && isActive.value) {
+      stopAnimation();
+    }
+  }
+);
+
 // Expose methods
 defineExpose({
   start: startAnimation,
