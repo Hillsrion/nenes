@@ -1,8 +1,12 @@
 <template>
-  <section class="h-screen py-9 bg-primary rounded-t-4xl sticky top-0 z-30">
-    <div class="container mx-auto px-8 h-full flex flex-col justify-between">
-      <div class="flex items-center justify-between flex-1 pt-15">
-        <div class="flex flex-col w-3/5">
+  <section class="lg:h-screen py-9 bg-primary rounded-t-4xl sticky top-0 z-30">
+    <div
+      class="container mx-auto px-6 xl:px-8 h-full flex flex-col justify-between"
+    >
+      <div
+        class="flex flex-wrap items-center justify-between flex-1 lg:pt-15 md:pt-10 sm:pt-6 pt-4"
+      >
+        <div class="flex flex-col md:w-3/5 w-full">
           <h2
             class="text-secondary mb-6 uppercase leading-normal text-base tracking-title-sm"
           >
@@ -16,7 +20,7 @@
             >
               <div class="flex items-center justify-between">
                 <h3
-                  class="text-2xl leading-tight font-semibold text-secondary flex-1"
+                  class="lg:text-2xl text-xl leading-tight font-semibold text-secondary flex-1"
                 >
                   {{ resource.title }}
                 </h3>
@@ -26,7 +30,7 @@
                 {{ resource.description }}
               </p>
               <a
-                class="text-xl text-secondary"
+                class="lg:text-xl text-secondary"
                 :title="`Appeler le numéro ${resource.phone}`"
                 v-if="resource.phone"
                 :href="`tel:${resource.phone}`"
@@ -37,8 +41,12 @@
                 >
               </a>
               <a
-                class="text-xl text-secondary underline"
-                :href="resource.website"
+                class="lg:text-xl text-secondary underline"
+                :href="
+                  resource.website.startsWith('http')
+                    ? resource.website
+                    : `https://${resource.website}`
+                "
                 target="_blank"
                 v-if="resource.website"
               >
@@ -47,26 +55,24 @@
             </div>
           </div>
         </div>
-        <div>
+        <div class="md:w-auto sm:w-4/5 w-3/5 mx-auto my-8 md:mx-0 md:my-0">
           <img
             src="/images/illustrations/1.svg"
             width="221"
             height="221"
+            class="mx-auto max-w-full"
             alt="Illustration de poitrine"
           />
         </div>
       </div>
 
       <div
-        class="pt-8 flex justify-between items-center text-secondary leading-normal font-normal text-base"
+        class="pt-8 flex flex-wrap gap-2 justify-between items-center text-secondary leading-normal font-normal text-base"
       >
         <p>© {{ new Date().getFullYear() }} - nénés</p>
         <p>
           Design par
-          <a
-            href="https://www.instagram.com/anais_boucherie/"
-            target="_blank"
-            class="underline"
+          <a href="https://anabanana.fr" target="_blank" class="underline"
             >Anaïs</a
           >
           - Photos & Dev par
@@ -92,19 +98,19 @@ const resources = [
   },
   {
     title: "Ruban rose",
-    website: "https://www.cancerdusein.org",
+    website: "www.cancerdusein.org",
     description:
       "Association dédiée à la sensibilisation et au financement de la recherche.",
   },
   {
     title: "La Ligue contre le cancer",
-    website: "https://www.ligue-cancer.net",
+    website: "www.ligue-cancer.net",
     description:
       "Informations, soutien psychologique, accompagnement et groupes de parole.",
   },
   {
     title: "Santé publique France",
-    website: "https://www.santepubliquefrance.fr",
+    website: "www.santepubliquefrance.fr",
     description: "Recommandations officielles et ressources sur le dépistage.",
   },
 ];
