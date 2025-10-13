@@ -1,6 +1,12 @@
 <template>
-  <div ref="containerRef" class="cursor-image-spawner">
-    <canvas ref="canvasRef"></canvas>
+  <div
+    ref="containerRef"
+    class="fixed top-0 left-0 w-screen h-screen pointer-events-none z-[9999] overflow-hidden"
+  >
+    <canvas
+      ref="canvasRef"
+      class="absolute top-0 left-0 w-full h-full"
+    ></canvas>
   </div>
 </template>
 
@@ -471,23 +477,3 @@ defineExpose({
 });
 </script>
 
-<style scoped>
-.cursor-image-spawner {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  pointer-events: none;
-  z-index: 9999;
-  overflow: hidden;
-}
-
-.cursor-image-spawner canvas {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-}
-</style>
