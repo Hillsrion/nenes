@@ -1,70 +1,86 @@
 <template>
   <section
-    class="min-h-screen py-16 bg-gradient-to-br from-nenes-sky-light to-nenes-sky-dark"
+    class="h-screen py-9 bg-primary rounded-t-4xl sticky top-0 z-30"
     ref="sectionRef"
   >
-    <div class="max-w-6xl mx-auto px-8 text-center">
-      <div class="mb-16">
-        <h2 class="text-4xl font-bold text-gray-800 mb-4">
-          RESSOURCES ESSENTIELLES
-        </h2>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-16">
-        <div
-          v-for="(resource, index) in resources"
-          :key="index"
-          class="bg-white/90 rounded-3xl p-8 shadow-lg backdrop-blur-md border border-white/50 opacity-0 translate-y-8 transition-all duration-700 ease-out"
-          :class="{ 'opacity-100 translate-y-0 animate-slide-up': isVisible }"
-          :style="{ animationDelay: `${index * 0.2}s` }"
-        >
-          <div class="flex items-center justify-between mb-6">
-            <h3 class="text-2xl font-semibold text-gray-800 flex-1">
-              {{ resource.title }}
-            </h3>
+    <div class="container mx-auto px-8 h-full flex flex-col justify-between">
+      <div class="flex items-center justify-between flex-1 pt-15">
+        <div class="flex flex-col w-3/5">
+          <h2
+            class="text-secondary mb-6 uppercase leading-normal text-base tracking-title-sm"
+          >
+            Ressources essentielles
+          </h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-10 mb-16">
             <div
-              class="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-purple-600 flex items-center justify-center ml-4"
+              v-for="(resource, index) in resources"
+              :key="index"
+              class="text-secondary text-left space-y-4"
             >
-              <div class="w-6 h-6 rounded-full bg-white/30"></div>
-            </div>
-          </div>
+              <div class="flex items-center justify-between">
+                <h3
+                  class="text-2xl leading-tight font-semibold text-secondary flex-1"
+                >
+                  {{ resource.title }}
+                </h3>
+              </div>
 
-          <div class="text-left">
-            <div class="mb-4">
-              <p
-                class="text-xl font-semibold text-gray-700 mb-2"
-                v-if="resource.phone"
-              >
+              <p class="lg:text-xl leading-normal">
+                {{ resource.description }}
+              </p>
+              <p class="text-xl text-secondary" v-if="resource.phone">
                 {{ resource.phone }}
               </p>
-              <p
-                class="text-xl font-semibold text-gray-700 mb-2"
+              <a
+                class="text-xl text-secondary underline"
+                :href="resource.website"
+                target="_blank"
                 v-if="resource.website"
               >
                 {{ resource.website }}
-              </p>
+              </a>
             </div>
-            <p class="text-gray-600 leading-relaxed">
-              {{ resource.description }}
-            </p>
           </div>
+        </div>
+        <div>
+          <img
+            src="/images/illustrations/1.svg"
+            width="221"
+            height="221"
+            alt="Illustration de poitrine"
+          />
         </div>
       </div>
 
       <div
-        class="border-t border-white/30 pt-8 flex justify-between items-center text-gray-600"
+        class="pt-8 flex justify-between items-center text-secondary leading-normal font-normal text-base"
       >
-        <p class="text-lg">© 2025 - nénés</p>
-        <p class="text-lg">Site par Anaïs & Ismaël</p>
+        <p>© {{ new Date().getFullYear() }} - nénés</p>
+        <p>
+          Design par
+          <a
+            href="https://www.instagram.com/anais_boucherie/"
+            target="_blank"
+            class="underline"
+            >Anaïs</a
+          >
+          - Photos & Dev par
+          <a
+            href="https://www.instagram.com/ismaelsbn"
+            target="_blank"
+            class="underline"
+            >Ismaël</a
+          >
+        </p>
       </div>
     </div>
   </section>
 </template>
 
 <script setup>
-import { useSectionVisibility } from "~/composables/useSectionVisibility";
+import { ref } from "vue";
 
-const { sectionRef, isVisible } = useSectionVisibility(0.2);
+const sectionRef = ref(null);
 
 const resources = ref([
   {
