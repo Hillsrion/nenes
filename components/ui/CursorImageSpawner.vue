@@ -22,6 +22,7 @@
 import { ref, reactive, onMounted, onUnmounted, watch, type Ref } from "vue";
 import { useCanvas } from "../../composables/useCanvas";
 import { useAssetPreloader } from "../../composables/useAssetPreloader";
+import { useAnimationsStore } from "../../stores";
 import { clamp, modulo, lerp, wrap } from "../../utils/mathUtils";
 
 interface ImageItem {
@@ -71,6 +72,9 @@ const imageArray = ref<ImageItem[]>([]);
 
 // Asset preloader
 const assetPreloader = useAssetPreloader();
+
+// Animations store
+const animationsStore = useAnimationsStore();
 
 // Device detection - disable on mobile/touch devices
 const isMobileOrTouch = ref(false);
@@ -511,6 +515,20 @@ watch(
     } else if (assetPreloader.isComplete.value) {
       // If not loaded but assets are preloaded, load images and start
       await loadImages();
+      startAnimation();
+    }
+  }
+);
+
+// Watch for cover scaling state changes
+watch(
+  () => animationsStore.getCoverScaling,
+  (isCoverScaling) => {
+    if (isCoverScaling) {
+      // Stop animation when cover starts scaling
+      stopAnimation();
+    } else if (!props.disabled && !isMobileOrTouch.value && isLoaded.value) {
+      // Restart animation when cover stops scaling (if other conditions allow)
       startAnimation();
     }
   }

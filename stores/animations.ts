@@ -26,11 +26,19 @@ interface LogoState {
   isPrimary: boolean;
 }
 
+// Cover scaling state
+interface CoverState {
+  isScaling: boolean;
+}
+
 export const useAnimationsStore = defineStore("animations", {
   state: () => ({
     sections,
     logo: {
       isPrimary: true,
+    },
+    cover: {
+      isScaling: false,
     },
   }),
   actions: {
@@ -40,6 +48,9 @@ export const useAnimationsStore = defineStore("animations", {
     updateLogoColor(isPrimary: boolean) {
       this.logo.isPrimary = isPrimary;
     },
+    updateCoverScaling(isScaling: boolean) {
+      this.cover.isScaling = isScaling;
+    },
   },
   getters: {
     getSectionState: (state) => (section: TSection) => {
@@ -47,6 +58,9 @@ export const useAnimationsStore = defineStore("animations", {
     },
     getLogoState: (state) => {
       return state.logo.isPrimary;
+    },
+    getCoverScaling: (state) => {
+      return state.cover.isScaling;
     },
   },
 });
