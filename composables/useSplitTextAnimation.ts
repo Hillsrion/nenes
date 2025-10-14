@@ -19,8 +19,9 @@ export const useSplitTextAnimation = ({
   textRefs,
   sectionRef,
 }: SplitTextAnimationOptions) => {
-  // Split text triggers
+  // Split text triggers and instances
   const splitTextTriggers = ref<any[]>([]);
+  const splitInstances = ref<SplitType[]>([]);
 
   /**
    * Set text ref for split text animation
@@ -52,14 +53,9 @@ export const useSplitTextAnimation = ({
       });
 
       const split = splitTypeInstance;
-      const revert = () => splitTypeInstance.revert();
 
-      // Store the revert function for cleanup
-      onUnmounted(() => {
-        if (revert) {
-          revert();
-        }
-      });
+      // Store the split instance for cleanup
+      splitInstances.value.push(splitTypeInstance);
 
       // Set initial state: all lines visible (natural state)
       nextTick(() => {
@@ -117,7 +113,24 @@ export const useSplitTextAnimation = ({
       }
     });
     splitTextTriggers.value = [];
+
+    // Clean up split text instances
+    splitInstances.value.forEach((instance) => {
+      try {
+        if (instance && instance.revert) {
+          instance.revert();
+        }
+      } catch (error) {
+        console.warn("Error reverting split text instance:", error);
+      }
+    });
+    splitInstances.value = [];
   };
+
+  // Register cleanup on unmount at the top level
+  onUnmounted(() => {
+    cleanup();
+  });
 
   return {
     setTextRef,

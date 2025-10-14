@@ -17,11 +17,11 @@
       :key="`card-${index}`"
       class="min-h-screen flex items-center py-16"
       :class="[index % 2 === 0 ? 'justify-start' : 'justify-end']"
+      ref="cardRefs"
     >
       <ExaminationCard
         :step-number="`${index + 1}`"
         :description="step.content"
-        ref="cardRefs"
       />
     </div>
   </div>

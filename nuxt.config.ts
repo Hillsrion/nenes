@@ -37,6 +37,7 @@ export default defineNuxtConfig({
     extraPlugins: {
       scrollTrigger: true,
     },
+    autoImport: true,
   },
 
   // PostCSS configuration for Tailwind CSS

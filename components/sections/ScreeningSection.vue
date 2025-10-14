@@ -147,9 +147,21 @@ const setTitleRef = (el: any) => {
   }
 };
 
+// Store animations and split instances for cleanup
+const titleAnimations: any[] = [];
+const splitInstances: any[] = [];
+
 // Initialize split text animation for title with 50% starting opacity
 const initializeTitleAnimation = () => {
-  if (!textRefs.value.length) return;
+  if (!textRefs.value.length || !sectionRef.value) return;
+
+  const triggerElement = sectionRef.value.parentElement;
+  if (!triggerElement) {
+    console.warn(
+      "initializeTitleAnimation: sectionRef.parentElement not found"
+    );
+    return;
+  }
 
   textRefs.value.forEach((textElement) => {
     if (!textElement) return;
@@ -162,13 +174,11 @@ const initializeTitleAnimation = () => {
     });
 
     const split = splitTypeInstance;
-
-    // Store the revert function for cleanup
-    const revert = () => splitTypeInstance.revert();
+    splitInstances.push(splitTypeInstance);
 
     // Set initial state and create scroll trigger animation
     nextTick(() => {
-      if (!split?.lines?.length || !sectionRef?.value) return;
+      if (!split?.lines?.length) return;
       // Create scroll trigger animation that goes from 50% to 100% opacity line by line
       const titleAnimation = $gsap.fromTo(
         split.lines,
@@ -180,7 +190,7 @@ const initializeTitleAnimation = () => {
           ease: "power2.out",
           stagger: 0.05, // Stagger each line
           scrollTrigger: {
-            trigger: sectionRef.value.parentElement,
+            trigger: triggerElement,
             start: "top 80%", // Start when section enters viewport
             end: "center center", // End when section reaches center
             scrub: 1, // Smooth scrubbing
@@ -188,53 +198,32 @@ const initializeTitleAnimation = () => {
         }
       );
 
-      // Cleanup on unmount
-      onUnmounted(() => {
-        if (titleAnimation && titleAnimation.scrollTrigger) {
-          titleAnimation.scrollTrigger.kill();
-        }
-        if (titleAnimation && titleAnimation.kill) {
-          titleAnimation.kill();
-        }
-        if (logoScrollTrigger && logoScrollTrigger.scrollTrigger) {
-          logoScrollTrigger.scrollTrigger.kill();
-        }
-        if (logoScrollTrigger && logoScrollTrigger.kill) {
-          logoScrollTrigger.kill();
-        }
-        if (sidebarScrollTrigger && sidebarScrollTrigger.scrollTrigger) {
-          sidebarScrollTrigger.scrollTrigger.kill();
-        }
-        if (sidebarScrollTrigger && sidebarScrollTrigger.kill) {
-          sidebarScrollTrigger.kill();
-        }
-        if (fadeOutScrollTrigger && fadeOutScrollTrigger.scrollTrigger) {
-          fadeOutScrollTrigger.scrollTrigger.kill();
-        }
-        if (fadeOutScrollTrigger && fadeOutScrollTrigger.kill) {
-          fadeOutScrollTrigger.kill();
-        }
-        if (revert) {
-          revert();
-        }
-      });
+      titleAnimations.push(titleAnimation);
     });
   });
 };
 
 // Initialize logo scroll trigger for color change
 const initializeLogoColorChangeAnimation = () => {
-  if (!sectionRef.value?.parentElement) return;
+  if (!sectionRef.value?.parentElement) {
+    return;
+  }
 
   logoScrollTrigger = $gsap.timeline({
     scrollTrigger: {
       trigger: sectionRef.value.parentElement,
-      start: "top +=100px",
+      start: "top top+100px",
       end: "bottom bottom",
       onEnter: () => {
         store.updateLogoColor(true);
       },
       onLeaveBack: () => {
+        store.updateLogoColor(false);
+      },
+      onEnterBack: () => {
+        store.updateLogoColor(true);
+      },
+      onLeave: () => {
         store.updateLogoColor(false);
       },
     },
@@ -243,7 +232,7 @@ const initializeLogoColorChangeAnimation = () => {
 
 // Initialize fade out animation for the container
 const initializeFadeOutAnimation = () => {
-  if (!containerRef.value || !sidebarRef.value) return;
+  if (!containerRef.value || !sidebarRef.value || !sectionRef.value) return;
 
   // Get all sidebar elements except the last one
   const sidebarElements = Array.from(sidebarRef.value.children);
@@ -254,17 +243,24 @@ const initializeFadeOutAnimation = () => {
   const lastElementTitle = lastElement?.querySelector("h3");
   const lastElementParagraph = lastElement?.querySelector("p");
 
+  // Build array of elements to animate, filtering out null/undefined values
+  const elementsToFade = [...otherElements];
+  if (lastElementTitle) elementsToFade.push(lastElementTitle);
+  if (lastElementParagraph) elementsToFade.push(lastElementParagraph);
+
   // First ScrollTrigger: fade out other sidebar elements and last element's title/paragraph
-  $gsap.to([otherElements, lastElementTitle, lastElementParagraph], {
-    opacity: 0,
-    ease: "power2.out",
-    scrollTrigger: {
-      trigger: sectionRef.value,
-      start: `center top+=${vh(20)}`, // Start 26vh after center reaches top
-      end: `bottom top+=${vh(35)}`, // End when section bottom reaches viewport top
-      scrub: true, // Smooth scrubbing
-    },
-  });
+  if (elementsToFade.length > 0) {
+    $gsap.to(elementsToFade, {
+      opacity: 0,
+      ease: "power2.out",
+      scrollTrigger: {
+        trigger: sectionRef.value,
+        start: `center top+=${vh(20)}`, // Start 26vh after center reaches top
+        end: `bottom top+=${vh(35)}`, // End when section bottom reaches viewport top
+        scrub: true, // Smooth scrubbing
+      },
+    });
+  }
 
   // Second ScrollTrigger: scale down and fade out the container
   $gsap.to(containerRef.value, {
@@ -287,9 +283,19 @@ const initializeSidebarAnimation = () => {
     !sidebarRef.value ||
     !sectionRef.value ||
     !titleRef.value ||
-    !lastImageRef.value
+    !lastImageRef.value ||
+    !containerRef.value
   )
     return;
+
+  // Ensure parentElement exists and is a valid element
+  const triggerElement = containerRef.value.parentElement;
+  if (!triggerElement) {
+    console.warn(
+      "initializeSidebarAnimation: containerRef.parentElement not found"
+    );
+    return;
+  }
 
   // Calculate the maximum y offset needed to align the last image top with title top
   const titleRect = titleRef.value.getBoundingClientRect();
@@ -314,7 +320,7 @@ const initializeSidebarAnimation = () => {
       y: -maxOffset, // Move up by calculated offset to align last image with title
       ease: "none", // Linear movement with scroll
       scrollTrigger: {
-        trigger: containerRef.value?.parentElement,
+        trigger: triggerElement,
         start: "top top", // Start when section top reaches viewport top
         end: "center top", // End when section bottom reaches viewport top
         scrub: true, // Smooth scrubbing
@@ -333,14 +339,58 @@ watch(
       sectionRef.value.parentElement
     ) {
       setTimeout(() => {
+        initializeLogoColorChangeAnimation();
         initializeTitleAnimation();
         initializeSidebarAnimation();
         initializeFadeOutAnimation();
-        initializeLogoColorChangeAnimation();
       }, 1000);
     }
   }
 );
+
+// Cleanup on unmount
+onUnmounted(() => {
+  // Clean up title animations
+  titleAnimations.forEach((anim) => {
+    if (anim && anim.scrollTrigger) {
+      anim.scrollTrigger.kill();
+    }
+    if (anim && anim.kill) {
+      anim.kill();
+    }
+  });
+
+  // Clean up split instances
+  splitInstances.forEach((instance) => {
+    if (instance && instance.revert) {
+      instance.revert();
+    }
+  });
+
+  // Clean up logo scroll trigger
+  if (logoScrollTrigger && logoScrollTrigger.scrollTrigger) {
+    logoScrollTrigger.scrollTrigger.kill();
+  }
+  if (logoScrollTrigger && logoScrollTrigger.kill) {
+    logoScrollTrigger.kill();
+  }
+
+  // Clean up sidebar scroll trigger
+  if (sidebarScrollTrigger && sidebarScrollTrigger.scrollTrigger) {
+    sidebarScrollTrigger.scrollTrigger.kill();
+  }
+  if (sidebarScrollTrigger && sidebarScrollTrigger.kill) {
+    sidebarScrollTrigger.kill();
+  }
+
+  // Clean up fade out scroll trigger
+  if (fadeOutScrollTrigger && fadeOutScrollTrigger.scrollTrigger) {
+    fadeOutScrollTrigger.scrollTrigger.kill();
+  }
+  if (fadeOutScrollTrigger && fadeOutScrollTrigger.kill) {
+    fadeOutScrollTrigger.kill();
+  }
+});
 
 // Auto-imported composables
 </script>
