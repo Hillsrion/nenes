@@ -6,13 +6,19 @@
     <!-- Fixed video at center of viewport -->
     <video
       ref="videoRef"
-      :src="currentVideoUrl"
+      :src="actualVideoUrl"
       class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full h-full object-cover scale-0 origin-center"
       autoplay
       muted
       loop
       playsinline
     ></video>
+
+    <!-- Black overlay for video transitions -->
+    <div
+      ref="overlayRef"
+      class="fixed top-0 left-0 w-full h-full bg-black pointer-events-none opacity-0 z-0"
+    ></div>
 
     <!-- Examination Cards in normal document flow -->
     <div
@@ -59,6 +65,9 @@ const store = useAnimationsStore();
 const videoRef = ref<HTMLVideoElement | null>(null);
 const containerRef = ref<HTMLElement | null>(null);
 const cardRefs = ref<(HTMLElement | null)[]>([]);
+const overlayRef = ref<HTMLDivElement | null>(null);
+const isTransitioning = ref(false);
+const actualVideoUrl = ref("");
 
 // Computed trigger element (parent section or current section)
 const triggerElement = computed(() => {
@@ -95,12 +104,50 @@ const currentVideoUrl = computed(() => {
   return "";
 });
 
+// Video transition function using GSAP timeline
+const transitionToVideo = (newUrl: string) => {
+  if (!overlayRef.value) return;
+
+  isTransitioning.value = true;
+
+  const timeline = $gsap.timeline({
+    onComplete: () => {
+      isTransitioning.value = false;
+    },
+  });
+
+  timeline
+    .to(overlayRef.value, {
+      opacity: 1,
+      duration: 0.3,
+      ease: "power2.inOut",
+    })
+    .call(() => {
+      actualVideoUrl.value = newUrl;
+    })
+    .to(overlayRef.value, {
+      opacity: 0,
+      duration: 0.3,
+      ease: "power2.inOut",
+    });
+};
+
+// Watch for video URL changes and trigger transition
+watch(currentVideoUrl, (newUrl, oldUrl) => {
+  if (newUrl !== oldUrl && !isTransitioning.value && overlayRef.value) {
+    transitionToVideo(newUrl);
+  }
+});
+
 // Initialize all animations with GSAP ScrollTrigger
 const initializeAnimations = () => {
   if (!containerRef.value || !videoRef.value) return;
 
   // Set initial video state
   $gsap.set(videoRef.value, { scale: 0 });
+
+  // Initialize the first video URL
+  actualVideoUrl.value = props.steps[0]?.videoUrl || "";
 
   // Video entrance animation using GSAP with ScrollTrigger
   $gsap.fromTo(
@@ -115,7 +162,6 @@ const initializeAnimations = () => {
         start: "center 10%",
         end: "60% 70%",
         scrub: 1,
-        markers: true,
       },
     }
   );
@@ -166,14 +212,6 @@ watch(
 // Cleanup
 onUnmounted(() => {
   // Kill all GSAP animations and ScrollTriggers
-  $gsap.killTweensOf([videoRef.value, ...cardRefs.value]);
+  $gsap.killTweensOf([videoRef.value, overlayRef.value, ...cardRefs.value]);
 });
 </script>
-
-<style scoped>
-/* Ensure video covers the viewport properly */
-video {
-  min-width: 100%;
-  min-height: 100%;
-}
-</style>
