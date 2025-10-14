@@ -8,7 +8,7 @@
         :title="selfExaminationHeader"
         :parent-section="containerRef"
       />
-      <ExaminationSteps :steps="steps" />
+      <ExaminationSteps :steps="steps" :parent-section="containerRef" />
     </div>
   </section>
 </template>

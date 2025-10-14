@@ -1,5 +1,8 @@
 <template>
-  <div ref="containerRef" class="relative mt-[450svh] container mx-auto">
+  <div
+    ref="containerRef"
+    class="relative mt-[250svh] pt-[300svh] container mx-auto"
+  >
     <!-- Fixed video at center of viewport -->
     <video
       ref="videoRef"
@@ -42,6 +45,7 @@ interface Step {
 
 interface Props {
   steps: Step[];
+  parentSection?: HTMLElement;
 }
 
 const props = defineProps<Props>();
@@ -55,6 +59,28 @@ const store = useAnimationsStore();
 const videoRef = ref<HTMLVideoElement | null>(null);
 const containerRef = ref<HTMLElement | null>(null);
 const cardRefs = ref<(HTMLElement | null)[]>([]);
+
+// Computed trigger element (parent section or current section)
+const triggerElement = computed(() => {
+  // If parentSection prop is provided, use it
+  if (props.parentSection) {
+    return props.parentSection;
+  }
+
+  // Otherwise, try to find parent with bg-secondary-light class
+  if (containerRef.value) {
+    let parent = containerRef.value.parentElement;
+    while (parent && !parent.classList.contains("bg-secondary-light")) {
+      parent = parent.parentElement;
+    }
+    if (parent) {
+      return parent;
+    }
+  }
+
+  // Fallback to current section
+  return containerRef.value;
+});
 
 // Current step tracking
 const currentStepIndex = ref(0);
@@ -82,13 +108,14 @@ const initializeAnimations = () => {
     { scale: 0 },
     {
       scale: 1,
-      duration: 0.8,
+      duration: 0.2,
       ease: "power2.out",
       scrollTrigger: {
-        trigger: containerRef.value,
-        start: "top center",
-        end: "center center",
+        trigger: triggerElement.value,
+        start: "center 10%",
+        end: "60% 70%",
         scrub: 1,
+        markers: true,
       },
     }
   );
