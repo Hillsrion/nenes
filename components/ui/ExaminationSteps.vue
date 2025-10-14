@@ -1,5 +1,5 @@
 <template>
-  <div ref="containerRef" class="relative pt-[400svh] container mx-auto">
+  <div ref="containerRef" class="relative mt-[450svh] container mx-auto">
     <!-- Fixed video at center of viewport -->
     <video
       ref="videoRef"
@@ -88,7 +88,7 @@ const initializeAnimations = () => {
         trigger: containerRef.value,
         start: "top center",
         end: "center center",
-        scrub: false,
+        scrub: 1,
       },
     }
   );
