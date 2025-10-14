@@ -15,7 +15,7 @@
     <div
       v-for="(step, index) in steps"
       :key="`card-${index}`"
-      class="min-h-screen flex items-center py-16"
+      class="min-h-screen flex items-center py-16 relative z-1"
       :class="[index % 2 === 0 ? 'justify-start' : 'justify-end']"
       ref="cardRefs"
     >
@@ -93,51 +93,8 @@ const initializeAnimations = () => {
     }
   );
 
-  // Card entrance animations using GSAP with ScrollTrigger
+  // Video URL switching using GSAP with ScrollTrigger
   nextTick(() => {
-    cardRefs.value.forEach((card, index) => {
-      if (card) {
-        $gsap.set(card, { opacity: 0, y: 32 });
-
-        // Card entrance animation
-        $gsap.fromTo(
-          card,
-          { opacity: 0, y: 32 },
-          {
-            opacity: 1,
-            y: 0,
-            duration: 0.6,
-            ease: "power2.out",
-            scrollTrigger: {
-              trigger: card,
-              start: "top 80%",
-              end: "top 60%",
-              scrub: false,
-            },
-          }
-        );
-
-        // Card exit animation when scrolling back
-        $gsap.fromTo(
-          card,
-          { opacity: 1, y: 0 },
-          {
-            opacity: 0,
-            y: 32,
-            duration: 0.3,
-            ease: "power2.out",
-            scrollTrigger: {
-              trigger: card,
-              start: "top 60%",
-              end: "top 80%",
-              scrub: false,
-            },
-          }
-        );
-      }
-    });
-
-    // Video URL switching using GSAP with ScrollTrigger
     props.steps.forEach((_, index) => {
       const cardElement = cardRefs.value[index];
       if (cardElement) {
