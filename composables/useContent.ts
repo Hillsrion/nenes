@@ -72,17 +72,17 @@ export const useContent = () => {
     {
       content:
         "Couvrez l'intégralité du sein, de l'extérieur vers le mamelon, en utilisant différents niveaux de pression (légère, moyenne, forte).",
-      videoUrl: "/videos/ForBiggerBlazes.mp4",
+      videoUrl: "/videos/ForBiggerMeltdowns.mp4",
     },
     {
       content:
         "N'oubliez pas de palper la zone sous l'aisselle ainsi que l'espace entre le sein et l'aisselle.",
-      videoUrl: "/videos/ForBiggerBlazes.mp4",
+      videoUrl: "/videos/ForBiggerEscapes.mp4",
     },
     {
       content:
         "Terminez en pinçant délicatement le mamelon pour vérifier l'absence d'écoulement anormal.",
-      videoUrl: "/videos/ForBiggerBlazes.mp4",
+      videoUrl: "/videos/ForBiggerJoyrides.mp4",
     },
     {
       content:
