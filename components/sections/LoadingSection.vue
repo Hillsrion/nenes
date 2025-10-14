@@ -54,7 +54,7 @@
           </div>
         </div>
       </div>
-      <p class="font-serif text-white text-center text-[2rem]">
+      <p class="font-serif text-secondary text-center text-serif-size">
         un projet pour la prévention du cancer du sein
       </p>
     </div>

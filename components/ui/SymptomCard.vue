@@ -1,9 +1,9 @@
 <template>
   <li class="w-90 h-130 flex p-8 relative" :class="classes">
-    <h3 class="relative z-1" :class="titleClasses">
+    <h3 class="relative z-1 leading-title" :class="titleClasses">
       {{ title }}
     </h3>
-    <CardContent v-if="description" :content="description" />
+    <CardContent v-if="description" :content="description" class="mt-2" />
     <img
       v-if="hasImage"
       :src="image"
