@@ -33,7 +33,7 @@ interface CoverState {
 
 export const useAnimationsStore = defineStore("animations", {
   state: () => ({
-    sections,
+    sections: sections || {},
     logo: {
       isPrimary: true,
     },
@@ -43,24 +43,30 @@ export const useAnimationsStore = defineStore("animations", {
   }),
   actions: {
     updateSectionState(section: TSection, state: TSectionAnimationState) {
-      this.sections[section].state = state;
+      if (this.sections && this.sections[section]) {
+        this.sections[section].state = state;
+      }
     },
     updateLogoColor(isPrimary: boolean) {
-      this.logo.isPrimary = isPrimary;
+      if (this.logo) {
+        this.logo.isPrimary = isPrimary;
+      }
     },
     updateCoverScaling(isScaling: boolean) {
-      this.cover.isScaling = isScaling;
+      if (this.cover) {
+        this.cover.isScaling = isScaling;
+      }
     },
   },
   getters: {
     getSectionState: (state) => (section: TSection) => {
-      return state.sections[section]?.state;
+      return state?.sections?.[section]?.state;
     },
     getLogoState: (state) => {
-      return state.logo.isPrimary;
+      return state?.logo?.isPrimary ?? true;
     },
     getCoverScaling: (state) => {
-      return state.cover.isScaling;
+      return state?.cover?.isScaling ?? false;
     },
   },
 });

@@ -1,6 +1,6 @@
 <template>
   <section
-    class="py-16 h-[300svh] relative z-20 bg-white -mt-[25svh]"
+    class="py-16 h-[450svh] relative z-20 bg-white -mt-[25svh]"
     ref="sectionRef"
   >
     <div

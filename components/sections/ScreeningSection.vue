@@ -266,7 +266,7 @@ const initializeFadeOutAnimation = () => {
   $gsap.to(containerRef.value, {
     scale: 0.7, // Scale down to disappear
     opacity: 0, // Fade out to transparent
-    y: vh(55),
+    y: vh(30),
     ease: "power2.out",
     scrollTrigger: {
       trigger: sectionRef.value,

@@ -22,7 +22,10 @@
     <div
       class="relative h-[250svh] w-full min-h-screen bg-white transition-all duration-300 ease-out rounded-t-4xl"
       ref="whiteSectionRef"
-      :class="{ 'rounded-t-4xl': !store.sections.loading?.state === 'idle' }"
+      :class="{
+        'rounded-t-4xl':
+          animationsStore?.sections?.loading?.state === 'isComplete',
+      }"
     >
       <div
         class="max-w-[42rem] h-[100svh] w-full px-8 sticky top-0 left-1/2 transform -translate-x-1/2 z-10 mx-auto flex flex-col justify-center"
@@ -72,6 +75,16 @@
       </div>
     </div>
 
+    <!-- Serif Scroll Indicator -->
+    <div
+      class="fixed bottom-8 left-1/2 -translate-x-1/2 z-20 font-serif text-serif-size text-primary transition-opacity duration-500"
+      :class="{
+        'opacity-0 pointer-events-none': animationsStore.cover.isScaling,
+      }"
+    >
+      scroll
+    </div>
+
     <ScrollIndicator
       class="absolute bottom-10 left-1/2 -translate-x-1/2 text-primary"
     />
@@ -89,8 +102,8 @@ import { useAnimationsStore } from "~/stores";
 // Use global GSAP instance (should be available through Nuxt GSAP module)
 const { $gsap } = useNuxtApp();
 
-// Store
-const store = useAnimationsStore();
+// Animations store
+const animationsStore = useAnimationsStore();
 
 // Props
 const props = defineProps({

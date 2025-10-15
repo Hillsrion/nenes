@@ -35,11 +35,13 @@ export const useEntryCoverAnimation = ({
 
   // Watch for scale changes and update logo color when scale reaches 1
   watch(currentScale, (newScale) => {
-    animationsStore.updateLogoColor(newScale <= 0.3);
+    if (animationsStore) {
+      animationsStore.updateLogoColor(newScale <= 0.3);
 
-    // Update cover scaling state based on scale value
-    // Consider the cover as "scaling" when scale > 0.1 (just starting to scale)
-    animationsStore.updateCoverScaling(newScale > 0.1);
+      // Update cover scaling state based on scale value
+      // Consider the cover as "scaling" when scale > 0.1 (just starting to scale)
+      animationsStore.updateCoverScaling(newScale > 0.1);
+    }
   });
 
   /**
