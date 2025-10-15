@@ -63,7 +63,7 @@
             :ref="(el) => setTextRef(el, index)"
             :class="[
               index % 2 === 0
-                ? 'col-span-1'
+                ? 'col-span-2'
                 : 'col-start-2 col-span-2 row-start-2 pr-4',
             ]"
           >
@@ -84,10 +84,6 @@
     >
       scroll
     </div>
-
-    <ScrollIndicator
-      class="absolute bottom-10 left-1/2 -translate-x-1/2 text-primary"
-    />
   </section>
 </template>
 
@@ -158,22 +154,12 @@ const { setTextRef, initializeAnimations: initializeSplitTextAnimations } =
 
 // Initialize animations on mount
 onMounted(() => {
-  console.log("Component mounted, checking conditions...");
-  console.log("sectionRef available:", !!sectionRef.value);
-  console.log("statisticsText length:", props.statisticsText.length);
-
   if (sectionRef.value && props.statisticsText.length > 0) {
     // Initialize statistics animations
     initializeStatisticsAnimations();
-
     // Initialize entry cover animation
     initializeEntryCoverAnimation();
-
-    console.log("Animations initialized");
-  } else {
-    console.log("Conditions not met for animation initialization");
   }
-
   // Initialize split text animations for content elements
   initializeSplitTextAnimations();
 });
