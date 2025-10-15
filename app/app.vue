@@ -50,9 +50,13 @@ import Logo from "~/components/ui/Logo.vue";
 import CursorImageSpawner from "~/components/ui/CursorImageSpawner.vue";
 import { useAnimationsStore } from "~/stores";
 import { useContent } from "~/composables/useContent";
+import { useFaviconAnimation } from "~/composables/useFaviconAnimation";
 
 // Store
 const store = useAnimationsStore();
+
+// Favicon animation
+const { init: initFaviconAnimation } = useFaviconAnimation();
 
 // Content data from hook
 const {
@@ -118,7 +122,10 @@ watch(
   { immediate: true }
 );
 
-onMounted(() => {
+onMounted(async () => {
   scrollTo(0, 0);
+
+  // Initialize gentle favicon animation
+  await initFaviconAnimation();
 });
 </script>
