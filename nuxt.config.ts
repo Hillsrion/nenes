@@ -3,7 +3,14 @@ export default defineNuxtConfig({
   app: {
     head: {
       title: "Nénés",
-      link: [{ rel: "icon", type: "image/x-icon", href: "/favicon.ico" }],
+      link: [
+        {
+          rel: "icon",
+          type: "image/svg+xml",
+          href: "/images/illustrations/3.svg",
+        },
+        { rel: "icon", type: "image/png", href: "/images/illustrations/3.png" },
+      ],
       meta: [
         {
           name: "description",
