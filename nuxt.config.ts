@@ -1,5 +1,16 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
+  app: {
+    head: {
+      title: "Nénés",
+      meta: [
+        {
+          name: "description",
+          content: "Un projet pour la prévention du cancer du sein",
+        },
+      ],
+    },
+  },
   compatibilityDate: "2025-07-15",
   devtools: { enabled: process.env.NODE_ENV === "development" },
 
