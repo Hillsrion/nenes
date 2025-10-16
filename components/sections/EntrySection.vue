@@ -28,7 +28,7 @@
       }"
     >
       <div
-        class="max-w-[42rem] h-[100svh] w-full px-8 sticky top-0 left-1/2 transform -translate-x-1/2 z-10 mx-auto flex flex-col justify-center"
+        class="max-w-[42rem] h-[100svh] w-full px-8 sticky top-0 z-10 mx-auto flex flex-col justify-center"
       >
         <div
           ref="statisticsTextRef"
