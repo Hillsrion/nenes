@@ -125,13 +125,13 @@ export const useEntryCoverAnimation = ({
         : viewportHeight;
 
     // Since the image is fixed positioned and covers the full viewport,
-    // we need to calculate the offset to center it on the target point
-    // The image is already at (0,0) with 100vw x 100vh size
+    // we need to calculate the offset to center it on the target point horizontally
+    // Keep it vertically centered (translateY = 0) so it stays in viewport center
     const translateX = targetX - viewportWidth / 2;
-    const translateY = targetY - actualViewportHeight / 2;
 
     // Apply the transform to position the image correctly
-    imageElement.style.transform = `translate(${translateX}px, ${0}px) scale(${scale})`;
+    // Only translate horizontally, keep vertical position centered
+    imageElement.style.transform = `translate(${translateX}px, 0px) scale(${scale})`;
 
     // // Debug logging to understand positioning
     // console.log("Image positioning:", {
@@ -178,22 +178,15 @@ export const useEntryCoverAnimation = ({
       positionImageAtCenter(entryCoverRef.value, initialPos.x, initialPos.y);
     }
 
-    const screenRatio = Math.min(
-      window.innerWidth / initialPos.width,
-      window.innerHeight / initialPos.height
-    );
-
     // Animation: scale from 0 to full size while staying centered between words
     const { $gsap } = useNuxtApp();
     imageAnimation = $gsap.fromTo(
       entryCoverRef.value,
       {
-        scale: 0,
         opacity: 1,
         transformOrigin: "center center",
       },
       {
-        scale: 1.25,
         opacity: 1,
         duration: 4.5,
         ease: "power2.out",
@@ -203,18 +196,30 @@ export const useEntryCoverAnimation = ({
           end: "top -30%", // End much later for longer animation
           scrub: 0.8,
           onUpdate: (self: any) => {
-            // Simple scroll-based scaling with built-in delay
-            // Scale from 0 to 1 over the trigger range, but with a delayed start
+            // Simple scroll-based scaling
             const progress = self.progress;
-
             const delayedProgress = Math.max(0, progress);
 
-            // Scale grows from the delayed progress point
-            const scaleValue = Math.min(delayedProgress, 1); // Faster scaling after delay
-            // Update the current scale ref so the watcher can detect when it reaches 1
-            currentScale.value = scaleValue;
             // Get current position for image placement
             const currentPos = calculateImagePosition();
+
+            // Calculate required scale based on horizontal offset
+            const viewportWidth = window.innerWidth;
+            const horizontalOffset = Math.abs(currentPos.x - viewportWidth / 2);
+
+            // Progressive coverage amount beyond 1 due to translation (0..)
+            const coverageIncrease = (2 * horizontalOffset) / viewportWidth;
+
+            // Add a small aesthetic extra range that grows with progress
+            const extraRange = 0.25; // up to +0.25 at progress 1
+
+            // Progressive scale: starts at 0 and grows with progress
+            // By multiplying the max potential scale by progress, we avoid immediate jumps
+            const maxScaleThisFrame = 1 + coverageIncrease + extraRange;
+            const scaleValue = Math.min(delayedProgress, 1) * maxScaleThisFrame;
+
+            // Update the current scale ref so the watcher can detect when it reaches target
+            currentScale.value = scaleValue;
 
             // Continuously update position to stay centered between moving words
             try {
