@@ -1,21 +1,29 @@
 <template>
   <section class="min-h-screen flex items-center relative" ref="sectionRef">
     <!-- Entry Cover Image -->
-    <img
-      ref="entryCoverRef"
-      src="/images/entry-cover.jpg"
-      alt="Entry Cover"
-      class="fixed z-5 pointer-events-none"
-      :style="{
-        width: '100vw',
-        height: '100vh',
-        transformOrigin: 'center center',
-        objectFit: 'cover',
-        willChange: 'transform',
-        top: 0,
-        left: 0,
-      }"
-    />
+    <picture>
+      <!-- Portrait image for mobile devices (768px and below) -->
+      <source
+        media="(max-width: 768px)"
+        srcset="/images/entry-cover-portrait.jpg"
+      />
+      <!-- Landscape image for desktop devices (769px and above) -->
+      <img
+        ref="entryCoverRef"
+        src="/images/entry-cover.jpg"
+        alt="Entry Cover"
+        class="fixed z-5 pointer-events-none"
+        :style="{
+          width: '100vw',
+          height: '100vh',
+          transformOrigin: 'center center',
+          objectFit: 'cover',
+          willChange: 'transform',
+          top: 0,
+          left: 0,
+        }"
+      />
+    </picture>
 
     <!-- Statistics Section -->
     <div class="absolute -top-2 left-0 w-full h-16 bg-primary -z-1"></div>
