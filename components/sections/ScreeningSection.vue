@@ -109,6 +109,7 @@ const vh = (percentage: number): string => {
 let logoScrollTrigger: any = null;
 let sidebarScrollTrigger: any = null;
 let fadeOutScrollTrigger: any = null;
+let mm: any = null; // matchMedia instance
 
 const sectionRef = ref<HTMLElement | null>(null);
 const sidebarRef = ref<HTMLElement | null>(null);
@@ -339,10 +340,18 @@ watch(
       sectionRef.value.parentElement
     ) {
       setTimeout(() => {
+        // Always initialize these animations (all screen sizes)
         initializeLogoColorChangeAnimation();
         initializeTitleAnimation();
-        initializeSidebarAnimation();
-        initializeFadeOutAnimation();
+
+        // Initialize matchMedia for desktop-only animations
+        mm = $gsap.matchMedia();
+
+        mm.add("(min-width: 1024px)", () => {
+          // Desktop-only animations
+          initializeSidebarAnimation();
+          initializeFadeOutAnimation();
+        });
       }, 1000);
     }
   }
@@ -350,6 +359,11 @@ watch(
 
 // Cleanup on unmount
 onUnmounted(() => {
+  // Revert matchMedia (this will automatically clean up all animations and ScrollTriggers created within it)
+  if (mm) {
+    mm.revert();
+  }
+
   // Clean up title animations
   titleAnimations.forEach((anim) => {
     if (anim && anim.scrollTrigger) {
