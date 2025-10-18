@@ -113,7 +113,6 @@ const initializeLogoColorChangeAnimation = () => {
       trigger: sectionRef.value,
       start: "top top+=100px",
       end: "bottom bottom",
-      markers: true,
       onEnter: () => {
         store.updateLogoColor(false);
       },

@@ -5,7 +5,7 @@
     <div ref="contentRef" class="text-center max-w-4xl mx-auto">
       <h2
         ref="titleRef"
-        class="text-4xl md:text-5xl font-medium text-primary leading-title"
+        class="text-3xl sm:text-4xl md:text-5xl font-medium text-primary leading-title"
         v-html="title"
       ></h2>
     </div>
