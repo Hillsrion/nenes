@@ -13,7 +13,7 @@
         }"
       >
         <Logo
-          class="fixed top-8 left-1/2 transform -translate-x-1/2 z-150"
+          class="fixed top-8 left-1/2 -translate-x-1/2 z-150"
           :color="logoColor"
         />
 

@@ -28,7 +28,7 @@
     <!-- Statistics Section -->
     <div class="absolute -top-2 left-0 w-full h-16 bg-primary -z-1"></div>
     <div
-      class="relative h-[250svh] w-full min-h-screen bg-white transition-all duration-300 ease-out rounded-t-4xl"
+      class="relative h-[250svh] w-full min-h-screen bg-white transition-all duration-300 ease-out rounded-t-4xl overflow-x-clip"
       ref="whiteSectionRef"
       :class="{
         'rounded-t-4xl':
@@ -40,13 +40,13 @@
       >
         <div
           ref="statisticsTextRef"
-          class="text-3xl lg:text-5xl leading-snug font-medium text-center text-primary relative"
+          class="text-3xl lg:text-5xl leading-snug font-medium text-center text-primary relative w-full break-words"
         >
           <template v-for="(line, index) in statisticsText" :key="index">
             <span class="inline-block">
               <template v-if="index === statisticsText.length - 1">
                 <!-- Split last line: first word goes left, rest goes right -->
-                <span class="inline-block animate-split-word-left mr-2.75">
+                <span class="inline-block animate-split-word-left mr-3 lg:mr-4">
                   {{ textUtils.getFirstWord(line) }}
                 </span>
                 <span class="inline-block animate-split-word-right">
