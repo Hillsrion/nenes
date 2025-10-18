@@ -69,23 +69,43 @@ const setCardRef = (el: any, index: number) => {
 
 const initializeTitleAnimation = () => {
   if (!titleRef.value?.titleElement) return;
-  titleAnimation = $gsap.fromTo(
-    titleRef.value.titleElement,
+
+  // Use matchMedia to have different start positions for mobile vs desktop
+  const mm = $gsap.matchMedia();
+
+  mm.add(
     {
-      scale: 5,
-      opacity: 0,
+      // Mobile (small screens)
+      isMobile: "(max-width: 1023px)",
+      // Desktop (large screens and up)
+      isDesktop: "(min-width: 1024px)",
     },
-    {
-      scale: 1,
-      opacity: 1,
-      duration: 0.8,
-      ease: "power2.out",
-      scrollTrigger: {
-        trigger: sectionRef.value,
-        start: "top 30%",
-        end: "30% bottom",
-        scrub: 1,
-      },
+    (context: any) => {
+      const { isMobile } = context.conditions;
+
+      titleAnimation = $gsap.fromTo(
+        titleRef.value!.titleElement,
+        {
+          scale: 5,
+          opacity: 0,
+        },
+        {
+          scale: 1,
+          opacity: 1,
+          duration: 0.8,
+          ease: "power2.out",
+          scrollTrigger: {
+            trigger: sectionRef.value,
+            // On mobile, start much later (when 50% of section has scrolled past viewport top)
+            // This accounts for the negative margin and ensures ScreeningSection is fully past
+            // On desktop, start earlier (when section top is at 30% from top)
+            start: isMobile ? "30% top" : "top 30%",
+            end: isMobile ? "40% top" : "30% bottom",
+            scrub: 1,
+            // markers: true, // Uncomment to debug scroll positions
+          },
+        }
+      );
     }
   );
 };
@@ -97,62 +117,79 @@ const initializeCarouselAnimation = () => {
   // Filter out null refs
   const validRefs = cardRefs.value.filter((ref) => ref !== null);
 
-  carouselAnimation = $gsap.fromTo(
-    validRefs,
+  // Use matchMedia to have different start positions for mobile vs desktop
+  const mm = $gsap.matchMedia();
+
+  mm.add(
     {
-      rotation: 30, // Starting angle
+      // Mobile (small screens)
+      isMobile: "(max-width: 1023px)",
+      // Desktop (large screens and up)
+      isDesktop: "(min-width: 1024px)",
     },
-    {
-      rotation: -30, // Ending angle
-      ease: "power1.inOut", // Non-linear movement
-      stagger: 0.09, // Delay between the start of each card
-      scrollTrigger: {
-        trigger: sectionRef.value,
-        start: "top top",
-        end: "bottom bottom",
-        scrub: true, // Animation progresses with scrolling
-        // markers: true, // Uncomment for debugging
-        onUpdate: (self) => {
-          // Get the actual rotation of the first card element (card at index 0)
-          if (!cardRefs.value[0] || !titleRef.value?.titleElement) return;
+    (context: any) => {
+      const { isMobile } = context.conditions;
 
-          const firstCardElement = cardRefs.value[0];
-          const currentRotation = $gsap.getProperty(
-            firstCardElement,
-            "rotation"
-          ) as number;
-
-          // Hide title when first card reaches approximately 0° (covering the title)
-          // Using a wider threshold of ±5° to reliably catch fast scrolling
-          if (
-            currentRotation <= 5 &&
-            currentRotation >= -5 &&
-            !isTitleHidden.value
-          ) {
-            isTitleHidden.value = true;
-            if (titleHideAnimation) {
-              titleHideAnimation.kill();
-            }
-            titleHideAnimation = $gsap.to(titleRef.value.titleElement, {
-              opacity: 0,
-              duration: 0.3,
-              ease: "power2.out",
-            });
-          } else if (currentRotation >= 15 && isTitleHidden.value) {
-            // Show title again when first card starts moving back up (rotation ≈ 15°)
-            isTitleHidden.value = false;
-            if (titleHideAnimation) {
-              titleHideAnimation.kill();
-              titleHideAnimation = null;
-            }
-            $gsap.to(titleRef.value.titleElement, {
-              opacity: 1,
-              duration: 0.3,
-              ease: "power2.out",
-            });
-          }
+      carouselAnimation = $gsap.fromTo(
+        validRefs,
+        {
+          rotation: 30, // Starting angle
         },
-      },
+        {
+          rotation: -30, // Ending angle
+          ease: "power1.inOut", // Non-linear movement
+          stagger: 0.09, // Delay between the start of each card
+          scrollTrigger: {
+            trigger: sectionRef.value,
+            // On mobile, start after title reveal (at 35% to give a slight overlap)
+            // On desktop, start immediately
+            start: isMobile ? "35% top" : "top top",
+            end: "bottom bottom",
+            scrub: true, // Animation progresses with scrolling
+            // markers: true, // Uncomment for debugging
+            onUpdate: (self) => {
+              // Get the actual rotation of the first card element (card at index 0)
+              if (!cardRefs.value[0] || !titleRef.value?.titleElement) return;
+
+              const firstCardElement = cardRefs.value[0];
+              const currentRotation = $gsap.getProperty(
+                firstCardElement,
+                "rotation"
+              ) as number;
+
+              // Hide title when first card reaches approximately 0° (covering the title)
+              // Using a wider threshold of ±5° to reliably catch fast scrolling
+              if (
+                currentRotation <= 5 &&
+                currentRotation >= -5 &&
+                !isTitleHidden.value
+              ) {
+                isTitleHidden.value = true;
+                if (titleHideAnimation) {
+                  titleHideAnimation.kill();
+                }
+                titleHideAnimation = $gsap.to(titleRef.value.titleElement, {
+                  opacity: 0,
+                  duration: 0.3,
+                  ease: "power2.out",
+                });
+              } else if (currentRotation >= 15 && isTitleHidden.value) {
+                // Show title again when first card starts moving back up (rotation ≈ 15°)
+                isTitleHidden.value = false;
+                if (titleHideAnimation) {
+                  titleHideAnimation.kill();
+                  titleHideAnimation = null;
+                }
+                $gsap.to(titleRef.value.titleElement, {
+                  opacity: 1,
+                  duration: 0.3,
+                  ease: "power2.out",
+                });
+              }
+            },
+          },
+        }
+      );
     }
   );
 };
