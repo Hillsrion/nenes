@@ -58,7 +58,7 @@
             </div>
           </div>
         </div>
-        <div class="md:w-auto sm:w-4/5 w-3/5 mx-auto my-8 md:mx-0 md:my-0">
+        <div class="md:w-auto sm:w-3/5 w-2/5 mx-auto my-8 md:mx-0 md:my-0">
           <img
             src="/images/illustrations/1.svg"
             width="221"

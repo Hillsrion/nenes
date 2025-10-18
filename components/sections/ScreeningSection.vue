@@ -1,5 +1,5 @@
 <template>
-  <div class="h-[150svh] relative">
+  <div class="lg:h-[150svh] relative">
     <section
       class="flex h-screen items-center justify-center bg-white rounded-t-4xl sticky top-0 z-30"
       ref="sectionRef"
