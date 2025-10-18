@@ -1,5 +1,8 @@
 <template>
-  <section class="lg:h-screen py-9 bg-primary rounded-t-4xl sticky top-0 z-30">
+  <section
+    class="lg:h-screen py-9 bg-primary rounded-t-4xl sticky top-0 z-30"
+    ref="sectionRef"
+  >
     <div
       class="container mx-auto px-6 xl:px-8 h-full flex flex-col justify-between"
     >
@@ -89,6 +92,66 @@
 </template>
 
 <script setup>
+import { ref, onMounted, onUnmounted } from "vue";
+import { useAnimationsStore } from "../../stores";
+import { useNuxtApp } from "nuxt/app";
+
+// Animation store
+const store = useAnimationsStore();
+const { $gsap } = useNuxtApp();
+
+// Register ScrollTrigger
+$gsap.registerPlugin($gsap.ScrollTrigger);
+
+const sectionRef = ref(null);
+let logoScrollTrigger = null;
+
+// Initialize logo scroll trigger for color change
+const initializeLogoColorChangeAnimation = () => {
+  logoScrollTrigger = $gsap.timeline({
+    scrollTrigger: {
+      trigger: sectionRef.value,
+      start: "top top+=100px",
+      end: "bottom bottom",
+      markers: true,
+      onEnter: () => {
+        store.updateLogoColor(false);
+      },
+      onLeaveBack: () => {
+        store.updateLogoColor(true);
+      },
+      onEnterBack: () => {
+        store.updateLogoColor(false);
+      },
+    },
+  });
+};
+
+watch(
+  () => store.getSectionState("loading"),
+  (loadingState) => {
+    if (
+      loadingState === "isComplete" &&
+      sectionRef.value &&
+      sectionRef.value.parentElement
+    ) {
+      setTimeout(() => {
+        initializeLogoColorChangeAnimation();
+      }, 1000);
+    }
+  }
+);
+
+// Cleanup on unmount
+onUnmounted(() => {
+  if (logoScrollTrigger && logoScrollTrigger.scrollTrigger) {
+    logoScrollTrigger.scrollTrigger.kill();
+  }
+  if (logoScrollTrigger && logoScrollTrigger.kill) {
+    logoScrollTrigger.kill();
+  }
+});
+
 const resources = [
   {
     title: "Numéro national Cancer Info",
