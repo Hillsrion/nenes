@@ -7,9 +7,9 @@ export default defineNuxtConfig({
         {
           rel: "icon",
           type: "image/svg+xml",
-          href: "/images/illustrations/3.svg",
+          href: "/favicon/3.svg",
         },
-        { rel: "icon", type: "image/png", href: "/images/illustrations/3.png" },
+        { rel: "icon", type: "image/png", href: "/favicon/3.png" },
       ],
       meta: [
         {
