@@ -224,9 +224,6 @@ const initializeLogoColorChangeAnimation = () => {
       onEnterBack: () => {
         store.updateLogoColor(true);
       },
-      onLeave: () => {
-        store.updateLogoColor(false);
-      },
     },
   });
 };
