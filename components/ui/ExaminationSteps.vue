@@ -12,14 +12,8 @@
       loop
       playsinline
     >
-      <source
-        media="(max-width: 768px)"
-        :src="currentStep?.mobileUrl || currentStep?.videoUrl || ''"
-      />
-      <source
-        media="(min-width: 769px)"
-        :src="currentStep?.desktopUrl || currentStep?.videoUrl || ''"
-      />
+      <source media="(max-width: 768px)" :src="actualVideoUrl || ''" />
+      <source media="(min-width: 769px)" :src="actualVideoUrl || ''" />
     </video>
 
     <!-- Black overlay for video transitions -->
@@ -27,6 +21,16 @@
       ref="overlayRef"
       class="fixed top-0 left-0 w-full h-full bg-black pointer-events-none opacity-0 z-0"
     ></div>
+
+    <!-- Video loading indicator -->
+    <div
+      v-if="videoLoading"
+      class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 flex items-center justify-center"
+    >
+      <div
+        class="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin"
+      ></div>
+    </div>
 
     <!-- Examination Cards in normal document flow -->
     <div
@@ -78,6 +82,8 @@ const cardRefs = ref<(HTMLElement | null)[]>([]);
 const overlayRef = ref<HTMLDivElement | null>(null);
 const isTransitioning = ref(false);
 const actualVideoUrl = ref("");
+const loadedVideos = ref<Set<string>>(new Set());
+const videoLoading = ref(false);
 
 // Computed trigger element (parent section or current section)
 const triggerElement = computed(() => {
@@ -149,9 +155,81 @@ const currentVideoUrl = computed(() => {
   return currentStep.videoUrl || "";
 });
 
+// Video loading methods
+const loadVideo = async (url: string): Promise<void> => {
+  if (!url || loadedVideos.value.has(url)) return;
+
+  return new Promise((resolve) => {
+    const video = document.createElement("video");
+    video.preload = "metadata";
+
+    const onLoadedData = () => {
+      loadedVideos.value.add(url);
+      video.removeEventListener("loadeddata", onLoadedData);
+      video.removeEventListener("error", onError);
+      resolve();
+    };
+
+    const onError = () => {
+      video.removeEventListener("loadeddata", onLoadedData);
+      video.removeEventListener("error", onError);
+      console.warn(`Failed to preload video: ${url}`);
+      resolve();
+    };
+
+    video.addEventListener("loadeddata", onLoadedData);
+    video.addEventListener("error", onError);
+
+    // Set the appropriate source based on device type
+    if (url.includes("mobile") || url.includes("desktop")) {
+      video.src = url;
+    } else {
+      // For legacy video URLs, we need to set the source attribute directly
+      video.src = url;
+    }
+  });
+};
+
+const preloadUpcomingVideos = async () => {
+  const currentIndex = currentStepIndex.value;
+  const upcomingIndices = [
+    currentIndex + 1,
+    currentIndex + 2,
+    Math.max(0, currentIndex - 1),
+  ].filter(
+    (index) =>
+      index >= 0 && index < props.steps.length && index !== currentIndex
+  );
+
+  const preloadPromises = upcomingIndices.map((index) => {
+    const step = props.steps[index];
+    if (!step) return Promise.resolve();
+
+    const url = isMobileOrTablet.value
+      ? step.mobileUrl || step.desktopUrl || step.videoUrl
+      : step.desktopUrl || step.videoUrl;
+
+    return url ? loadVideo(url) : Promise.resolve();
+  });
+
+  await Promise.allSettled(preloadPromises);
+};
+
 // Video transition function using GSAP timeline
-const transitionToVideo = () => {
-  if (!overlayRef.value || !videoRef.value) return;
+const transitionToVideo = async () => {
+  if (!overlayRef.value || !videoRef.value || !currentVideoUrl.value) return;
+
+  const videoUrl = currentVideoUrl.value;
+
+  // Load the video if not already loaded
+  if (!loadedVideos.value.has(videoUrl)) {
+    videoLoading.value = true;
+    await loadVideo(videoUrl);
+    videoLoading.value = false;
+  }
+
+  // Update the actual video URL for the transition
+  actualVideoUrl.value = videoUrl;
 
   isTransitioning.value = true;
 
@@ -169,13 +247,20 @@ const transitionToVideo = () => {
     })
     .call(() => {
       // Force video reload by changing currentTime to trigger source switch
-      videoRef.value!.currentTime = 0;
+      if (videoRef.value) {
+        videoRef.value.currentTime = 0;
+      }
     })
     .to(overlayRef.value, {
       opacity: 0,
       duration: 0.3,
       ease: "power2.inOut",
     });
+
+  // Preload upcoming videos after the current transition
+  setTimeout(() => {
+    preloadUpcomingVideos();
+  }, 500);
 };
 
 // Watch for video URL changes and trigger transition
@@ -186,7 +271,7 @@ watch(currentVideoUrl, (newUrl, oldUrl) => {
 });
 
 // Initialize all animations with GSAP ScrollTrigger
-const initializeAnimations = () => {
+const initializeAnimations = async () => {
   if (!containerRef.value || !videoRef.value) return;
 
   // Set initial video state
@@ -194,6 +279,19 @@ const initializeAnimations = () => {
 
   // Initialize the first step
   currentStepIndex.value = 0;
+
+  // Preload the first video immediately
+  const firstStep = props.steps[0];
+  if (firstStep) {
+    const firstVideoUrl = isMobileOrTablet.value
+      ? firstStep.mobileUrl || firstStep.desktopUrl || firstStep.videoUrl
+      : firstStep.desktopUrl || firstStep.videoUrl;
+
+    if (firstVideoUrl) {
+      await loadVideo(firstVideoUrl);
+      actualVideoUrl.value = firstVideoUrl;
+    }
+  }
 
   // Video entrance animation using GSAP with ScrollTrigger
   $gsap.fromTo(
@@ -225,11 +323,19 @@ const initializeAnimations = () => {
               trigger: cardElement,
               start: "top 50%",
               end: "bottom 50%",
-              onEnter: () => {
+              onEnter: async () => {
                 currentStepIndex.value = index;
+                // Preload videos around this step for better performance
+                setTimeout(() => {
+                  preloadUpcomingVideos();
+                }, 100);
               },
-              onEnterBack: () => {
+              onEnterBack: async () => {
                 currentStepIndex.value = index;
+                // Preload videos around this step for better performance
+                setTimeout(() => {
+                  preloadUpcomingVideos();
+                }, 100);
               },
             },
           }
@@ -259,5 +365,10 @@ watch(
 onUnmounted(() => {
   // Kill all GSAP animations and ScrollTriggers
   $gsap.killTweensOf([videoRef.value, overlayRef.value, ...cardRefs.value]);
+
+  // Reset state
+  loadedVideos.value.clear();
+  videoLoading.value = false;
+  actualVideoUrl.value = "";
 });
 </script>
