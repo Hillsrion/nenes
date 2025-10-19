@@ -68,7 +68,11 @@
           <div
             v-for="(element, index) in contentElements"
             :key="index"
-            :ref="(el) => setTextRef(el, index)"
+            :ref="
+              (el) => {
+                if (el) textRefs[index] = el;
+              }
+            "
             :class="[
               index % 2 === 0
                 ? 'col-span-2'
@@ -102,7 +106,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useTextUtils } from "~/composables/useTextUtils";
 import { useStatisticsAnimation } from "~/composables/useStatisticsAnimation";
 import { useEntryCoverAnimation } from "~/composables/useEntryCoverAnimation";
-import { useSplitTextAnimation } from "~/composables/useSplitTextAnimation";
+import { useContentElementsAnimation } from "~/composables/useContentElementsAnimation";
 import { useAnimationsStore } from "~/stores";
 
 // Use global GSAP instance (should be available through Nuxt GSAP module)
@@ -155,10 +159,11 @@ const {
   getTimeline,
 });
 
-const { setTextRef, initializeAnimations: initializeSplitTextAnimations } =
-  useSplitTextAnimation({
+const { initializeAnimation: initializeContentElementsAnimation } =
+  useContentElementsAnimation({
     textRefs,
     sectionRef,
+    getTimeline,
   });
 
 // Track if animations have been initialized
@@ -184,15 +189,13 @@ watch(
       if (sectionRef.value && props.statisticsText.length > 0) {
         initializeStatisticsAnimations();
 
-        // Then add cover animation to the same timeline
+        // Then add animations to the same timeline
         // Use nextTick to ensure the timeline is fully created
         nextTick(() => {
           initializeEntryCoverAnimation();
+          initializeContentElementsAnimation();
         });
       }
-
-      // Initialize split text animations for content elements
-      // initializeSplitTextAnimations();
 
       animationsInitialized = true;
     }
