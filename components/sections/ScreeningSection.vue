@@ -13,7 +13,7 @@
           <div class="max-w-2xl">
             <p
               :ref="setTitleRef"
-              class="text-primary font-medium text-3xl md:text-4xl lg:text-5xl leading-title mb-8"
+              class="text-primary font-medium text-2xl xs:text-3xl md:text-4xl lg:text-5xl leading-title mb-8"
             >
               {{ title }}
             </p>

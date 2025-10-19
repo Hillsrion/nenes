@@ -33,6 +33,7 @@
   --tracking-title-sm: 0.16rem;
   --leading-title: 1.33;
   --text-serif-size: 2rem;
+  --breakpoint-xs: 430px;
 }
 
 /* Animation utilities */

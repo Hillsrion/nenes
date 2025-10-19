@@ -40,7 +40,7 @@
       >
         <div
           ref="statisticsTextRef"
-          class="text-3xl lg:text-5xl leading-snug font-medium text-center text-primary relative w-full break-words"
+          class="text-2xl xs:text-3xl lg:text-5xl leading-snug font-medium text-center text-primary relative w-full break-words"
         >
           <template v-for="(line, index) in statisticsText" :key="index">
             <span class="inline-block">
