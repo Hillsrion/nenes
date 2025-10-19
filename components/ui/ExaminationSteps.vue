@@ -51,6 +51,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from "vue";
 import { useAnimationsStore } from "../../stores";
+import { useVideos } from "~/composables/useVideos";
 import ExaminationCard from "~/components/ui/ExaminationCard.vue";
 
 // Nuxt composables are auto-imported
@@ -80,10 +81,32 @@ const videoRef = ref<HTMLVideoElement | null>(null);
 const containerRef = ref<HTMLElement | null>(null);
 const cardRefs = ref<(HTMLElement | null)[]>([]);
 const overlayRef = ref<HTMLDivElement | null>(null);
-const isTransitioning = ref(false);
-const actualVideoUrl = ref("");
-const loadedVideos = ref<Set<string>>(new Set());
-const videoLoading = ref(false);
+
+// Current step tracking
+const currentStepIndex = ref(0);
+
+// Current step data
+const currentStep = computed(() => {
+  return props.steps[currentStepIndex.value] || null;
+});
+
+// Use the videos composable
+const {
+  loadedVideos,
+  videoLoading,
+  actualVideoUrl,
+  isTransitioning,
+  isMobileOrTablet,
+  loadVideo,
+  preloadUpcomingVideos,
+  transitionToVideo,
+  currentVideoUrl,
+} = useVideos({
+  steps: props.steps,
+  currentStepIndex: currentStepIndex,
+  videoRef,
+  overlayRef,
+});
 
 // Computed trigger element (parent section or current section)
 const triggerElement = computed(() => {
@@ -107,169 +130,6 @@ const triggerElement = computed(() => {
   return containerRef.value;
 });
 
-// Current step tracking
-const currentStepIndex = ref(0);
-
-// Current step data
-const currentStep = computed(() => {
-  return props.steps[currentStepIndex.value] || null;
-});
-
-// No need to split steps - single loop handles positioning
-
-// Detect if we're on mobile/tablet (768px and below)
-const isMobileOrTablet = ref(false);
-let resizeHandler: (() => void) | null = null;
-
-// Initialize mobile/tablet detection
-onMounted(() => {
-  const checkDevice = () => {
-    isMobileOrTablet.value = window.innerWidth <= 768;
-  };
-
-  resizeHandler = checkDevice;
-  checkDevice();
-  window.addEventListener("resize", checkDevice);
-});
-
-// Cleanup
-onUnmounted(() => {
-  if (resizeHandler) {
-    window.removeEventListener("resize", resizeHandler);
-  }
-});
-
-// Current video URL based on current step and device type
-const currentVideoUrl = computed(() => {
-  const currentStep = props.steps[currentStepIndex.value];
-  if (!currentStep) return "";
-
-  // Check for responsive URLs first
-  if (currentStep.mobileUrl || currentStep.desktopUrl) {
-    return isMobileOrTablet.value
-      ? currentStep.mobileUrl
-      : currentStep.desktopUrl;
-  }
-
-  // Fall back to legacy videoUrl for backward compatibility
-  return currentStep.videoUrl || "";
-});
-
-// Video loading methods
-const loadVideo = async (url: string): Promise<void> => {
-  if (!url || loadedVideos.value.has(url)) return;
-
-  return new Promise((resolve) => {
-    const video = document.createElement("video");
-    video.preload = "metadata";
-
-    const onLoadedData = () => {
-      loadedVideos.value.add(url);
-      video.removeEventListener("loadeddata", onLoadedData);
-      video.removeEventListener("error", onError);
-      resolve();
-    };
-
-    const onError = () => {
-      video.removeEventListener("loadeddata", onLoadedData);
-      video.removeEventListener("error", onError);
-      console.warn(`Failed to preload video: ${url}`);
-      resolve();
-    };
-
-    video.addEventListener("loadeddata", onLoadedData);
-    video.addEventListener("error", onError);
-
-    // Set the appropriate source based on device type
-    if (url.includes("mobile") || url.includes("desktop")) {
-      video.src = url;
-    } else {
-      // For legacy video URLs, we need to set the source attribute directly
-      video.src = url;
-    }
-  });
-};
-
-const preloadUpcomingVideos = async () => {
-  const currentIndex = currentStepIndex.value;
-  const upcomingIndices = [
-    currentIndex + 1,
-    currentIndex + 2,
-    Math.max(0, currentIndex - 1),
-  ].filter(
-    (index) =>
-      index >= 0 && index < props.steps.length && index !== currentIndex
-  );
-
-  const preloadPromises = upcomingIndices.map((index) => {
-    const step = props.steps[index];
-    if (!step) return Promise.resolve();
-
-    const url = isMobileOrTablet.value
-      ? step.mobileUrl || step.desktopUrl || step.videoUrl
-      : step.desktopUrl || step.videoUrl;
-
-    return url ? loadVideo(url) : Promise.resolve();
-  });
-
-  await Promise.allSettled(preloadPromises);
-};
-
-// Video transition function using GSAP timeline
-const transitionToVideo = async () => {
-  if (!overlayRef.value || !videoRef.value || !currentVideoUrl.value) return;
-
-  const videoUrl = currentVideoUrl.value;
-
-  // Load the video if not already loaded
-  if (!loadedVideos.value.has(videoUrl)) {
-    videoLoading.value = true;
-    await loadVideo(videoUrl);
-    videoLoading.value = false;
-  }
-
-  // Update the actual video URL for the transition
-  actualVideoUrl.value = videoUrl;
-
-  isTransitioning.value = true;
-
-  const timeline = $gsap.timeline({
-    onComplete: () => {
-      isTransitioning.value = false;
-    },
-  });
-
-  timeline
-    .to(overlayRef.value, {
-      opacity: 1,
-      duration: 0.3,
-      ease: "power2.inOut",
-    })
-    .call(() => {
-      // Force video reload by changing currentTime to trigger source switch
-      if (videoRef.value) {
-        videoRef.value.currentTime = 0;
-      }
-    })
-    .to(overlayRef.value, {
-      opacity: 0,
-      duration: 0.3,
-      ease: "power2.inOut",
-    });
-
-  // Preload upcoming videos after the current transition
-  setTimeout(() => {
-    preloadUpcomingVideos();
-  }, 500);
-};
-
-// Watch for video URL changes and trigger transition
-watch(currentVideoUrl, (newUrl, oldUrl) => {
-  if (newUrl !== oldUrl && !isTransitioning.value) {
-    transitionToVideo();
-  }
-});
-
 // Initialize all animations with GSAP ScrollTrigger
 const initializeAnimations = async () => {
   if (!containerRef.value || !videoRef.value) return;
@@ -279,19 +139,6 @@ const initializeAnimations = async () => {
 
   // Initialize the first step
   currentStepIndex.value = 0;
-
-  // Preload the first video immediately
-  const firstStep = props.steps[0];
-  if (firstStep) {
-    const firstVideoUrl = isMobileOrTablet.value
-      ? firstStep.mobileUrl || firstStep.desktopUrl || firstStep.videoUrl
-      : firstStep.desktopUrl || firstStep.videoUrl;
-
-    if (firstVideoUrl) {
-      await loadVideo(firstVideoUrl);
-      actualVideoUrl.value = firstVideoUrl;
-    }
-  }
 
   // Video entrance animation using GSAP with ScrollTrigger
   $gsap.fromTo(
@@ -323,14 +170,14 @@ const initializeAnimations = async () => {
               trigger: cardElement,
               start: "top 50%",
               end: "bottom 50%",
-              onEnter: async () => {
+              onEnter: () => {
                 currentStepIndex.value = index;
                 // Preload videos around this step for better performance
                 setTimeout(() => {
                   preloadUpcomingVideos();
                 }, 100);
               },
-              onEnterBack: async () => {
+              onEnterBack: () => {
                 currentStepIndex.value = index;
                 // Preload videos around this step for better performance
                 setTimeout(() => {
@@ -365,10 +212,5 @@ watch(
 onUnmounted(() => {
   // Kill all GSAP animations and ScrollTriggers
   $gsap.killTweensOf([videoRef.value, overlayRef.value, ...cardRefs.value]);
-
-  // Reset state
-  loadedVideos.value.clear();
-  videoLoading.value = false;
-  actualVideoUrl.value = "";
 });
 </script>
