@@ -90,6 +90,17 @@ export const useContent = () => {
       videoUrl: "/videos/ForBiggerBlazes.mp4",
     },
   ];
+  const cursorImages = [
+    "/images/entry-cover-portrait.jpg",
+    "/images/entry-cover-portrait.jpg",
+    "/images/entry-cover-portrait.jpg",
+    "/images/entry-cover-portrait.jpg",
+    "/images/entry-cover-portrait.jpg",
+    "/images/entry-cover-portrait.jpg",
+    "/images/entry-cover-portrait.jpg",
+    "/images/entry-cover-portrait.jpg",
+  ];
+
   return {
     mainContentElements,
     statisticsText,
@@ -99,5 +110,6 @@ export const useContent = () => {
     symptomsCards,
     selfExaminationHeader,
     selfExaminationSteps,
+    cursorImages,
   };
 };

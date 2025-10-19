@@ -112,9 +112,9 @@ const canvasState = ref({ width: 0, height: 0 });
 
 // Grid settings
 const grid = reactive<GridSettings>({
-  imgSize: 75,
+  imgSize: 40,
   maxDistance: 250,
-  gap: 50,
+  gap: 100,
   step: 135,
   cols: 0,
   rows: 0,
@@ -198,7 +198,7 @@ const loadImages = async (): Promise<void> => {
 
   // Create 6 instances of each image
   const expandedImages = imageCategories.flatMap((category) =>
-    Array(6)
+    Array(1)
       .fill(null)
       .map((_, index) => ({
         url: category.url,

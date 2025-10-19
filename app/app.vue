@@ -32,7 +32,7 @@
 
         <!-- Resources Section -->
         <ResourcesSection />
-        <CursorImageSpawner />
+        <CursorImageSpawner :images="cursorImages" />
       </div>
     </MainLayout>
   </div>
@@ -63,6 +63,7 @@ const {
   symptomsMainTitle,
   symptomsCards,
   selfExaminationSteps,
+  cursorImages,
 } = useContent();
 
 // Reactive state for loading completion
