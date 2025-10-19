@@ -68,11 +68,6 @@
           <div
             v-for="(element, index) in contentElements"
             :key="index"
-            :ref="
-              (el) => {
-                if (el) textRefs[index] = el;
-              }
-            "
             :class="[
               index % 2 === 0
                 ? 'col-span-2'
@@ -80,6 +75,11 @@
             ]"
           >
             <p
+              :ref="
+                (el) => {
+                  if (el) textRefs[index] = el;
+                }
+              "
               class="text-secondary font-medium lg:text-5xl text-3xl leading-title"
             >
               {{ element.content }}

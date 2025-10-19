@@ -95,7 +95,6 @@ export const useStatisticsAnimation = ({
         start: "top top",
         end: "top -200%", // Tighter scroll distance
         scrub: 0.5,
-        markers: true,
         onUpdate: (self: any) => {
           // Track animation states
           firstTwoLinesFaded.value = self.progress > 0.1;

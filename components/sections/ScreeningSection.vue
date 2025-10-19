@@ -5,7 +5,7 @@
       ref="sectionRef"
     >
       <div
-        class="container mx-auto px-4 flex flex-col lg:flex-row gap-8 xl:gap-12 origin-top h-[100svh] py-27"
+        class="container mx-auto px-4 flex flex-col lg:flex-row gap-8 xl:gap-12 origin-top h-[100svh] lg:py-27 sm:py-20 py-14"
         ref="containerRef"
       >
         <!-- Main content -->

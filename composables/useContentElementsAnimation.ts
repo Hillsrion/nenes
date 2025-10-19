@@ -39,11 +39,13 @@ export const useContentElementsAnimation = ({
 
     const { $gsap } = useNuxtApp();
 
-    // Initialize all elements to invisible
-    textRefs.value.forEach((el) => {
+    // Initialize all elements to invisible and scaled down
+    textRefs.value.forEach((el, index) => {
       if (el) {
         $gsap.set(el, {
           opacity: 0,
+          scale: index > 0 ? 1 : 0.5,
+          transformOrigin: "center center",
         });
       }
     });
@@ -70,6 +72,9 @@ export const useContentElementsAnimation = ({
 
       const elementStartTime = startPosition + index * elementCycleDuration;
 
+      // Offset for scale animation (scale starts after opacity begins)
+      const scaleOffset = fadeInDuration * 2; // Scale starts 30% into fade-in
+
       // Fade in
       timeline.to(
         el,
@@ -81,13 +86,38 @@ export const useContentElementsAnimation = ({
         elementStartTime
       );
 
+      // Scale up (only for the first element, with longer duration)
+      if (index === 0) {
+        timeline.to(
+          el,
+          {
+            scale: 1,
+            duration: fadeInDuration * 2.5, // Much longer duration
+            ease: "back.out(1.2)", // Bouncy ease for more dynamic feel
+          },
+          elementStartTime + scaleOffset
+        );
+      } else {
+        // For other elements, scale instantly to 1
+        timeline.to(
+          el,
+          {
+            scale: 1,
+            duration: 0.01,
+            ease: "none",
+          },
+          elementStartTime
+        );
+      }
+
       // Hold (implicit - just the duration between fade in and fade out)
 
-      // Fade out
+      // Fade out (keep scale at 1)
       timeline.to(
         el,
         {
           opacity: 0,
+          scale: 1,
           duration: fadeOutDuration,
           ease: "power2.in",
         },
