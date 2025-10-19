@@ -1,0 +1,7 @@
+[build]
+  command = "pnpm nuxi build"
+  publish = ".output/public"
+  functions = ".output/server"
+
+[functions]
+  node_bundler = "esbuild"
