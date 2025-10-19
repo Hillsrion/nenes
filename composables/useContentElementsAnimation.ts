@@ -44,21 +44,20 @@ export const useContentElementsAnimation = ({
       if (el) {
         $gsap.set(el, {
           opacity: 0,
-          y: 30, // Optional: start slightly below
         });
       }
     });
 
     // Calculate timing for each element
-    // We want the content elements to start animating after the statistics animation completes (at position 1.0)
-    const fadeInDuration = 0.15; // Duration to fade in each element
-    const holdDuration = 0.5; // Duration to hold each element visible
-    const fadeOutDuration = 0.15; // Duration to fade out each element
+    // We want the content elements to start animating right after the image starts scaling (at position 0.4)
+    const fadeInDuration = 0.4; // Duration to fade in each element
+    const holdDuration = 1.2; // Duration to hold each element visible while scrolling
+    const fadeOutDuration = 0.4; // Duration to fade out each element
     const elementCycleDuration =
       fadeInDuration + holdDuration + fadeOutDuration;
 
-    // Start position in timeline (after statistics animation completes)
-    let startPosition = 1.0;
+    // Start position in timeline (right after image starts scaling at 0.4)
+    let startPosition = 0.45;
 
     // Create sequential animations for each element
     textRefs.value.forEach((el, index) => {
@@ -71,7 +70,6 @@ export const useContentElementsAnimation = ({
         el,
         {
           opacity: 1,
-          y: 0,
           duration: fadeInDuration,
           ease: "power2.out",
         },
@@ -85,7 +83,6 @@ export const useContentElementsAnimation = ({
         el,
         {
           opacity: 0,
-          y: -30, // Optional: exit slightly above
           duration: fadeOutDuration,
           ease: "power2.in",
         },

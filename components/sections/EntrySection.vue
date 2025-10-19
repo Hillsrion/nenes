@@ -28,7 +28,7 @@
     <!-- Statistics Section -->
     <div class="absolute -top-2 left-0 w-full h-16 bg-primary -z-1"></div>
     <div
-      class="relative h-[300svh] w-full min-h-screen bg-white transition-all duration-300 ease-out rounded-t-4xl overflow-x-clip"
+      class="relative h-[400svh] w-full min-h-screen bg-white transition-all duration-300 ease-out rounded-t-4xl overflow-x-clip"
       ref="whiteSectionRef"
       :class="{
         'rounded-t-4xl':
@@ -61,7 +61,7 @@
         </div>
       </div>
 
-      <div class="container w-full mx-auto px-8 relative z-100 mt-[55svh]">
+      <div class="container w-full mx-auto px-8 relative z-100">
         <div
           class="max-w-[70rem] mx-auto mt-24 grid grid-cols-3 gap-y-72 auto-rows-auto"
         >
