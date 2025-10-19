@@ -129,9 +129,9 @@ export const useEntryCoverAnimation = ({
     // Keep it vertically centered (translateY = 0) so it stays in viewport center
     const translateX = targetX - viewportWidth / 2;
 
-    // Apply the transform to position the image correctly
-    // Only translate horizontally, keep vertical position centered
-    imageElement.style.transform = `translate(${translateX}px, 0px) scale(${scale})`;
+    // Apply translation using GSAP so it composes with ScrollTrigger scale
+    const { $gsap } = useNuxtApp();
+    $gsap.set(imageElement, { x: translateX });
 
     // // Debug logging to understand positioning
     // console.log("Image positioning:", {
@@ -180,14 +180,25 @@ export const useEntryCoverAnimation = ({
 
     // Animation: scale from 0 to full size while staying centered between words
     const { $gsap } = useNuxtApp();
+    // Precompute target max scale once (based on initial split center)
+    const initialCenterX = initialPos.x;
+    const initialViewportWidth = window.innerWidth;
+    const initialHorizontalOffset = Math.abs(
+      initialCenterX - initialViewportWidth / 2
+    );
+    const initialCoverageIncrease =
+      (2 * initialHorizontalOffset) / initialViewportWidth;
+    const maxScale = 1 + initialCoverageIncrease + 0.05; // small aesthetic extra
     imageAnimation = $gsap.fromTo(
       entryCoverRef.value,
       {
         opacity: 1,
         transformOrigin: "center center",
+        scale: 0,
       },
       {
         opacity: 1,
+        scale: maxScale, // ScrollTrigger scrubs from 0 to this target smoothly
         duration: 4.5,
         ease: "power2.out",
         scrollTrigger: {
@@ -203,20 +214,8 @@ export const useEntryCoverAnimation = ({
             // Get current position for image placement
             const currentPos = calculateImagePosition();
 
-            // Calculate required scale based on horizontal offset
-            const viewportWidth = window.innerWidth;
-            const horizontalOffset = Math.abs(currentPos.x - viewportWidth / 2);
-
-            // Progressive coverage amount beyond 1 due to translation (0..)
-            const coverageIncrease = (2 * horizontalOffset) / viewportWidth;
-
-            // Add a small aesthetic extra range that grows with progress
-            const extraRange = 0.25; // up to +0.25 at progress 1
-
-            // Progressive scale: starts at 0 and grows with progress
-            // By multiplying the max potential scale by progress, we avoid immediate jumps
-            const maxScaleThisFrame = 1 + coverageIncrease + extraRange;
-            const scaleValue = Math.min(delayedProgress, 1) * maxScaleThisFrame;
+            // Derive instantaneous scale (ScrollTrigger handles the actual tween)
+            const scaleValue = Math.min(delayedProgress, 1) * maxScale;
 
             // Update the current scale ref so the watcher can detect when it reaches target
             currentScale.value = scaleValue;
