@@ -63,7 +63,7 @@
 
       <div class="container w-full mx-auto px-8 relative z-100">
         <div
-          class="max-w-[70rem] mx-auto mt-24 grid grid-cols-3 gap-y-[60vh] auto-rows-auto"
+          class="max-w-[70rem] mx-auto grid grid-cols-3 lg:gap-y-[60vh] gap-y-[40vh] auto-rows-auto mt-[40vh]"
         >
           <div
             v-for="(element, index) in contentElements"
