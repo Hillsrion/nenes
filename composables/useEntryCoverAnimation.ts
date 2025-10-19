@@ -192,7 +192,7 @@ export const useEntryCoverAnimation = ({
     imageAnimation = $gsap.fromTo(
       entryCoverRef.value,
       {
-        opacity: 1,
+        opacity: 0,
         transformOrigin: "center center",
         scale: 0,
       },
@@ -203,8 +203,10 @@ export const useEntryCoverAnimation = ({
         ease: "power2.out",
         scrollTrigger: {
           trigger: sectionRef.value,
-          start: "65px 10%", // Start when words begin horizontal splitting
-          end: "top -30%", // End much later for longer animation
+          // Start only after the first lines have faded and the last line finished centering
+          // This aligns with statistics triggers: fade end at "top 40%", center ends at "top 20%"
+          start: "top 20%",
+          end: "top -40%",
           scrub: 0.8,
           onUpdate: (self: any) => {
             // Simple scroll-based scaling

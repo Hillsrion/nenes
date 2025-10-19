@@ -28,7 +28,7 @@
     <!-- Statistics Section -->
     <div class="absolute -top-2 left-0 w-full h-16 bg-primary -z-1"></div>
     <div
-      class="relative h-[250svh] w-full min-h-screen bg-white transition-all duration-300 ease-out rounded-t-4xl overflow-x-clip"
+      class="relative h-[300svh] w-full min-h-screen bg-white transition-all duration-300 ease-out rounded-t-4xl overflow-x-clip"
       ref="whiteSectionRef"
       :class="{
         'rounded-t-4xl':
@@ -113,10 +113,6 @@ const animationsStore = useAnimationsStore();
 
 // Props
 const props = defineProps({
-  backgroundGradient: {
-    type: String,
-    default: "linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)",
-  },
   statisticsText: {
     type: Array,
     default: () => [],
@@ -140,6 +136,7 @@ const textUtils = useTextUtils();
 // Animation composables
 const {
   firstTwoLinesFaded,
+  lastLineCentered,
   initializeAnimations: initializeStatisticsAnimations,
 } = useStatisticsAnimation({
   sectionRef,
@@ -162,16 +159,46 @@ const { setTextRef, initializeAnimations: initializeSplitTextAnimations } =
     sectionRef,
   });
 
-// Initialize animations on mount
+// Track if animations have been initialized
+let animationsInitialized = false;
+let entryCoverInitialized = false;
+
+// Set initial state for cover image - must be scale 0 and hidden
 onMounted(() => {
-  if (sectionRef.value && props.statisticsText.length > 0) {
-    // Initialize statistics animations
-    initializeStatisticsAnimations();
-    // Initialize entry cover animation
-    initializeEntryCoverAnimation();
+  if (entryCoverRef.value) {
+    const { $gsap } = useNuxtApp();
+    $gsap.set(entryCoverRef.value, {
+      scale: 0,
+      opacity: 0,
+    });
   }
-  // Initialize split text animations for content elements
-  initializeSplitTextAnimations();
+});
+
+// Wait for loading to complete before initializing any animations
+watch(
+  () => animationsStore?.sections?.loading?.state,
+  (loadingState) => {
+    if (loadingState === "isComplete" && !animationsInitialized) {
+      // Now initialize statistics animations
+      if (sectionRef.value && props.statisticsText.length > 0) {
+        initializeStatisticsAnimations();
+      }
+
+      // Initialize split text animations for content elements
+      // initializeSplitTextAnimations();
+
+      animationsInitialized = true;
+    }
+  },
+  { immediate: true }
+);
+
+// Delay initializing the cover scaling until the first lines finish fading
+watch([firstTwoLinesFaded, lastLineCentered], ([faded, centered]) => {
+  if (faded && centered && !entryCoverInitialized) {
+    // initializeEntryCoverAnimation();
+    entryCoverInitialized = true;
+  }
 });
 
 // Note: All animation logic has been moved to composables for better organization

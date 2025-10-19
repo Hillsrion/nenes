@@ -68,13 +68,13 @@ export const useStatisticsAnimation = ({
 
     fadeTrigger = $gsap.to(allLinesExceptLast, {
       opacity: 0,
-      duration: 0.05, // Ultra fast fade
       ease: "none",
       scrollTrigger: {
         trigger: sectionRef.value,
-        start: "top bottom", // Start immediately when scrolling begins
-        end: "top 20%", // End when section is well into viewport
+        start: "top top", // Start immediately when scrolling begins
+        end: "+150", // End when section is well into viewport
         scrub: 1, // Instant scrubbing for immediate fade
+        markers: true,
         onUpdate: (self: any) => {
           // Track fade state
           firstTwoLinesFaded.value = self.progress > 0.8;
