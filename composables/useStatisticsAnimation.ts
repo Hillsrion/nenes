@@ -126,13 +126,13 @@ export const useStatisticsAnimation = ({
       0.1
     );
 
-    // Step 3: Split the words horizontally (30-100% of timeline)
+    // Step 3: Split the words horizontally (40-70% of timeline)
     timeline.to(
       splitWordLeft,
       {
         x: "-150vw",
         ease: "none",
-        duration: 0.7,
+        duration: 0.5,
       },
       0.4
     );
@@ -142,7 +142,7 @@ export const useStatisticsAnimation = ({
       {
         x: "150vw",
         ease: "none",
-        duration: 0.7,
+        duration: 0.5,
       },
       0.4
     );

@@ -46,7 +46,7 @@
             <span class="inline-block">
               <template v-if="index === statisticsText.length - 1">
                 <!-- Split last line: first word goes left, rest goes right -->
-                <span class="inline-block animate-split-word-left mr-3 lg:mr-4">
+                <span class="inline-block animate-split-word-left mr-3">
                   {{ textUtils.getFirstWord(line) }}
                 </span>
                 <span class="inline-block animate-split-word-right">
@@ -63,7 +63,7 @@
 
       <div class="container w-full mx-auto px-8 relative z-100">
         <div
-          class="max-w-[70rem] mx-auto grid grid-cols-3 lg:gap-y-[60vh] gap-y-[40vh] auto-rows-auto mt-[40vh]"
+          class="max-w-[70rem] mx-auto grid grid-cols-3 lg:gap-y-[60vh] gap-y-[40vh] auto-rows-auto mt-[60vh]"
         >
           <div
             v-for="(element, index) in contentElements"

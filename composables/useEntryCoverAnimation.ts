@@ -206,8 +206,8 @@ export const useEntryCoverAnimation = ({
       scale: 0,
     });
 
-    // Add cover animation to the timeline, synchronized with word split (30-100% of timeline)
-    // Fade in and start scaling slightly before words split (at 25%)
+    // Add cover animation to the timeline, synchronized with word split (40-70% of timeline)
+    // Fade in and start scaling at 0.4
     timeline.to(
       entryCoverRef.value,
       {
@@ -218,12 +218,12 @@ export const useEntryCoverAnimation = ({
       0.4
     );
 
-    // Scale up as words move apart (25-100% of timeline = 75% duration)
+    // Scale up as words move apart (40-70% of timeline = 30% duration)
     imageAnimation = timeline.to(
       entryCoverRef.value,
       {
         scale: maxScale,
-        duration: 0.75,
+        duration: 0.3,
         ease: "power2.out",
         onUpdate: function () {
           // Get the current progress of THIS tween within the timeline
@@ -251,7 +251,7 @@ export const useEntryCoverAnimation = ({
           }
         },
       },
-      0.4
+      0.42
     );
 
     // Store the animation reference for cleanup
