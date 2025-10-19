@@ -93,7 +93,7 @@ export const useStatisticsAnimation = ({
       scrollTrigger: {
         trigger: sectionRef.value,
         start: "top top",
-        end: "top -300%", // Extended to 300% for longer scroll distance
+        end: "top -200%", // Tighter scroll distance
         scrub: 0.5,
         markers: true,
         onUpdate: (self: any) => {

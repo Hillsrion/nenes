@@ -49,15 +49,20 @@ export const useContentElementsAnimation = ({
     });
 
     // Calculate timing for each element
-    // We want the content elements to start animating right after the image starts scaling (at position 0.4)
-    const fadeInDuration = 0.4; // Duration to fade in each element
-    const holdDuration = 1.2; // Duration to hold each element visible while scrolling
-    const fadeOutDuration = 0.4; // Duration to fade out each element
-    const elementCycleDuration =
-      fadeInDuration + holdDuration + fadeOutDuration;
+    // Timeline runs from 0 to 1, start exactly when image starts scaling (0.4)
+    // Available timeline space: 0.4 to 1.0 = 0.6
+    const numberOfElements = textRefs.value.length;
+    const availableTimelineSpace = 0.6; // From 0.4 to 1.0
+    const spacePerElement = availableTimelineSpace / numberOfElements;
 
-    // Start position in timeline (right after image starts scaling at 0.4)
-    let startPosition = 0.45;
+    // Each element gets equal time in the timeline
+    const fadeInDuration = spacePerElement * 0.15; // 15% of element time for fade in
+    const holdDuration = spacePerElement * 0.7; // 70% of element time for hold
+    const fadeOutDuration = spacePerElement * 0.15; // 15% of element time for fade out
+    const elementCycleDuration = spacePerElement;
+
+    // Start position in timeline (exactly when image starts scaling at 0.4)
+    const startPosition = 0.4;
 
     // Create sequential animations for each element
     textRefs.value.forEach((el, index) => {
