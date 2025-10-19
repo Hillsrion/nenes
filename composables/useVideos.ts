@@ -1,4 +1,4 @@
-import { ref, computed, onMounted, onUnmounted, watch } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch, Ref } from "vue";
 
 interface Step {
   content: string;
@@ -28,14 +28,34 @@ export function useVideos(options: UseVideosOptions) {
   // Device detection
   const isMobileOrTablet = ref(false);
 
-  // Initialize mobile/tablet detection
+  // Initialize mobile/tablet detection and first video
   onMounted(() => {
     const checkDevice = () => {
       isMobileOrTablet.value = window.innerWidth <= 768;
     };
 
     checkDevice();
+    console.log(
+      "📱 Device detected - isMobileOrTablet:",
+      isMobileOrTablet.value
+    );
     window.addEventListener("resize", checkDevice);
+
+    // Initialize the first video URL after device is checked
+    const firstStep = steps[0];
+    console.log("🎬 First step:", firstStep);
+    if (firstStep) {
+      const firstVideoUrl = isMobileOrTablet.value
+        ? firstStep.mobileUrl || firstStep.desktopUrl || firstStep.videoUrl
+        : firstStep.desktopUrl || firstStep.videoUrl;
+
+      console.log("🎥 First video URL:", firstVideoUrl);
+      if (firstVideoUrl) {
+        actualVideoUrl.value = firstVideoUrl;
+        console.log("✅ Set actualVideoUrl to:", actualVideoUrl.value);
+        loadVideo(firstVideoUrl);
+      }
+    }
   });
 
   // Cleanup
@@ -128,6 +148,10 @@ export function useVideos(options: UseVideosOptions) {
 
     const videoUrl = currentVideoUrl.value;
 
+    // Set transitioning flag
+    isTransitioning.value = true;
+    console.log("🔄 Starting transition to:", videoUrl);
+
     // Load the video if not already loaded
     if (!loadedVideos.value.has(videoUrl)) {
       videoLoading.value = true;
@@ -135,26 +159,39 @@ export function useVideos(options: UseVideosOptions) {
       videoLoading.value = false;
     }
 
-    // Update the actual video URL for the transition
-    actualVideoUrl.value = videoUrl;
-
-    isTransitioning.value = true;
-
-    // Call the transition callback if provided
+    // Call the transition callback BEFORE updating video URL
+    // This allows the fade-in to happen before the video changes
     if (transitionCallback) {
       transitionCallback(videoUrl);
     }
 
+    // Wait for fade-in to complete before updating video URL
+    setTimeout(() => {
+      actualVideoUrl.value = videoUrl;
+      console.log("✅ Video URL updated to:", videoUrl);
+    }, 300);
+
+    // Reset transitioning flag after full transition completes
+    setTimeout(() => {
+      isTransitioning.value = false;
+      console.log("✓ Transition complete, ready for next video");
+    }, 800);
+
     // Preload upcoming videos after the current transition
     setTimeout(() => {
       preloadUpcomingVideos();
-    }, 500);
+    }, 1000);
   };
 
   // Watch for video URL changes and trigger transition
   watch(currentVideoUrl, (newUrl, oldUrl) => {
+    console.log("🎬 currentVideoUrl changed from:", oldUrl, "to:", newUrl);
+    console.log("🔒 isTransitioning:", isTransitioning.value);
     if (newUrl !== oldUrl && !isTransitioning.value) {
+      console.log("▶️ Triggering transition...");
       transitionToVideo();
+    } else if (isTransitioning.value) {
+      console.log("⏸️ Transition blocked - already transitioning");
     }
   });
 

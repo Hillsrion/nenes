@@ -6,26 +6,24 @@
     <!-- Fixed video at center of viewport -->
     <video
       ref="videoRef"
+      :src="actualVideoUrl"
       class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full h-full object-cover scale-0 origin-center"
       autoplay
       muted
       loop
       playsinline
-    >
-      <source media="(max-width: 768px)" :src="actualVideoUrl || ''" />
-      <source media="(min-width: 769px)" :src="actualVideoUrl || ''" />
-    </video>
+    ></video>
 
     <!-- Black overlay for video transitions -->
     <div
       ref="overlayRef"
-      class="fixed top-0 left-0 w-full h-full bg-black pointer-events-none opacity-0 z-0"
+      class="fixed top-0 left-0 w-full h-full bg-black pointer-events-none opacity-0 z-20"
     ></div>
 
     <!-- Video loading indicator -->
     <div
       v-if="videoLoading"
-      class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 flex items-center justify-center"
+      class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-30 flex items-center justify-center"
     >
       <div
         class="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin"
@@ -90,6 +88,31 @@ const currentStep = computed(() => {
   return props.steps[currentStepIndex.value] || null;
 });
 
+// Transition callback to handle fade effect with overlay
+const handleVideoTransition = (url: string) => {
+  if (!overlayRef.value) return;
+
+  console.log("🎬 Handling fade transition for:", url);
+
+  // Create GSAP timeline for smooth fade transition
+  const tl = $gsap.timeline();
+
+  // Fade in overlay (to black)
+  tl.to(overlayRef.value, {
+    opacity: 1,
+    duration: 0.3,
+    ease: "power2.inOut",
+  })
+    // Keep black for a moment while video switches
+    .to({}, { duration: 0.1 })
+    // Fade out overlay (reveal new video)
+    .to(overlayRef.value, {
+      opacity: 0,
+      duration: 0.3,
+      ease: "power2.inOut",
+    });
+};
+
 // Use the videos composable
 const {
   loadedVideos,
@@ -106,6 +129,7 @@ const {
   currentStepIndex: currentStepIndex,
   videoRef,
   overlayRef,
+  transitionCallback: handleVideoTransition,
 });
 
 // Computed trigger element (parent section or current section)
@@ -171,6 +195,7 @@ const initializeAnimations = async () => {
               start: "top 50%",
               end: "bottom 50%",
               onEnter: () => {
+                console.log(`🎯 ScrollTrigger onEnter - Step ${index + 1}`);
                 currentStepIndex.value = index;
                 // Preload videos around this step for better performance
                 setTimeout(() => {
@@ -178,6 +203,7 @@ const initializeAnimations = async () => {
                 }, 100);
               },
               onEnterBack: () => {
+                console.log(`🔙 ScrollTrigger onEnterBack - Step ${index + 1}`);
                 currentStepIndex.value = index;
                 // Preload videos around this step for better performance
                 setTimeout(() => {
@@ -191,6 +217,21 @@ const initializeAnimations = async () => {
     });
   });
 };
+
+// Watch for current step index changes
+watch(currentStepIndex, (newIndex, oldIndex) => {
+  console.log(`📊 currentStepIndex changed from ${oldIndex} to ${newIndex}`);
+  console.log(`🎥 Current step:`, props.steps[newIndex]);
+});
+
+// Watch for video URL changes and reload video
+watch(actualVideoUrl, (newUrl) => {
+  console.log("📹 Video URL changed to:", newUrl);
+  if (newUrl && videoRef.value) {
+    console.log("🔄 Reloading video element");
+    videoRef.value.load();
+  }
+});
 
 // Watch for loading completion to start animations
 watch(
