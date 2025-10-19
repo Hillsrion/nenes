@@ -1,3 +1,24 @@
+<script setup lang="ts">
+import CardContent from "./CardContent.vue";
+
+interface Props {
+  stepNumber: string;
+  description: string;
+}
+
+defineProps<Props>();
+</script>
+
+<script lang="ts">
+import type { DefineComponent } from "vue";
+
+const ExaminationCard: DefineComponent<{}, {}, any> = {
+  name: "ExaminationCard",
+};
+
+export default ExaminationCard;
+</script>
+
 <template>
   <div class="bg-secondary-light flex flex-col justify-center p-8 w-90">
     <p class="text-primary font-serif font-normal text-serif-size/7.5 mb-5">
@@ -6,18 +27,3 @@
     <CardContent :content="description" />
   </div>
 </template>
-
-<script setup lang="ts">
-import CardContent from "~/components/ui/CardContent.vue";
-
-defineProps({
-  stepNumber: {
-    type: String,
-    required: true,
-  },
-  description: {
-    type: String,
-    required: true,
-  },
-});
-</script>

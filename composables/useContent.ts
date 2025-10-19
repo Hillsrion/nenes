@@ -67,27 +67,32 @@ export const useContent = () => {
     {
       content:
         "Placez-vous devant un miroir, les bras le long du corps, puis les mains sur les hanches, et enfin les bras levés au-dessus de la tête. Observez vos seins pour détecter tout changement inhabituel.",
-      videoUrl: "/videos/ForBiggerBlazes.mp4",
+      mobileUrl: "/videos/ForBiggerBlazes.mp4",
+      desktopUrl: "/videos/ForBiggerBlazes.mp4",
     },
     {
       content:
         "Couvrez l'intégralité du sein, de l'extérieur vers le mamelon, en utilisant différents niveaux de pression (légère, moyenne, forte).",
-      videoUrl: "/videos/ForBiggerMeltdowns.mp4",
+      mobileUrl: "/videos/ForBiggerMeltdowns.mp4",
+      desktopUrl: "/videos/ForBiggerMeltdowns.mp4",
     },
     {
       content:
         "N'oubliez pas de palper la zone sous l'aisselle ainsi que l'espace entre le sein et l'aisselle.",
-      videoUrl: "/videos/ForBiggerEscapes.mp4",
+      mobileUrl: "/videos/ForBiggerEscapes.mp4",
+      desktopUrl: "/videos/ForBiggerEscapes.mp4",
     },
     {
       content:
         "Terminez en pinçant délicatement le mamelon pour vérifier l'absence d'écoulement anormal.",
-      videoUrl: "/videos/ForBiggerJoyrides.mp4",
+      mobileUrl: "/videos/ForBiggerJoyrides.mp4",
+      desktopUrl: "/videos/ForBiggerJoyrides.mp4",
     },
     {
       content:
         "Répétez ces mêmes gestes sur le sein droit avec votre main gauche.",
-      videoUrl: "/videos/ForBiggerBlazes.mp4",
+      mobileUrl: "/videos/ForBiggerBlazes.mp4",
+      desktopUrl: "/videos/ForBiggerBlazes.mp4",
     },
   ];
   const cursorImages = [

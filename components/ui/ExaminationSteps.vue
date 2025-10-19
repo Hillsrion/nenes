@@ -6,13 +6,21 @@
     <!-- Fixed video at center of viewport -->
     <video
       ref="videoRef"
-      :src="actualVideoUrl"
       class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full h-full object-cover scale-0 origin-center"
       autoplay
       muted
       loop
       playsinline
-    ></video>
+    >
+      <source
+        media="(max-width: 768px)"
+        :src="currentStep?.mobileUrl || currentStep?.videoUrl || ''"
+      />
+      <source
+        media="(min-width: 769px)"
+        :src="currentStep?.desktopUrl || currentStep?.videoUrl || ''"
+      />
+    </video>
 
     <!-- Black overlay for video transitions -->
     <div
@@ -46,7 +54,9 @@ declare const useNuxtApp: () => { $gsap: any };
 
 interface Step {
   content: string;
-  videoUrl: string;
+  videoUrl?: string; // For backward compatibility
+  mobileUrl?: string;
+  desktopUrl?: string;
 }
 
 interface Props {
@@ -94,19 +104,54 @@ const triggerElement = computed(() => {
 // Current step tracking
 const currentStepIndex = ref(0);
 
+// Current step data
+const currentStep = computed(() => {
+  return props.steps[currentStepIndex.value] || null;
+});
+
 // No need to split steps - single loop handles positioning
 
-// Current video URL based on current step
-const currentVideoUrl = computed(() => {
-  if (props.steps[currentStepIndex.value]) {
-    return props.steps[currentStepIndex.value].videoUrl;
+// Detect if we're on mobile/tablet (768px and below)
+const isMobileOrTablet = ref(false);
+let resizeHandler: (() => void) | null = null;
+
+// Initialize mobile/tablet detection
+onMounted(() => {
+  const checkDevice = () => {
+    isMobileOrTablet.value = window.innerWidth <= 768;
+  };
+
+  resizeHandler = checkDevice;
+  checkDevice();
+  window.addEventListener("resize", checkDevice);
+});
+
+// Cleanup
+onUnmounted(() => {
+  if (resizeHandler) {
+    window.removeEventListener("resize", resizeHandler);
   }
-  return "";
+});
+
+// Current video URL based on current step and device type
+const currentVideoUrl = computed(() => {
+  const currentStep = props.steps[currentStepIndex.value];
+  if (!currentStep) return "";
+
+  // Check for responsive URLs first
+  if (currentStep.mobileUrl || currentStep.desktopUrl) {
+    return isMobileOrTablet.value
+      ? currentStep.mobileUrl
+      : currentStep.desktopUrl;
+  }
+
+  // Fall back to legacy videoUrl for backward compatibility
+  return currentStep.videoUrl || "";
 });
 
 // Video transition function using GSAP timeline
-const transitionToVideo = (newUrl: string) => {
-  if (!overlayRef.value) return;
+const transitionToVideo = () => {
+  if (!overlayRef.value || !videoRef.value) return;
 
   isTransitioning.value = true;
 
@@ -123,7 +168,8 @@ const transitionToVideo = (newUrl: string) => {
       ease: "power2.inOut",
     })
     .call(() => {
-      actualVideoUrl.value = newUrl;
+      // Force video reload by changing currentTime to trigger source switch
+      videoRef.value!.currentTime = 0;
     })
     .to(overlayRef.value, {
       opacity: 0,
@@ -134,8 +180,8 @@ const transitionToVideo = (newUrl: string) => {
 
 // Watch for video URL changes and trigger transition
 watch(currentVideoUrl, (newUrl, oldUrl) => {
-  if (newUrl !== oldUrl && !isTransitioning.value && overlayRef.value) {
-    transitionToVideo(newUrl);
+  if (newUrl !== oldUrl && !isTransitioning.value) {
+    transitionToVideo();
   }
 });
 
@@ -146,8 +192,8 @@ const initializeAnimations = () => {
   // Set initial video state
   $gsap.set(videoRef.value, { scale: 0 });
 
-  // Initialize the first video URL
-  actualVideoUrl.value = props.steps[0]?.videoUrl || "";
+  // Initialize the first step
+  currentStepIndex.value = 0;
 
   // Video entrance animation using GSAP with ScrollTrigger
   $gsap.fromTo(
