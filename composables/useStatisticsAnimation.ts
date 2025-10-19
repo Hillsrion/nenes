@@ -185,5 +185,6 @@ export const useStatisticsAnimation = ({
     lastLineCentered,
     initializeAnimations,
     cleanup,
+    getTimeline: () => animationTimeline,
   };
 };

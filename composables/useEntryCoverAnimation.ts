@@ -14,12 +14,14 @@ interface EntryCoverAnimationOptions {
   sectionRef: Ref<HTMLElement | null>;
   entryCoverRef: Ref<HTMLElement | null>;
   statisticsTextRef: Ref<HTMLElement | null>;
+  getTimeline?: () => any;
 }
 
 export const useEntryCoverAnimation = ({
   sectionRef,
   entryCoverRef,
   statisticsTextRef,
+  getTimeline,
 }: EntryCoverAnimationOptions) => {
   // Animation state
   const isCoverFullyVisible = ref(false);
@@ -167,10 +169,18 @@ export const useEntryCoverAnimation = ({
 
   /**
    * Create animation for entry cover image
+   * Adds the cover animation to the existing statistics timeline
    */
   const createEntryCoverAnimation = () => {
     if (!entryCoverRef.value || !statisticsTextRef.value || !sectionRef.value)
       return;
+
+    // Get the timeline from the statistics animation
+    const timeline = getTimeline?.();
+    if (!timeline) {
+      console.warn("Timeline not available for cover animation");
+      return;
+    }
 
     // Get initial position and set up the image
     const initialPos = calculateImagePosition();
@@ -178,9 +188,8 @@ export const useEntryCoverAnimation = ({
       positionImageAtCenter(entryCoverRef.value, initialPos.x, initialPos.y);
     }
 
-    // Animation: scale from 0 to full size while staying centered between words
-    const { $gsap } = useNuxtApp();
     // Precompute target max scale once (based on initial split center)
+    const { $gsap } = useNuxtApp();
     const initialCenterX = initialPos.x;
     const initialViewportWidth = window.innerWidth;
     const initialHorizontalOffset = Math.abs(
@@ -189,55 +198,60 @@ export const useEntryCoverAnimation = ({
     const initialCoverageIncrease =
       (2 * initialHorizontalOffset) / initialViewportWidth;
     const maxScale = 1 + initialCoverageIncrease + 0.05; // small aesthetic extra
-    imageAnimation = $gsap.fromTo(
+
+    // Initialize image to invisible and scaled to 0
+    $gsap.set(entryCoverRef.value, {
+      opacity: 0,
+      transformOrigin: "center center",
+      scale: 0,
+    });
+
+    // Add cover animation to the timeline, synchronized with word split (30-100% of timeline)
+    // Fade in and start scaling slightly before words split (at 25%)
+    timeline.to(
       entryCoverRef.value,
       {
-        opacity: 0,
-        transformOrigin: "center center",
-        scale: 0,
-      },
-      {
         opacity: 1,
-        scale: maxScale, // ScrollTrigger scrubs from 0 to this target smoothly
-        duration: 4.5,
+        duration: 0.05,
+        ease: "none",
+      },
+      0.25
+    );
+
+    // Scale up as words move apart (25-100% of timeline = 75% duration)
+    imageAnimation = timeline.to(
+      entryCoverRef.value,
+      {
+        scale: maxScale,
+        duration: 0.75,
         ease: "power2.out",
-        scrollTrigger: {
-          trigger: sectionRef.value,
-          // Start only after the first lines have faded and the last line finished centering
-          // This aligns with statistics triggers: fade end at "top 40%", center ends at "top 20%"
-          start: "top 20%",
-          end: "top -40%",
-          scrub: 0.8,
-          onUpdate: (self: any) => {
-            // Simple scroll-based scaling
-            const progress = self.progress;
-            const delayedProgress = Math.max(0, progress);
+        onUpdate: function () {
+          // Get the current progress of THIS tween within the timeline
+          const tweenProgress = this.progress();
+          const scaleValue = tweenProgress * maxScale;
 
-            // Get current position for image placement
-            const currentPos = calculateImagePosition();
+          // Update the current scale ref so the watcher can detect changes
+          currentScale.value = scaleValue;
 
-            // Derive instantaneous scale (ScrollTrigger handles the actual tween)
-            const scaleValue = Math.min(delayedProgress, 1) * maxScale;
+          // Get current position for image placement
+          const currentPos = calculateImagePosition();
 
-            // Update the current scale ref so the watcher can detect when it reaches target
-            currentScale.value = scaleValue;
-
-            // Continuously update position to stay centered between moving words
-            try {
-              if (currentPos && (currentPos.x !== 0 || currentPos.y !== 0)) {
-                throttledPositionUpdate(
-                  entryCoverRef.value,
-                  currentPos.x,
-                  currentPos.y,
-                  scaleValue
-                );
-              }
-            } catch (error) {
-              console.warn("Error updating image position:", error);
+          // Continuously update position to stay centered between moving words
+          try {
+            if (currentPos && (currentPos.x !== 0 || currentPos.y !== 0)) {
+              throttledPositionUpdate(
+                entryCoverRef.value,
+                currentPos.x,
+                currentPos.y,
+                scaleValue
+              );
             }
-          },
+          } catch (error) {
+            console.warn("Error updating image position:", error);
+          }
         },
-      }
+      },
+      0.25
     );
 
     // Store the animation reference for cleanup

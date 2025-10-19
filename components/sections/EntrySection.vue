@@ -138,6 +138,7 @@ const {
   firstTwoLinesFaded,
   lastLineCentered,
   initializeAnimations: initializeStatisticsAnimations,
+  getTimeline,
 } = useStatisticsAnimation({
   sectionRef,
   statisticsTextRef,
@@ -151,6 +152,7 @@ const {
   sectionRef,
   entryCoverRef,
   statisticsTextRef,
+  getTimeline,
 });
 
 const { setTextRef, initializeAnimations: initializeSplitTextAnimations } =
@@ -161,7 +163,6 @@ const { setTextRef, initializeAnimations: initializeSplitTextAnimations } =
 
 // Track if animations have been initialized
 let animationsInitialized = false;
-let entryCoverInitialized = false;
 
 // Set initial state for cover image - must be scale 0 and hidden
 onMounted(() => {
@@ -179,9 +180,15 @@ watch(
   () => animationsStore?.sections?.loading?.state,
   (loadingState) => {
     if (loadingState === "isComplete" && !animationsInitialized) {
-      // Now initialize statistics animations
+      // Initialize statistics animations first (creates the timeline)
       if (sectionRef.value && props.statisticsText.length > 0) {
         initializeStatisticsAnimations();
+
+        // Then add cover animation to the same timeline
+        // Use nextTick to ensure the timeline is fully created
+        nextTick(() => {
+          initializeEntryCoverAnimation();
+        });
       }
 
       // Initialize split text animations for content elements
@@ -192,14 +199,6 @@ watch(
   },
   { immediate: true }
 );
-
-// Delay initializing the cover scaling until the first lines finish fading
-watch([firstTwoLinesFaded, lastLineCentered], ([faded, centered]) => {
-  if (faded && centered && !entryCoverInitialized) {
-    // initializeEntryCoverAnimation();
-    entryCoverInitialized = true;
-  }
-});
 
 // Note: All animation logic has been moved to composables for better organization
 
