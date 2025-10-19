@@ -215,7 +215,7 @@ export const useEntryCoverAnimation = ({
         duration: 0.05,
         ease: "none",
       },
-      0.25
+      0.4
     );
 
     // Scale up as words move apart (25-100% of timeline = 75% duration)
@@ -251,7 +251,7 @@ export const useEntryCoverAnimation = ({
           }
         },
       },
-      0.25
+      0.4
     );
 
     // Store the animation reference for cleanup

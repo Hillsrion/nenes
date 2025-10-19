@@ -134,7 +134,7 @@ export const useStatisticsAnimation = ({
         ease: "none",
         duration: 0.7,
       },
-      0.3
+      0.4
     );
 
     timeline.to(
@@ -144,7 +144,7 @@ export const useStatisticsAnimation = ({
         ease: "none",
         duration: 0.7,
       },
-      0.3
+      0.4
     );
 
     animationTimeline = timeline;
