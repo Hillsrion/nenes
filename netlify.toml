@@ -1,7 +1,11 @@
 [build]
-  command = "pnpm nuxi build"
-  publish = ".output/public"
-  functions = ".output/server"
+  command = "pnpm install --frozen-lockfile && pnpm nuxi build"
+  publish = "dist"
+  functions = ".netlify/functions-internal"
+
+[env]
+  [env.production]
+    NODE_ENV = "production"
 
 [functions]
   node_bundler = "esbuild"

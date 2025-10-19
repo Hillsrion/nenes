@@ -84,6 +84,8 @@ export default defineNuxtConfig({
 
   // Nitro configuration for prerendering and resource optimization
   nitro: {
+    // Use netlify preset for proper asset deployment
+    preset: "netlify",
     // Prerender configuration for better performance
     prerender: {
       // Preload critical assets that appear in the loading sequence
@@ -105,9 +107,13 @@ export default defineNuxtConfig({
             const info = assetInfo.name!.split(".");
             const ext = info[info.length - 1];
             if (/png|jpe?g|svg|gif|tiff|bmp|ico/i.test(ext)) {
-              return `images/[name]-[hash][extname]`;
+              return `_nuxt/images/[name]-[hash][extname]`;
+            } else if (/css/i.test(ext)) {
+              return `_nuxt/[name]-[hash][extname]`;
+            } else if (/woff2?|ttf|eot|otf/i.test(ext)) {
+              return `_nuxt/fonts/[name]-[hash][extname]`;
             }
-            return `[name]-[hash][extname]`;
+            return `_nuxt/[name]-[hash][extname]`;
           },
         },
       },
