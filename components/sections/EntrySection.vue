@@ -28,7 +28,7 @@
     <!-- Statistics Section -->
     <div class="absolute -top-2 left-0 w-full h-16 bg-primary -z-1"></div>
     <div
-      class="relative h-[300svh] w-full min-h-screen bg-white transition-all duration-300 ease-out rounded-t-4xl overflow-x-clip"
+      class="relative h-[350svh] w-full min-h-screen bg-white transition-all duration-300 ease-out rounded-t-4xl overflow-x-clip"
       ref="whiteSectionRef"
       :class="{
         'rounded-t-4xl':
@@ -63,15 +63,15 @@
 
       <div class="container w-full mx-auto px-8 relative z-100">
         <div
-          class="max-w-[70rem] mx-auto grid grid-cols-3 lg:gap-y-[60vh] gap-y-[40vh] auto-rows-auto mt-[60vh]"
+          class="max-w-[70rem] mx-auto grid grid-cols-5 lg:grid-cols-6 lg:gap-y-[60vh] gap-y-[40vh] auto-rows-auto mt-[60vh]"
         >
           <div
             v-for="(element, index) in contentElements"
             :key="index"
             :class="[
               index % 2 === 0
-                ? 'col-span-2'
-                : 'col-start-2 col-span-2 row-start-2 pr-4',
+                ? 'col-span-4'
+                : 'col-start-2 lg:col-start-3 col-span-4 row-start-2',
             ]"
           >
             <p
