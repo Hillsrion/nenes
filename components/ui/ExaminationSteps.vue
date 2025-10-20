@@ -17,13 +17,13 @@
     <!-- Black overlay for video transitions -->
     <div
       ref="overlayRef"
-      class="fixed top-0 left-0 w-full h-full bg-black pointer-events-none opacity-0 z-20"
+      class="fixed top-0 left-0 w-full h-full bg-black pointer-events-none opacity-0"
     ></div>
 
     <!-- Video loading indicator -->
     <div
       v-if="videoLoading"
-      class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-30 flex items-center justify-center"
+      class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 flex items-center justify-center"
     >
       <div
         class="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin"
