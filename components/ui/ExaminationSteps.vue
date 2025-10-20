@@ -3,16 +3,42 @@
     ref="containerRef"
     class="relative mt-[250svh] pt-[300svh] container mx-auto"
   >
-    <!-- Fixed video at center of viewport -->
+    <!-- Fixed video at center of viewport with multiple sources -->
     <video
       ref="videoRef"
-      :src="actualVideoUrl"
       class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full h-full object-cover scale-0 origin-center"
       autoplay
       muted
       loop
       playsinline
-    ></video>
+    >
+      <!-- WebM sources (better compression, modern browsers) -->
+      <source
+        :src="getVideoSource('webm', '1440p')"
+        type="video/webm"
+        media="(min-width: 1920px)"
+      />
+      <source
+        :src="getVideoSource('webm', '1080p')"
+        type="video/webm"
+        media="(min-width: 1280px)"
+      />
+
+      <!-- MP4 sources (fallback, wider compatibility) -->
+      <source
+        :src="getVideoSource('mp4', '1440p')"
+        type="video/mp4"
+        media="(min-width: 1920px)"
+      />
+      <source
+        :src="getVideoSource('mp4', '1080p')"
+        type="video/mp4"
+        media="(min-width: 1280px)"
+      />
+
+      <!-- Default fallback -->
+      <source :src="actualVideoUrl" type="video/mp4" />
+    </video>
 
     <!-- Black overlay for video transitions -->
     <div
@@ -74,6 +100,12 @@ const store = useAnimationsStore();
 
 // GSAP with ScrollTrigger is registered globally in the app
 
+// Configuration: Track which steps have optimized videos on R2
+// Add step indices here as you upload more folders to R2
+// Example: [0, 1, 2, 3, 4] for all steps
+const stepsWithOptimizedVideos = [2]; // step-03 (index 2) - currently on R2
+// TODO: Upload step-01, step-02, step-04, step-05 to R2 and add indices here
+
 // Refs
 const videoRef = ref<HTMLVideoElement | null>(null);
 const containerRef = ref<HTMLElement | null>(null);
@@ -87,6 +119,31 @@ const currentStepIndex = ref(0);
 const currentStep = computed(() => {
   return props.steps[currentStepIndex.value] || null;
 });
+
+// Helper function to get video source URL based on format and resolution
+const getVideoSource = (
+  format: "mp4" | "webm",
+  resolution: "1080p" | "1440p"
+) => {
+  // Format step number with leading zero (01, 02, 03, etc.)
+  const stepNumber = String(currentStepIndex.value + 1).padStart(2, "0");
+  const stepFolder = `step-${stepNumber}`;
+
+  // Check if current step has optimized videos
+  const hasOptimizedVideos = stepsWithOptimizedVideos.includes(
+    currentStepIndex.value
+  );
+
+  if (hasOptimizedVideos) {
+    // Use optimized video from R2 bucket
+    // R2 URL: https://pub-xxxxx.r2.dev/step-0X/step-0X-{resolution}.{format}
+    const r2PublicUrl = "https://pub-98cf5dcf21ad46868d9f67705208e67e.r2.dev";
+    return `${r2PublicUrl}/${stepFolder}/${stepFolder}-${resolution}.${format}`;
+  }
+
+  // Fallback to original URL for steps without optimized videos
+  return actualVideoUrl.value || "";
+};
 
 // Transition callback to handle fade effect with overlay
 const handleVideoTransition = (url: string) => {

@@ -124,7 +124,7 @@ export default defineNuxtConfig({
     },
   },
 
-  // Runtime configuration for asset optimization
+  // Runtime configuration for asset optimization and Cloudflare Stream
   runtimeConfig: {
     public: {
       // Critical assets that should be preloaded
@@ -139,6 +139,16 @@ export default defineNuxtConfig({
         "/images/illustrations/8.svg",
         "/images/entry-cover.jpg",
       ],
+      // Cloudflare Stream configuration (if using Stream)
+      cloudflareStream: {
+        customerCode:
+          process.env.NUXT_PUBLIC_CLOUDFLARE_STREAM_CUSTOMER_CODE || "",
+        accountId: process.env.NUXT_PUBLIC_CLOUDFLARE_ACCOUNT_ID || "",
+      },
+      // Cloudflare R2 configuration (if using R2 for video hosting)
+      r2: {
+        publicUrl: process.env.NUXT_PUBLIC_R2_PUBLIC_URL || "",
+      },
     },
   },
 });
