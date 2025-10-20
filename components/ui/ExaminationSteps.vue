@@ -12,7 +12,21 @@
       loop
       playsinline
     >
-      <!-- WebM sources (better compression, modern browsers) -->
+      <!-- Mobile WebM sources (better compression, modern browsers) -->
+      <source
+        :src="getVideoSource('webm', 'mobile')"
+        type="video/webm"
+        media="(max-width: 768px)"
+      />
+
+      <!-- Mobile MP4 fallback -->
+      <source
+        :src="getVideoSource('mp4', 'mobile')"
+        type="video/mp4"
+        media="(max-width: 768px)"
+      />
+
+      <!-- Desktop WebM sources (better compression, modern browsers) -->
       <source
         :src="getVideoSource('webm', '1440p')"
         type="video/webm"
@@ -24,7 +38,7 @@
         media="(min-width: 1280px)"
       />
 
-      <!-- MP4 sources (fallback, wider compatibility) -->
+      <!-- Desktop MP4 sources (fallback, wider compatibility) -->
       <source
         :src="getVideoSource('mp4', '1440p')"
         type="video/mp4"
@@ -123,7 +137,7 @@ const currentStep = computed(() => {
 // Helper function to get video source URL based on format and resolution
 const getVideoSource = (
   format: "mp4" | "webm",
-  resolution: "1080p" | "1440p"
+  resolution: "1080p" | "1440p" | "mobile"
 ) => {
   // Format step number with leading zero (01, 02, 03, etc.)
   const stepNumber = String(currentStepIndex.value + 1).padStart(2, "0");
@@ -137,7 +151,13 @@ const getVideoSource = (
   if (hasOptimizedVideos) {
     // Use optimized video from R2 bucket
     // R2 URL: https://pub-xxxxx.r2.dev/step-0X/step-0X-{resolution}.{format}
+    // For mobile: https://pub-xxxxx.r2.dev/step-0X/step-0X-mobile.{format}
     const r2PublicUrl = "https://pub-98cf5dcf21ad46868d9f67705208e67e.r2.dev";
+
+    if (resolution === "mobile") {
+      return `${r2PublicUrl}/${stepFolder}/${stepFolder}-mobile.${format}`;
+    }
+
     return `${r2PublicUrl}/${stepFolder}/${stepFolder}-${resolution}.${format}`;
   }
 

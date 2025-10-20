@@ -10,26 +10,35 @@ The video system supports multiple resolutions (1080p, 1440p) and formats (MP4, 
 
 ```
 public/videos/
-├── step-01.mp4              # Original video for step 1
+├── step-01.mp4              # Original desktop video for step 1
+├── Step-01-mobile.mp4       # Original mobile video for step 1
 ├── step-01/                 # Optimized videos folder
 │   ├── step-01-1080p.mp4
 │   ├── step-01-1080p.webm
 │   ├── step-01-1440p.mp4
-│   └── step-01-1440p.webm
-├── step-02.mp4              # Original video for step 2
+│   ├── step-01-1440p.webm
+│   ├── step-01-mobile-720p.mp4
+│   └── step-01-mobile-720p.webm
+├── step-02.mp4              # Original desktop video for step 2
+├── Step-02-mobile.mp4       # Original mobile video for step 2
 ├── step-02/                 # Optimized videos folder
 │   └── ...
-└── step-03.mp4              # Original video for step 3
-    └── step-03/             # Optimized videos folder (✅ DONE)
-        ├── step-03-1080p.mp4   (8.1 MB)
-        ├── step-03-1080p.webm  (6.8 MB)
-        ├── step-03-1440p.mp4   (19 MB)
-        └── step-03-1440p.webm  (18 MB)
+├── step-03.mp4              # Original desktop video for step 3
+├── Step-03-mobile.mp4       # Original mobile video for step 3
+└── step-03/                 # Optimized videos folder (✅ DONE)
+    ├── step-03-1080p.mp4   (8.1 MB)
+    ├── step-03-1080p.webm  (6.8 MB)
+    ├── step-03-1440p.mp4   (19 MB)
+    ├── step-03-1440p.webm  (18 MB)
+    ├── step-03-mobile-720p.mp4
+    └── step-03-mobile-720p.webm
 ```
 
 ## 🚀 How to Export Optimized Videos
 
-### 1. Prepare Your Video
+### Desktop Videos
+
+#### 1. Prepare Your Video
 
 Place your source video in `public/videos/` with the naming convention:
 
@@ -39,7 +48,7 @@ public/videos/step-XX.mp4
 
 Example: `public/videos/step-04.mp4`
 
-### 2. Run the Export Script
+#### 2. Run the Export Script
 
 ```bash
 # Export with step number
@@ -55,6 +64,44 @@ The script will:
 - ✅ Create output folder (`public/videos/step-XX/`)
 - ✅ Export 4 optimized versions (1080p & 1440p in MP4 & WebM)
 - ✅ Show file sizes and next steps
+
+### Mobile Videos (720p)
+
+#### 1. Prepare Your Mobile Video
+
+Place your mobile-optimized source video in `public/videos/` with the naming convention:
+
+```bash
+public/videos/Step-XX-mobile.mp4
+```
+
+Example: `public/videos/Step-03-mobile.mp4`
+
+#### 2. Run the Mobile Export Script
+
+```bash
+# Export mobile video for specific step
+./export-video-mobile.sh 03
+
+# Or export step-03 (default)
+./export-video-mobile.sh
+```
+
+The mobile script will:
+
+- ✅ Check if mobile source file exists
+- ✅ Use same output folder (`public/videos/step-XX/`)
+- ✅ Export 2 optimized versions (720p in WebM & MP4)
+- ✅ Optimize for mobile bandwidth and battery life
+- ✅ Show file sizes and implementation suggestions
+
+#### Mobile Video Specifications
+
+- **Resolution**: 720p (1280×720) - Optimal for mobile screens
+- **WebM (VP9)**: CRF 32, cpu-used 2 (excellent compression)
+- **MP4 (H.264)**: CRF 23, main profile (universal compatibility)
+- **Target bandwidth**: Lower bitrate for mobile networks
+- **No audio**: Videos are silent demonstrations
 
 ### 3. Update Component Configuration
 
@@ -87,6 +134,7 @@ The component will automatically:
 
 ### Resolutions
 
+- **720p** (1280×720): Mobile devices (smartphones, tablets)
 - **1080p** (1920×1080): Standard displays, lower bandwidth
 - **1440p** (2560×1440): MacBook Pro 14", 27" displays
 
@@ -97,10 +145,17 @@ The component will automatically:
 
 ### Quality Settings
 
+**Desktop:**
+
 - **1080p MP4**: CRF 20 (high quality)
 - **1440p MP4**: CRF 18 (very high quality)
 - **1080p WebM**: CRF 30 (balanced)
 - **1440p WebM**: CRF 24 (high quality)
+
+**Mobile:**
+
+- **720p MP4**: CRF 23 (mobile-optimized quality)
+- **720p WebM**: CRF 32 (excellent compression for mobile bandwidth)
 
 ## 🎨 How It Works
 
@@ -110,15 +165,49 @@ The browser automatically selects the best video using:
 2. **Format support** (WebM vs MP4)
 3. **Source order** (WebM preferred, MP4 fallback)
 
+### Responsive Video Loading Example
+
 ```html
-<!-- Browser picks best match -->
+<!-- Browser picks best match based on screen size and format support -->
 <video>
-  <source src="step-03-1440p.webm" media="(min-width: 1920px)" />
-  <source src="step-03-1080p.webm" media="(min-width: 1280px)" />
-  <source src="step-03-1440p.mp4" media="(min-width: 1920px)" />
-  <source src="step-03-1080p.mp4" media="(min-width: 1280px)" />
-  <source src="step-03.mp4" />
-  <!-- fallback -->
+  <!-- Mobile (≤768px) - 720p optimized -->
+  <source
+    src="step-03-mobile-720p.webm"
+    type="video/webm"
+    media="(max-width: 768px)"
+  />
+  <source
+    src="step-03-mobile-720p.mp4"
+    type="video/mp4"
+    media="(max-width: 768px)"
+  />
+
+  <!-- Desktop Large (≥1920px) - 1440p high quality -->
+  <source
+    src="step-03-1440p.webm"
+    type="video/webm"
+    media="(min-width: 1920px)"
+  />
+  <source
+    src="step-03-1440p.mp4"
+    type="video/mp4"
+    media="(min-width: 1920px)"
+  />
+
+  <!-- Desktop Standard (≥1280px) - 1080p balanced -->
+  <source
+    src="step-03-1080p.webm"
+    type="video/webm"
+    media="(min-width: 1280px)"
+  />
+  <source
+    src="step-03-1080p.mp4"
+    type="video/mp4"
+    media="(min-width: 1280px)"
+  />
+
+  <!-- Universal fallback -->
+  <source src="step-03.mp4" type="video/mp4" />
 </video>
 ```
 
