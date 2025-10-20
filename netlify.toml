@@ -1,5 +1,5 @@
 [build]
-  command = "pnpm install --frozen-lockfile && pnpm nuxi build"
+  command = "pnpm install && pnpm nuxi build"
   publish = "dist"
   functions = ".netlify/functions-internal"
 
