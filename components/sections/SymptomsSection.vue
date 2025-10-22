@@ -6,7 +6,9 @@
     <div
       class="h-[100svh] w-full px-8 sticky top-0 left-1/2 z-10 mx-auto flex flex-col justify-center overflow-hidden"
     >
-      <Title ref="titleRef" :title="title" />
+      <div ref="titleWrapperRef">
+        <Title ref="titleRef" :title="title" />
+      </div>
       <div class="absolute inset-0">
         <div
           v-for="(card, index) in cards"
@@ -51,6 +53,7 @@ const props = defineProps({
 const { $gsap } = useNuxtApp();
 
 const sectionRef = ref<HTMLElement | null>(null);
+const titleWrapperRef = ref<HTMLElement | null>(null);
 const titleRef = ref<{ titleElement: HTMLElement } | null>(null);
 const cardRefs = ref<(HTMLElement | null)[]>([]);
 const isTitleHidden = ref(false);
@@ -68,7 +71,7 @@ const setCardRef = (el: any, index: number) => {
 };
 
 const initializeTitleAnimation = () => {
-  if (!titleRef.value?.titleElement) return;
+  if (!titleWrapperRef.value) return;
 
   // Use matchMedia to have different start positions for mobile vs desktop
   const mm = $gsap.matchMedia();
@@ -84,7 +87,7 @@ const initializeTitleAnimation = () => {
       const { isMobile } = context.conditions;
 
       titleAnimation = $gsap.fromTo(
-        titleRef.value!.titleElement,
+        titleWrapperRef.value,
         {
           scale: 5,
           opacity: 0,
@@ -159,11 +162,7 @@ const initializeCarouselAnimation = () => {
 
               // Hide title when first card reaches approximately 0° (covering the title)
               // Using a wider threshold of ±5° to reliably catch fast scrolling
-              if (
-                currentRotation <= 5 &&
-                currentRotation >= -5 &&
-                !isTitleHidden.value
-              ) {
+              if (currentRotation <= 5 && !isTitleHidden.value) {
                 isTitleHidden.value = true;
                 if (titleHideAnimation) {
                   titleHideAnimation.kill();
@@ -173,8 +172,13 @@ const initializeCarouselAnimation = () => {
                   duration: 0.3,
                   ease: "power2.out",
                 });
-              } else if (currentRotation >= 15 && isTitleHidden.value) {
-                // Show title again when first card starts moving back up (rotation ≈ 15°)
+              } else if (
+                currentRotation >= 15 &&
+                isTitleHidden.value &&
+                self.direction === -1
+              ) {
+                console.log("show title");
+                // Show title again when first card starts moving back up (rotation ≈ 15°) and scrolling upward
                 isTitleHidden.value = false;
                 if (titleHideAnimation) {
                   titleHideAnimation.kill();
