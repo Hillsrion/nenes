@@ -166,6 +166,48 @@ const initializeMousePosition = () => {
 };
 
 /**
+ * Initialize mouse position to actual cursor position
+ */
+const initializeMousePositionToCursor = () => {
+  // Get the actual cursor position by listening to the next mousemove
+  const handleInitialMove = (event: MouseEvent) => {
+    const rect = containerRef.value?.getBoundingClientRect();
+    if (!rect) {
+      // Fallback to center if container not ready
+      initializeMousePosition();
+      return;
+    }
+
+    mouse.x = clamp(event.clientX - rect.left, 0, canvasState.value.width);
+    mouse.y = clamp(event.clientY - rect.top, 0, canvasState.value.height);
+    mouse.nX = (mouse.x / canvasState.value.width) * 2 - 1;
+    mouse.nY = -(mouse.y / canvasState.value.height) * 2 + 1;
+    target.x = mouse.x;
+    target.y = mouse.y;
+
+    // Remove this one-time listener and add the regular listener
+    window.removeEventListener("mousemove", handleInitialMove);
+    window.addEventListener("mousemove", onMouseMove, { passive: true });
+  };
+
+  // Add a one-time listener to capture the current cursor position
+  window.addEventListener("mousemove", handleInitialMove, { passive: true });
+
+  // Also check if cursor is over the document at this moment
+  // This is a fallback to capture the position even if no mousemove event fires
+  setTimeout(() => {
+    window.removeEventListener("mousemove", handleInitialMove);
+    if (!window.addEventListener) return;
+
+    // If we haven't gotten a position yet, initialize to center
+    if (target.x === 0 && target.y === 0) {
+      initializeMousePosition();
+      window.addEventListener("mousemove", onMouseMove, { passive: true });
+    }
+  }, 50);
+};
+
+/**
  * Start mouse tracking
  */
 const startMouse = () => {
@@ -415,9 +457,9 @@ const startAnimation = (initializePosition = false) => {
 
   isActive.value = true;
 
-  // Initialize mouse position to center before starting (if requested)
+  // Initialize mouse position to cursor position before starting (if requested)
   if (initializePosition) {
-    initializeMousePosition();
+    initializeMousePositionToCursor();
   }
 
   // Animate force scale from 0 to 1
