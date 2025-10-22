@@ -229,15 +229,10 @@ const loadImages = async (): Promise<void> => {
     url,
   }));
 
-  // Create 6 instances of each image
-  const expandedImages = imageCategories.flatMap((category) =>
-    Array(1)
-      .fill(null)
-      .map((_, index) => ({
-        url: category.url,
-        ratio: category.ratio,
-      }))
-  );
+  const expandedImages = imageCategories.map((category) => ({
+    url: category.url,
+    ratio: category.ratio,
+  }));
 
   // Shuffle array for visual variety
   for (let i = expandedImages.length - 1; i > 0; i--) {
@@ -299,14 +294,14 @@ const loadImages = async (): Promise<void> => {
 const updateGridSettings = () => {
   // Responsive sizing - reduced ratios for smaller grid
   if (canvasState.value.width >= 1024) {
-    grid.imgSize = canvasState.value.height * 0.045; // Reduced from 0.075
-    grid.maxDistance = canvasState.value.height * 0.18; // Reduced from 0.3
+    grid.imgSize = canvasState.value.height * 0.045;
+    grid.maxDistance = canvasState.value.height * 0.18;
   } else {
-    grid.imgSize = canvasState.value.height * 0.03; // Reduced from 0.05
-    grid.maxDistance = canvasState.value.height * 0.12; // Reduced from 0.2
+    grid.imgSize = canvasState.value.height * 0.03;
+    grid.maxDistance = canvasState.value.height * 0.12;
   }
 
-  grid.gap = canvasState.value.height * 0.035; // Reduced from 0.06
+  grid.gap = canvasState.value.height * 0.035;
   grid.step = grid.imgSize + grid.gap;
   grid.cols = Math.ceil(canvasState.value.width / (grid.imgSize + grid.gap));
   grid.rows = Math.ceil(canvasState.value.height / (grid.imgSize + grid.gap));
@@ -405,10 +400,10 @@ const animate = (timestamp: number) => {
       );
 
       // Calculate center position
-      const ye = (grid.imgSize - width) / 2;
-      const Re = (grid.imgSize - height) / 2;
-      const centerX = x + ye + grid.imgSize * 0.5;
-      const centerY = y + Re + grid.imgSize * 0.5;
+      const xOffset = (grid.imgSize - width) / 2;
+      const yOffset = (grid.imgSize - height) / 2;
+      const centerX = x + xOffset + grid.imgSize * 0.5;
+      const centerY = y + yOffset + grid.imgSize * 0.5;
 
       // Calculate distance from cursor
       const distance = Math.sqrt(
