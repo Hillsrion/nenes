@@ -103,8 +103,8 @@ const canvasState = ref({ width: 0, height: 0 });
 
 // Grid settings
 const grid = reactive<GridSettings>({
-  imgSize: 45,
-  maxDistance: 175,
+  imgSize: 65,
+  maxDistance: 195,
   gap: 50,
   step: 60,
   cols: 0,
@@ -294,11 +294,11 @@ const loadImages = async (): Promise<void> => {
 const updateGridSettings = () => {
   // Responsive sizing - reduced ratios for smaller grid
   if (canvasState.value.width >= 1024) {
-    grid.imgSize = canvasState.value.height * 0.045;
-    grid.maxDistance = canvasState.value.height * 0.18;
+    grid.imgSize = canvasState.value.height * 0.06; // Increased from 0.045
+    grid.maxDistance = canvasState.value.height * 0.2; // Adjusted for larger size
   } else {
-    grid.imgSize = canvasState.value.height * 0.03;
-    grid.maxDistance = canvasState.value.height * 0.12;
+    grid.imgSize = canvasState.value.height * 0.04; // Increased from 0.03
+    grid.maxDistance = canvasState.value.height * 0.15; // Adjusted for larger size
   }
 
   grid.gap = canvasState.value.height * 0.035;
@@ -390,13 +390,13 @@ const animate = (timestamp: number) => {
       const x = wrap(
         -grid.step - grid.gap,
         canvasState.value.width + grid.step,
-        col * grid.step + timestamp * 0.1
+        col * grid.step + timestamp * 0.08
       );
 
       const y = wrap(
         -grid.step - grid.gap,
         canvasState.value.height + grid.step,
-        row * grid.step - timestamp * 0.1
+        row * grid.step - timestamp * 0.08
       );
 
       // Calculate center position
