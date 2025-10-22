@@ -9,10 +9,11 @@
 # If no step number provided, defaults to step-03
 
 # Get step number from argument or default to 03
+REPO_ROOT=$(pwd)
 STEP_NUM="${1:-03}"
 STEP_FOLDER="step-${STEP_NUM}"
 
-INPUT="public/videos/${STEP_FOLDER}.mp4"
+INPUT="${REPO_ROOT}/public/videos/Step-${STEP_NUM}.mp4"
 OUTPUT_DIR="public/videos/${STEP_FOLDER}"
 
 # Check if input file exists
@@ -22,7 +23,7 @@ if [ ! -f "$INPUT" ]; then
   echo "Usage: ./export-video.sh [step-number]"
   echo "Example: ./export-video.sh 01"
   echo ""
-  echo "Make sure your video file exists at: public/videos/step-XX.mp4"
+  echo "Make sure your video file exists at: public/videos/Step-XX.mp4"
   exit 1
 fi
 

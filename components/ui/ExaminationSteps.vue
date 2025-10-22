@@ -117,7 +117,7 @@ const store = useAnimationsStore();
 // Configuration: Track which steps have optimized videos on R2
 // Add step indices here as you upload more folders to R2
 // Example: [0, 1, 2, 3, 4] for all steps
-const stepsWithOptimizedVideos = [2]; // step-03 (index 2) - currently on R2
+const stepsWithOptimizedVideos = [0, 1, 2, 3, 4]; // step-01 to step-05 (indices 0-4) - currently on R2
 // TODO: Upload step-01, step-02, step-04, step-05 to R2 and add indices here
 
 // Refs

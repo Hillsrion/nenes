@@ -9,11 +9,12 @@
 # If no step number provided, defaults to step-03
 
 # Get step number from argument or default to 03
+REPO_ROOT=$(pwd)
 STEP_NUM="${1:-03}"
 INPUT_FILENAME="Step-${STEP_NUM}-mobile.mp4"
 OUTPUT_FILENAME="step-${STEP_NUM}-mobile"
 
-INPUT="public/videos/${INPUT_FILENAME}"
+INPUT="${REPO_ROOT}/public/videos/${INPUT_FILENAME}"
 OUTPUT_DIR="public/videos/step-${STEP_NUM}"
 
 # Check if input file exists
