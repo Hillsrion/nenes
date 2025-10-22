@@ -96,14 +96,20 @@ export const useContent = () => {
     },
   ];
   const cursorImages = [
-    "/images/entry-cover-portrait.jpg",
-    "/images/entry-cover-portrait.jpg",
-    "/images/entry-cover-portrait.jpg",
-    "/images/entry-cover-portrait.jpg",
-    "/images/entry-cover-portrait.jpg",
-    "/images/entry-cover-portrait.jpg",
-    "/images/entry-cover-portrait.jpg",
-    "/images/entry-cover-portrait.jpg",
+    "/images/cursor/0D2A8280.jpg",
+    "/images/cursor/0D2A8587.jpg",
+    "/images/cursor/0D2A8610.jpg",
+    "/images/cursor/0D2A8761.jpg",
+    "/images/cursor/0D2A8789.jpg",
+    "/images/cursor/0D2A8819.jpg",
+    "/images/cursor/0D2A8842.jpg",
+    "/images/cursor/0D2A8852.jpg",
+    "/images/cursor/0D2A8855.jpg",
+    "/images/cursor/0D2A8864.jpg",
+    "/images/cursor/0D2A8865.jpg",
+    "/images/cursor/0D2A8909.jpg",
+    "/images/cursor/0D2A8933.jpg",
+    "/images/cursor/0D2A8956.jpg",
   ];
 
   return {

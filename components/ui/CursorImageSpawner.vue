@@ -47,16 +47,7 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  images: () => [
-    "/images/illustrations/1.svg",
-    "/images/illustrations/2.svg",
-    "/images/illustrations/3.svg",
-    "/images/illustrations/4.svg",
-    "/images/illustrations/5.svg",
-    "/images/illustrations/6.svg",
-    "/images/illustrations/7.svg",
-    "/images/illustrations/8.svg",
-  ],
+  images: () => [],
   disabled: false,
   forceScale: 1,
 });
@@ -112,10 +103,10 @@ const canvasState = ref({ width: 0, height: 0 });
 
 // Grid settings
 const grid = reactive<GridSettings>({
-  imgSize: 40,
-  maxDistance: 250,
-  gap: 100,
-  step: 135,
+  imgSize: 45,
+  maxDistance: 150,
+  gap: 50,
+  step: 60,
   cols: 0,
   rows: 0,
 });
@@ -264,16 +255,16 @@ const loadImages = async (): Promise<void> => {
  * Update grid settings
  */
 const updateGridSettings = () => {
-  // Responsive sizing
+  // Responsive sizing - reduced ratios for smaller grid
   if (canvasState.value.width >= 1024) {
-    grid.imgSize = canvasState.value.height * 0.075;
-    grid.maxDistance = canvasState.value.height * 0.3;
+    grid.imgSize = canvasState.value.height * 0.045; // Reduced from 0.075
+    grid.maxDistance = canvasState.value.height * 0.18; // Reduced from 0.3
   } else {
-    grid.imgSize = canvasState.value.height * 0.05;
-    grid.maxDistance = canvasState.value.height * 0.2;
+    grid.imgSize = canvasState.value.height * 0.03; // Reduced from 0.05
+    grid.maxDistance = canvasState.value.height * 0.12; // Reduced from 0.2
   }
 
-  grid.gap = canvasState.value.height * 0.06;
+  grid.gap = canvasState.value.height * 0.035; // Reduced from 0.06
   grid.step = grid.imgSize + grid.gap;
   grid.cols = Math.ceil(canvasState.value.width / (grid.imgSize + grid.gap));
   grid.rows = Math.ceil(canvasState.value.height / (grid.imgSize + grid.gap));
