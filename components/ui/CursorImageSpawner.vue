@@ -104,7 +104,7 @@ const canvasState = ref({ width: 0, height: 0 });
 // Grid settings
 const grid = reactive<GridSettings>({
   imgSize: 45,
-  maxDistance: 150,
+  maxDistance: 175,
   gap: 50,
   step: 60,
   cols: 0,
@@ -326,8 +326,8 @@ const animate = (timestamp: number) => {
   ctx.clearRect(0, 0, canvasState.value.width, canvasState.value.height);
 
   // Smooth mouse interpolation
-  target.x = lerp(target.x, mouse.x, 0.005);
-  target.y = lerp(target.y, mouse.y, 0.005);
+  target.x = lerp(target.x, mouse.x, 0.15);
+  target.y = lerp(target.y, mouse.y, 0.15);
 
   // Draw images in grid
   for (let row = -1; row < grid.rows + 1; row++) {
