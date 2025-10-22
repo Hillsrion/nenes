@@ -59,13 +59,7 @@
           </div>
         </div>
         <div class="md:w-auto sm:w-3/5 w-2/5 mx-auto my-8 md:mx-0 md:my-0">
-          <img
-            src="/images/illustrations/1.svg"
-            width="221"
-            height="221"
-            class="mx-auto max-w-full"
-            alt="Illustration de poitrine"
-          />
+          <ImageSequenceAnimator :progress="illustrationProgress" />
         </div>
       </div>
 
@@ -95,6 +89,7 @@
 import { ref, onMounted, onUnmounted } from "vue";
 import { useAnimationsStore } from "../../stores";
 import { useNuxtApp } from "nuxt/app";
+import ImageSequenceAnimator from "~/components/ui/ImageSequenceAnimator.vue";
 
 // Animation store
 const store = useAnimationsStore();
@@ -105,6 +100,8 @@ $gsap.registerPlugin($gsap.ScrollTrigger);
 
 const sectionRef = ref(null);
 let logoScrollTrigger = null;
+let illustrationAnimationTimeline = null;
+const illustrationProgress = ref(0);
 
 // Initialize logo scroll trigger for color change
 const initializeLogoColorChangeAnimation = () => {
@@ -126,6 +123,21 @@ const initializeLogoColorChangeAnimation = () => {
   });
 };
 
+// Initialize illustration animation
+const initializeIllustrationAnimation = () => {
+  illustrationAnimationTimeline = $gsap.to(
+    {},
+    {
+      duration: 10, // Adjust duration for desired speed
+      repeat: -1, // Infinite loop
+      ease: "none",
+      onUpdate: function () {
+        illustrationProgress.value = this.progress() * 100;
+      },
+    }
+  );
+};
+
 watch(
   () => store.getSectionState("loading"),
   (loadingState) => {
@@ -136,6 +148,7 @@ watch(
     ) {
       setTimeout(() => {
         initializeLogoColorChangeAnimation();
+        initializeIllustrationAnimation();
       }, 1000);
     }
   }
@@ -148,6 +161,9 @@ onUnmounted(() => {
   }
   if (logoScrollTrigger && logoScrollTrigger.kill) {
     logoScrollTrigger.kill();
+  }
+  if (illustrationAnimationTimeline && illustrationAnimationTimeline.kill) {
+    illustrationAnimationTimeline.kill();
   }
 });
 

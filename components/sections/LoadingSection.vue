@@ -33,12 +33,7 @@
             ref="imageContainerRef"
             class="relative lg:size-36 md:size-30 sm:size-28 size-36 opacity-0"
           >
-            <img
-              ref="currentImageRef"
-              :src="currentImage.src"
-              :alt="`Illustration ${currentImage.id}`"
-              class="w-full h-full object-contain"
-            />
+            <ImageSequenceAnimator :progress="progress" />
           </div>
         </div>
 
@@ -66,6 +61,7 @@ import { gsap } from "gsap";
 import Logo from "~/components/ui/Logo.vue";
 import { useAnimationsStore } from "~/stores";
 import { useAssetPreloader } from "~/composables/useAssetPreloader";
+import ImageSequenceAnimator from "~/components/ui/ImageSequenceAnimator.vue";
 
 const progress = ref(0);
 const isComplete = ref(false);
@@ -80,25 +76,6 @@ const logoBlueRef = ref(null);
 const chargementTextRef = ref(null);
 const percentageTextRef = ref(null);
 const imageContainerRef = ref(null);
-const currentImageRef = ref(null);
-
-// Image sequence state
-const currentImageIndex = ref(0);
-const imageSequence = ref([
-  { id: 1, src: "/images/illustrations/1.svg" },
-  { id: 2, src: "/images/illustrations/2.svg" },
-  { id: 3, src: "/images/illustrations/3.svg" },
-  { id: 4, src: "/images/illustrations/4.svg" },
-  { id: 5, src: "/images/illustrations/5.svg" },
-  { id: 6, src: "/images/illustrations/6.svg" },
-  { id: 7, src: "/images/illustrations/7.svg" },
-  { id: 8, src: "/images/illustrations/8.svg" },
-]);
-
-// Computed property for current image
-const currentImage = computed(
-  () => imageSequence.value[currentImageIndex.value]
-);
 
 // Master timeline for coordinated loading sequence
 let masterTimeline = null;
@@ -106,12 +83,6 @@ let masterTimeline = null;
 const startLoadingSequence = () => {
   // Create master timeline for the entire loading sequence
   masterTimeline = gsap.timeline();
-
-  // Add initial image setup
-  masterTimeline.set(currentImageRef.value, {
-    scale: 1,
-    opacity: 1,
-  });
 
   // Set all elements to visible immediately (no opacity animations)
   masterTimeline.set(
@@ -123,42 +94,6 @@ const startLoadingSequence = () => {
 
   // Start the progress counter immediately
   masterTimeline.add(startProgressCounter());
-};
-
-// Function to update image with GSAP bounce animation (2 turns through 8 images)
-const updateImageSequence = (progressValue) => {
-  // Calculate which image to show for 2 full cycles through 8 images
-  const cyclePosition = Math.floor((progressValue / 100) * 16); // 0-15 range for 16 steps
-  const imageIndex = cyclePosition % 8; // Modulo 8 gives us 2 full cycles: 0-7, 0-7
-
-  if (imageIndex !== currentImageIndex.value && currentImageRef.value) {
-    const previousIndex = currentImageIndex.value;
-    currentImageIndex.value = imageIndex;
-
-    // Update image source immediately
-    currentImageRef.value.src = currentImage.value.src;
-    currentImageRef.value.alt = `Illustration ${currentImage.value.id}`;
-
-    // Create bounce animation with GSAP
-    const bounceTl = gsap.timeline();
-
-    // Bounce out and in simultaneously
-    bounceTl
-      .to(currentImageRef.value, {
-        scale: 1.2,
-        duration: 0.3,
-        ease: "power4.in",
-      })
-      .to(
-        currentImageRef.value,
-        {
-          scale: 1,
-          duration: 0.4,
-          ease: "power4.out",
-        },
-        0 // Start at the same time
-      );
-  }
 };
 
 onMounted(async () => {
@@ -213,9 +148,6 @@ const startProgressCounter = () => {
       onUpdate: function () {
         // Update progress value
         progress.value = Math.round(this.targets()[0].progress);
-
-        // Update image sequence based on progression
-        updateImageSequence(progress.value);
       },
       onComplete: function () {
         progress.value = 100;
