@@ -97,6 +97,8 @@
                       :alt="element.title"
                       loading="lazy"
                       class="w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      width="312"
+                      height="468"
                     />
                   </picture>
                   <div

@@ -146,7 +146,6 @@ export default defineNuxtConfig({
         "/images/illustrations/6.svg",
         "/images/illustrations/7.svg",
         "/images/illustrations/8.svg",
-        "/images/entry-cover.jpg",
       ],
       // Cloudflare Stream configuration (if using Stream)
       cloudflareStream: {
