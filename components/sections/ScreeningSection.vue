@@ -1,7 +1,8 @@
 <template>
   <div class="lg:h-[150svh] relative">
     <section
-      class="flex h-screen items-center justify-center bg-white rounded-t-4xl sticky top-0 z-30"
+      class="flex h-screen items-center justify-center bg-white transition-all duration-300 ease-out sticky top-0 z-30"
+      :class="{ 'rounded-t-4xl': !isAtTop }"
       ref="sectionRef"
     >
       <div
@@ -165,6 +166,7 @@ const vh = (percentage: number): string => {
 let logoScrollTrigger: any = null;
 let sidebarScrollTrigger: any = null;
 let fadeOutScrollTrigger: any = null;
+let topScrollTrigger: any = null;
 let mm: any = null; // matchMedia instance
 
 const sectionRef = ref<HTMLElement | null>(null);
@@ -172,6 +174,9 @@ const sidebarRef = ref<HTMLElement | null>(null);
 const containerRef = ref<HTMLElement | null>(null);
 const titleRef = ref<HTMLElement | null>(null);
 const lastImageRef = ref<HTMLImageElement | null>(null);
+
+// Track if section is at top (sticky)
+const isAtTop = ref(false);
 
 // Title refs for split text animation
 const textRefs = ref<HTMLElement[]>([]);
@@ -276,6 +281,27 @@ const initializeLogoColorChangeAnimation = () => {
       },
       onEnterBack: () => {
         store.updateLogoColor(true);
+      },
+    },
+  });
+};
+
+// Initialize scroll trigger to track when section reaches top
+const initializeTopTracking = () => {
+  if (!sectionRef.value?.parentElement) {
+    return;
+  }
+
+  topScrollTrigger = $gsap.timeline({
+    scrollTrigger: {
+      trigger: sectionRef.value.parentElement,
+      start: "top top",
+      end: "bottom top",
+      onEnter: () => {
+        isAtTop.value = true;
+      },
+      onLeaveBack: () => {
+        isAtTop.value = false;
       },
     },
   });
@@ -393,6 +419,7 @@ watch(
         // Always initialize these animations (all screen sizes)
         initializeLogoColorChangeAnimation();
         initializeTitleAnimation();
+        initializeTopTracking();
 
         // Initialize matchMedia for desktop-only animations
         mm = $gsap.matchMedia();
@@ -437,6 +464,14 @@ onUnmounted(() => {
   }
   if (logoScrollTrigger && logoScrollTrigger.kill) {
     logoScrollTrigger.kill();
+  }
+
+  // Clean up top tracking scroll trigger
+  if (topScrollTrigger && topScrollTrigger.scrollTrigger) {
+    topScrollTrigger.scrollTrigger.kill();
+  }
+  if (topScrollTrigger && topScrollTrigger.kill) {
+    topScrollTrigger.kill();
   }
 
   // Clean up sidebar scroll trigger
