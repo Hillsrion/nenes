@@ -39,12 +39,43 @@
                   {{ element.content }}
                 </p>
                 <div class="relative overflow-hidden mt-8">
-                  <img
-                    :ref="(el) => setLastImageRef(el, index)"
-                    :src="element.image"
-                    :alt="element.title"
-                    class="w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
+                  <picture>
+                    <source
+                      type="image/avif"
+                      media="(max-width: 767px)"
+                      :srcset="element.image.replace('.jpg', '_mobile.avif')"
+                    />
+                    <source
+                      type="image/webp"
+                      media="(max-width: 767px)"
+                      :srcset="element.image.replace('.jpg', '_mobile.webp')"
+                    />
+                    <source
+                      type="image/avif"
+                      media="(min-width: 768px) and (max-width: 820px)"
+                      :srcset="element.image.replace('.jpg', '_regular.avif')"
+                    />
+                    <source
+                      type="image/webp"
+                      media="(min-width: 768px) and (max-width: 820px)"
+                      :srcset="element.image.replace('.jpg', '_regular.webp')"
+                    />
+                    <source
+                      type="image/avif"
+                      media="(min-width: 821px) and (max-width: 1024px)"
+                      :srcset="element.image.replace('.jpg', '_tablet.avif')"
+                    />
+                    <source
+                      type="image/webp"
+                      media="(min-width: 821px) and (max-width: 1024px)"
+                      :srcset="element.image.replace('.jpg', '_tablet.webp')"
+                    />
+                    <img
+                      :src="element.image.replace('.jpg', '_regular.webp')"
+                      :alt="element.title"
+                      class="w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                  </picture>
                   <div
                     class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"
                   ></div>
@@ -132,11 +163,8 @@ const setTextRef = (
 
 // Set last image ref function
 const setLastImageRef = (el: any, index: number) => {
-  if (
-    el instanceof HTMLImageElement &&
-    index === props.sidebarElements.length - 1
-  ) {
-    lastImageRef.value = el;
+  if (el instanceof HTMLElement && index === props.sidebarElements.length - 1) {
+    lastImageRef.value = el.querySelector("img");
   }
 };
 

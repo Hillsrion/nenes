@@ -2,27 +2,13 @@
   <section class="min-h-screen flex items-center relative" ref="sectionRef">
     <!-- Entry Cover Image -->
     <picture>
-      <!-- Portrait image for mobile devices (768px and below) -->
-      <source
-        media="(max-width: 768px)"
-        srcset="/images/entry-cover-portrait.jpg"
-      />
-      <!-- Landscape image for desktop devices (769px and above) -->
-      <img
-        ref="entryCoverRef"
-        src="/images/entry-cover.jpg"
-        alt="Entry Cover"
-        class="fixed z-5 pointer-events-none"
-        :style="{
-          width: '100vw',
-          height: '100vh',
-          transformOrigin: 'center center',
-          objectFit: 'cover',
-          willChange: 'transform',
-          top: 0,
-          left: 0,
-        }"
-      />
+      <!-- Portrait (<=768px) → AVIF, then WebP -->
+      <source type="image/avif" media="(max-width: 768px)" srcset="/images/entry-cover-portrait/entry-cover-portrait@640.avif 640w, /images/entry-cover-portrait/entry-cover-portrait@828.avif 828w, /images/entry-cover-portrait/entry-cover-portrait@1080.avif 1080w, /images/entry-cover-portrait/entry-cover-portrait@1440.avif 1440w" sizes="100vw" />
+      <source type="image/webp" media="(max-width: 768px)" srcset="/images/entry-cover-portrait/entry-cover-portrait@640.webp 640w, /images/entry-cover-portrait/entry-cover-portrait@828.webp 828w, /images/entry-cover-portrait/entry-cover-portrait@1080.webp 1080w, /images/entry-cover-portrait/entry-cover-portrait@1440.webp 1440w" sizes="100vw" />
+      <!-- Landscape (>=769px) → AVIF, then WebP -->
+      <source type="image/avif" media="(min-width: 769px)" srcset="/images/entry-cover/entry-cover@1024.avif 1024w, /images/entry-cover/entry-cover@1280.avif 1280w, /images/entry-cover/entry-cover@1920.avif 1920w, /images/entry-cover/entry-cover@2560.avif 2560w, /images/entry-cover/entry-cover@3840.avif 3840w" sizes="100vw" />
+      <source type="image/webp" media="(min-width: 769px)" srcset="/images/entry-cover/entry-cover@1024.webp 1024w, /images/entry-cover/entry-cover@1280.webp 1280w, /images/entry-cover/entry-cover@1920.webp 1920w, /images/entry-cover/entry-cover@2560.webp 2560w, /images/entry-cover/entry-cover@3840.webp 3840w" sizes="100vw" />
+      <img ref="entryCoverRef" src="/images/entry-cover/entry-cover@1280.webp" alt="Entry Cover" class="fixed z-5 pointer-events-none" :style="{ width: '100vw', height: '100vh', transformOrigin: 'center center', objectFit: 'cover', willChange: 'transform', top: 0, left: 0 }" />
     </picture>
 
     <!-- Statistics Section -->

@@ -8,7 +8,9 @@
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
-    "upload-to-r2": "tsx scripts/upload-to-r2.ts"
+    "upload-to-r2": "tsx scripts/upload-to-r2.ts",
+    "images:optimize": "scripts/optimize-images.sh",
+    "prebuild": "pnpm run images:optimize"
   },
   "dependencies": {
     "@hypernym/nuxt-gsap": "^2.4.3",
@@ -29,6 +31,7 @@
     "@aws-sdk/client-s3": "^3.709.0",
     "@types/node": "^22.10.5",
     "form-data": "^4.0.1",
+    "sharp": "^0.34.4",
     "tsx": "^4.19.2"
   }
 }
