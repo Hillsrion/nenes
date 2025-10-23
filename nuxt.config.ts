@@ -51,6 +51,9 @@ export default defineNuxtConfig({
 
   typescript: {
     tsConfig: {
+      compilerOptions: {
+        resolveJsonModule: true,
+      },
       include: ["imageSizes.d.ts"],
     },
   },

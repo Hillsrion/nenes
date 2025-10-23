@@ -36,4 +36,4 @@ declare module "~/imageSizes.json" {
     };
   };
   export default value;
-} 
+}
