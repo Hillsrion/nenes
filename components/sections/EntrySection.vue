@@ -3,22 +3,79 @@
     <!-- Entry Cover Image -->
     <picture>
       <!-- Portrait (<=768px) → AVIF, then WebP -->
-      <source type="image/avif" media="(max-width: 768px)" srcset="/images/entry-cover-portrait/entry-cover-portrait@640.avif 640w, /images/entry-cover-portrait/entry-cover-portrait@828.avif 828w, /images/entry-cover-portrait/entry-cover-portrait@1080.avif 1080w, /images/entry-cover-portrait/entry-cover-portrait@1440.avif 1440w" sizes="100vw" />
-      <source type="image/webp" media="(max-width: 768px)" srcset="/images/entry-cover-portrait/entry-cover-portrait@640.webp 640w, /images/entry-cover-portrait/entry-cover-portrait@828.webp 828w, /images/entry-cover-portrait/entry-cover-portrait@1080.webp 1080w, /images/entry-cover-portrait/entry-cover-portrait@1440.webp 1440w" sizes="100vw" />
+      <source
+        type="image/avif"
+        media="(max-width: 768px)"
+        srcset="
+          /images/entry-cover-portrait/entry-cover-portrait@640.avif   640w,
+          /images/entry-cover-portrait/entry-cover-portrait@828.avif   828w,
+          /images/entry-cover-portrait/entry-cover-portrait@1080.avif 1080w,
+          /images/entry-cover-portrait/entry-cover-portrait@1440.avif 1440w
+        "
+        sizes="100vw"
+      />
+      <source
+        type="image/webp"
+        media="(max-width: 768px)"
+        srcset="
+          /images/entry-cover-portrait/entry-cover-portrait@640.webp   640w,
+          /images/entry-cover-portrait/entry-cover-portrait@828.webp   828w,
+          /images/entry-cover-portrait/entry-cover-portrait@1080.webp 1080w,
+          /images/entry-cover-portrait/entry-cover-portrait@1440.webp 1440w
+        "
+        sizes="100vw"
+      />
       <!-- Landscape (>=769px) → AVIF, then WebP -->
-      <source type="image/avif" media="(min-width: 769px)" srcset="/images/entry-cover/entry-cover@1024.avif 1024w, /images/entry-cover/entry-cover@1280.avif 1280w, /images/entry-cover/entry-cover@1920.avif 1920w, /images/entry-cover/entry-cover@2560.avif 2560w, /images/entry-cover/entry-cover@3840.avif 3840w" sizes="100vw" />
-      <source type="image/webp" media="(min-width: 769px)" srcset="/images/entry-cover/entry-cover@1024.webp 1024w, /images/entry-cover/entry-cover@1280.webp 1280w, /images/entry-cover/entry-cover@1920.webp 1920w, /images/entry-cover/entry-cover@2560.webp 2560w, /images/entry-cover/entry-cover@3840.webp 3840w" sizes="100vw" />
-      <img ref="entryCoverRef" src="/images/entry-cover/entry-cover@1280.webp" alt="Entry Cover" class="fixed z-5 pointer-events-none" :style="{ width: '100vw', height: '100vh', transformOrigin: 'center center', objectFit: 'cover', willChange: 'transform', top: 0, left: 0 }" />
+      <source
+        type="image/avif"
+        media="(min-width: 769px)"
+        srcset="
+          /images/entry-cover/entry-cover@1024.avif 1024w,
+          /images/entry-cover/entry-cover@1280.avif 1280w,
+          /images/entry-cover/entry-cover@1920.avif 1920w,
+          /images/entry-cover/entry-cover@2560.avif 2560w,
+          /images/entry-cover/entry-cover@3840.avif 3840w
+        "
+        sizes="100vw"
+      />
+      <source
+        type="image/webp"
+        media="(min-width: 769px)"
+        srcset="
+          /images/entry-cover/entry-cover@1024.webp 1024w,
+          /images/entry-cover/entry-cover@1280.webp 1280w,
+          /images/entry-cover/entry-cover@1920.webp 1920w,
+          /images/entry-cover/entry-cover@2560.webp 2560w,
+          /images/entry-cover/entry-cover@3840.webp 3840w
+        "
+        sizes="100vw"
+      />
+      <img
+        ref="entryCoverRef"
+        src="/images/entry-cover/entry-cover@1280.webp"
+        alt="Entry Cover"
+        class="fixed z-5 pointer-events-none"
+        :style="{
+          width: '100vw',
+          height: '100vh',
+          transformOrigin: 'center center',
+          objectFit: 'cover',
+          willChange: 'transform',
+          top: 0,
+          left: 0,
+        }"
+      />
     </picture>
 
     <!-- Statistics Section -->
     <div class="absolute -top-2 left-0 w-full h-16 bg-primary -z-1"></div>
     <div
-      class="relative h-[350svh] w-full min-h-screen bg-white transition-all duration-300 ease-out rounded-t-4xl overflow-x-clip"
+      class="relative h-[350svh] w-full min-h-screen bg-white transition-all duration-300 ease-out overflow-x-clip"
       ref="whiteSectionRef"
       :class="{
         'rounded-t-4xl':
-          animationsStore?.sections?.loading?.state === 'isComplete',
+          animationsStore?.sections?.loading?.state === 'isAnimating' ||
+          animationsStore?.sections?.loading?.state === 'idle',
       }"
     >
       <div
