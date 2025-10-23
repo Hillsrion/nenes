@@ -1,3 +1,5 @@
+import imageSizes from "~/imageSizes.json";
+
 export const useContent = () => {
   // Define main content elements for the ContentSection
   const mainContentElements = [
@@ -95,21 +97,22 @@ export const useContent = () => {
       desktopUrl: "/videos/ForBiggerBlazes.mp4",
     },
   ];
+  const { width, height } = imageSizes.cursor.size;
   const cursorImages = [
-    "/images/cursor/0D2A8280-174x261.webp",
-    "/images/cursor/0D2A8587-174x261.webp",
-    "/images/cursor/0D2A8610-174x261.webp",
-    "/images/cursor/0D2A8761-174x261.webp",
-    "/images/cursor/0D2A8789-174x261.webp",
-    "/images/cursor/0D2A8819-174x261.webp",
-    "/images/cursor/0D2A8842-174x261.webp",
-    "/images/cursor/0D2A8852-174x261.webp",
-    "/images/cursor/0D2A8855-174x261.webp",
-    "/images/cursor/0D2A8864-174x261.webp",
-    "/images/cursor/0D2A8865-174x261.webp",
-    "/images/cursor/0D2A8909-174x261.webp",
-    "/images/cursor/0D2A8933-174x261.webp",
-    "/images/cursor/0D2A8956-174x261.webp",
+    `/images/cursor/0D2A8280-${width}x${height}.avif`,
+    `/images/cursor/0D2A8587-${width}x${height}.avif`,
+    `/images/cursor/0D2A8610-${width}x${height}.avif`,
+    `/images/cursor/0D2A8761-${width}x${height}.avif`,
+    `/images/cursor/0D2A8789-${width}x${height}.avif`,
+    `/images/cursor/0D2A8819-${width}x${height}.avif`,
+    `/images/cursor/0D2A8842-${width}x${height}.avif`,
+    `/images/cursor/0D2A8852-${width}x${height}.avif`,
+    `/images/cursor/0D2A8855-${width}x${height}.avif`,
+    `/images/cursor/0D2A8864-${width}x${height}.avif`,
+    `/images/cursor/0D2A8865-${width}x${height}.avif`,
+    `/images/cursor/0D2A8909-${width}x${height}.avif`,
+    `/images/cursor/0D2A8933-${width}x${height}.avif`,
+    `/images/cursor/0D2A8956-${width}x${height}.avif`,
   ];
 
   return {

@@ -49,6 +49,12 @@ export default defineNuxtConfig({
     "lenis/nuxt",
   ],
 
+  typescript: {
+    tsConfig: {
+      include: ["imageSizes.d.ts"],
+    },
+  },
+
   // Google Fonts configuration
   googleFonts: {
     families: {
