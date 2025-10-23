@@ -21,13 +21,13 @@ export const useContent = () => {
       title: "Dépistage",
       content:
         "Les femmes entre 50 et 74 ans sont invitées à faire une mammographie tous les 2 ans. Ce simple examen peut sauver des vies. Il est cependant recommandé dès l'âge de 25 ans de les montrer une fois par an à un médecin et/ou à un gynécologue.",
-      image: "/images/screening-01.jpg",
+      image: "/images/screening/screening-01.jpg",
     },
     {
       title: "Autopalpation",
       content:
         "L'autopalpation régulière est un procédé simple qui vous permettra de détecter d'éventuels symptômes de cancer du sein entre deux dépistages. Au plus tôt il est détecté, au plus facile il est de le soigner.",
-      image: "/images/screening-02.jpg",
+      image: "/images/screening/screening-02.jpg",
     },
   ];
 
