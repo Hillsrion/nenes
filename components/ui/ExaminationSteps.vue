@@ -90,6 +90,7 @@
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from "vue";
 import { useAnimationsStore } from "../../stores";
 import { useVideos } from "~/composables/useVideos";
+import { useContent } from "~/composables/useContent";
 import ExaminationCard from "~/components/ui/ExaminationCard.vue";
 
 // Nuxt composables are auto-imported
@@ -111,14 +112,14 @@ const props = defineProps<Props>();
 
 const { $gsap } = useNuxtApp();
 const store = useAnimationsStore();
+const { r2Config } = useContent();
 
 // GSAP with ScrollTrigger is registered globally in the app
 
-// Configuration: Track which steps have optimized videos on R2
+// Configuration: Track which steps have optimized videos on R2 (from centralized config)
 // Add step indices here as you upload more folders to R2
 // Example: [0, 1, 2, 3, 4] for all steps
-const stepsWithOptimizedVideos = [0, 1, 2, 3, 4]; // step-01 to step-05 (indices 0-4) - currently on R2
-// TODO: Upload step-01, step-02, step-04, step-05 to R2 and add indices here
+const stepsWithOptimizedVideos = r2Config.stepsWithOptimizedVideos;
 
 // Refs
 const videoRef = ref<HTMLVideoElement | null>(null);
@@ -152,7 +153,7 @@ const getVideoSource = (
     // Use optimized video from R2 bucket
     // R2 URL: https://pub-xxxxx.r2.dev/step-0X/step-0X-{resolution}.{format}
     // For mobile: https://pub-xxxxx.r2.dev/step-0X/step-0X-mobile.{format}
-    const r2PublicUrl = "https://pub-98cf5dcf21ad46868d9f67705208e67e.r2.dev";
+    const r2PublicUrl = r2Config.baseUrl;
 
     if (resolution === "mobile") {
       return `${r2PublicUrl}/${stepFolder}/${stepFolder}-mobile.${format}`;
@@ -207,6 +208,7 @@ const {
   videoRef,
   overlayRef,
   transitionCallback: handleVideoTransition,
+  getVideoSource: (format, resolution) => getVideoSource(format, resolution),
 });
 
 // Computed trigger element (parent section or current section)

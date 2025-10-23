@@ -13,11 +13,21 @@ interface UseVideosOptions {
   videoRef: Ref<HTMLVideoElement | null>;
   overlayRef: Ref<HTMLDivElement | null>;
   transitionCallback?: (url: string) => void;
+  getVideoSource: (
+    format: "mp4" | "webm",
+    resolution: "1080p" | "1440p" | "mobile"
+  ) => string;
 }
 
 export function useVideos(options: UseVideosOptions) {
-  const { steps, currentStepIndex, videoRef, overlayRef, transitionCallback } =
-    options;
+  const {
+    steps,
+    currentStepIndex,
+    videoRef,
+    overlayRef,
+    transitionCallback,
+    getVideoSource,
+  } = options;
 
   // State management
   const loadedVideos = ref<Set<string>>(new Set());
@@ -46,8 +56,8 @@ export function useVideos(options: UseVideosOptions) {
     console.log("🎬 First step:", firstStep);
     if (firstStep) {
       const firstVideoUrl = isMobileOrTablet.value
-        ? firstStep.mobileUrl || firstStep.desktopUrl || firstStep.videoUrl
-        : firstStep.desktopUrl || firstStep.videoUrl;
+        ? options.getVideoSource("mp4", "mobile") // Use the passed getVideoSource for mobile
+        : options.getVideoSource("mp4", "1080p"); // Use the passed getVideoSource for desktop (default 1080p)
 
       console.log("🎥 First video URL:", firstVideoUrl);
       if (firstVideoUrl) {
@@ -71,15 +81,9 @@ export function useVideos(options: UseVideosOptions) {
     const currentStep = steps[currentStepIndex.value];
     if (!currentStep) return "";
 
-    // Check for responsive URLs first
-    if (currentStep.mobileUrl || currentStep.desktopUrl) {
-      return isMobileOrTablet.value
-        ? currentStep.mobileUrl
-        : currentStep.desktopUrl;
-    }
-
-    // Fall back to legacy videoUrl for backward compatibility
-    return currentStep.videoUrl || "";
+    return isMobileOrTablet.value
+      ? options.getVideoSource("webm", "mobile")
+      : options.getVideoSource("webm", "1080p");
   });
 
   // Video loading method
@@ -107,13 +111,9 @@ export function useVideos(options: UseVideosOptions) {
       video.addEventListener("loadeddata", onLoadedData);
       video.addEventListener("error", onError);
 
-      // Set the appropriate source based on device type
-      if (url.includes("mobile") || url.includes("desktop")) {
-        video.src = url;
-      } else {
-        // For legacy video URLs, we need to set the source attribute directly
-        video.src = url;
-      }
+      // No need to check for "mobile" or "desktop" in url directly.
+      // The getVideoSource function already handles the resolution and format.
+      video.src = url;
     });
   };
 
@@ -132,9 +132,10 @@ export function useVideos(options: UseVideosOptions) {
       const step = steps[index];
       if (!step) return Promise.resolve();
 
-      const url = isMobileOrTablet.value
-        ? step.mobileUrl || step.desktopUrl || step.videoUrl
-        : step.desktopUrl || step.videoUrl;
+      const mobileVideoUrl = options.getVideoSource("webm", "mobile");
+      const desktopVideoUrl = options.getVideoSource("webm", "1080p");
+
+      const url = isMobileOrTablet.value ? mobileVideoUrl : desktopVideoUrl;
 
       return url ? loadVideo(url) : Promise.resolve();
     });
@@ -144,7 +145,13 @@ export function useVideos(options: UseVideosOptions) {
 
   // Video transition function
   const transitionToVideo = async () => {
-    if (!overlayRef.value || !videoRef.value || !currentVideoUrl.value) return;
+    if (
+      !overlayRef.value ||
+      !videoRef.value ||
+      !currentVideoUrl.value ||
+      isTransitioning.value
+    )
+      return;
 
     const videoUrl = currentVideoUrl.value;
 
@@ -201,8 +208,8 @@ export function useVideos(options: UseVideosOptions) {
       const firstStep = steps[0];
       if (firstStep) {
         const firstVideoUrl = isMobileOrTablet.value
-          ? firstStep.mobileUrl || firstStep.desktopUrl || firstStep.videoUrl
-          : firstStep.desktopUrl || firstStep.videoUrl;
+          ? options.getVideoSource("mp4", "mobile") // Use the passed getVideoSource for mobile
+          : options.getVideoSource("mp4", "1080p"); // Use the passed getVideoSource for desktop (default 1080p)
 
         if (firstVideoUrl) {
           loadVideo(firstVideoUrl).then(() => {
