@@ -288,13 +288,14 @@ const initializeLogoColorChangeAnimation = () => {
 
 // Initialize scroll trigger to track when section reaches top
 const initializeTopTracking = () => {
-  if (!sectionRef.value?.parentElement) {
+  if (!sectionRef.value) {
     return;
   }
 
+  // Use the section itself as trigger for consistency
   topScrollTrigger = $gsap.timeline({
     scrollTrigger: {
-      trigger: sectionRef.value.parentElement,
+      trigger: sectionRef.value,
       start: "top top",
       end: "bottom top",
       onEnter: () => {

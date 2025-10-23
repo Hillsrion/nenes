@@ -1,6 +1,7 @@
 <template>
   <section
-    class="lg:h-screen py-9 bg-primary rounded-t-4xl sticky top-0 z-30"
+    class="lg:h-screen py-9 bg-primary sticky top-0 z-30 transition-all duration-300 ease-out"
+    :class="{ 'rounded-t-4xl': !isAtTop }"
     ref="sectionRef"
   >
     <div
@@ -88,7 +89,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref, onMounted, onUnmounted, watch } from "vue";
 import { useAnimationsStore } from "../../stores";
 import { useNuxtApp } from "nuxt/app";
 import ImageSequenceAnimator from "~/components/ui/ImageSequenceAnimator.vue";
@@ -103,7 +104,11 @@ $gsap.registerPlugin($gsap.ScrollTrigger);
 const sectionRef = ref(null);
 let logoScrollTrigger = null;
 let illustrationAnimationTimeline = null;
+let topScrollTrigger = null;
 const illustrationProgress = ref(0);
+
+// Track if section is at top (sticky)
+const isAtTop = ref(false);
 
 // Initialize logo scroll trigger for color change
 const initializeLogoColorChangeAnimation = () => {
@@ -120,6 +125,28 @@ const initializeLogoColorChangeAnimation = () => {
       },
       onEnterBack: () => {
         store.updateLogoColor(false);
+      },
+    },
+  });
+};
+
+// Initialize scroll trigger to track when section reaches top
+const initializeTopTracking = () => {
+  if (!sectionRef.value) {
+    return;
+  }
+
+  // Use the section itself as trigger but with proper positioning
+  topScrollTrigger = $gsap.timeline({
+    scrollTrigger: {
+      trigger: sectionRef.value,
+      start: "top top+=10px",
+      end: "bottom top",
+      onEnter: () => {
+        isAtTop.value = true;
+      },
+      onLeaveBack: () => {
+        isAtTop.value = false;
       },
     },
   });
@@ -151,6 +178,7 @@ watch(
       setTimeout(() => {
         initializeLogoColorChangeAnimation();
         initializeIllustrationAnimation();
+        initializeTopTracking();
       }, 1000);
     }
   }
@@ -164,6 +192,15 @@ onUnmounted(() => {
   if (logoScrollTrigger && logoScrollTrigger.kill) {
     logoScrollTrigger.kill();
   }
+
+  // Clean up top tracking scroll trigger
+  if (topScrollTrigger && topScrollTrigger.scrollTrigger) {
+    topScrollTrigger.scrollTrigger.kill();
+  }
+  if (topScrollTrigger && topScrollTrigger.kill) {
+    topScrollTrigger.kill();
+  }
+
   if (illustrationAnimationTimeline && illustrationAnimationTimeline.kill) {
     illustrationAnimationTimeline.kill();
   }
