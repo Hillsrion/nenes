@@ -39,7 +39,7 @@
                   {{ element.content }}
                 </p>
                 <div class="relative overflow-hidden mt-8">
-                  <picture>
+                  <picture :ref="(el) => setLastImageRef(el, index)">
                     <!-- Mobile (<=767px) -->
                     <source
                       type="image/avif"

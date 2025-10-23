@@ -42,8 +42,8 @@ const optimizeImage = async (
     image.resize(width);
   }
 
-  await image.avif({ quality: 50, effort: 4 }).toFile(outputPath.replace(/\.(jpg|png)$/, '.avif'));
-  await image.webp({ quality: 70 }).toFile(outputPath.replace(/\.(jpg|png)$/, '.webp'));
+  await image.avif({ quality: 90, effort: 5 }).toFile(outputPath.replace(/\.(jpg|png)$/, '.avif'));
+  await image.webp({ quality: 90 }).toFile(outputPath.replace(/\.(jpg|png)$/, '.webp'));
   console.log(`Optimized ${inputPath} to ${outputPath.replace(/\.(jpg|png)$/, '.avif')} and ${outputPath.replace(/\.(jpg|png)$/, '.webp')}`);
 };
 
