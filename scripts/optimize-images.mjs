@@ -17,7 +17,8 @@ const optimizeImage = async (
   outputPath,
   width,
   height,
-  fit = 'cover'
+  fit = 'cover',
+  formats = ['avif', 'webp']
 ) => {
   const outputDir = path.dirname(outputPath);
   await fs.mkdir(outputDir, { recursive: true });
@@ -42,8 +43,12 @@ const optimizeImage = async (
     image.resize(width);
   }
 
-  await image.avif({ quality: 90, effort: 5 }).toFile(outputPath.replace(/\.(jpg|png)$/, '.avif'));
-  await image.webp({ quality: 90 }).toFile(outputPath.replace(/\.(jpg|png)$/, '.webp'));
+  if (formats.includes('avif')) {
+    await image.avif({ quality: 90, effort: 5 }).toFile(outputPath.replace(/\.(jpg|png)$/, '.avif'));
+  }
+  if (formats.includes('webp')) {
+    await image.webp({ quality: 90 }).toFile(outputPath.replace(/\.(jpg|png)$/, '.webp'));
+  }
   console.log(`Optimized ${inputPath} to ${outputPath.replace(/\.(jpg|png)$/, '.avif')} and ${outputPath.replace(/\.(jpg|png)$/, '.webp')}`);
 };
 
@@ -109,11 +114,26 @@ const processScreeningImages = async () => {
   }
 };
 
+const processSymptomsImages = async () => {
+  const symptomImages = await fg('public/images/symptoms/*.jpg', { cwd: __dirname });
+
+  for (const imagePath of symptomImages) {
+    const basename = path.basename(imagePath, path.extname(imagePath));
+    const outputPath = path.join(
+      IMAGES_DIR,
+      'symptoms',
+      `${basename}.jpg`
+    );
+    await optimizeImage(imagePath, outputPath, null, null, 'cover', ['avif']);
+  }
+};
+
 const runOptimization = async () => {
   console.log('Starting image optimization...');
   await processCursorImages();
   await processCoverImages();
   await processScreeningImages();
+  await processSymptomsImages();
   console.log('Image optimization complete.');
 };
 

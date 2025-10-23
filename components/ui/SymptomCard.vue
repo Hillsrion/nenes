@@ -9,7 +9,7 @@
       :src="image"
       :alt="title"
       width="360"
-      height="130"
+      height="520"
       class="size-full object-contain absolute inset-0"
     />
   </li>
