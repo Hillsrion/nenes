@@ -1,6 +1,5 @@
 @import "tailwindcss";
 
-/* Theme Configuration - Tailwind CSS v4 */
 @theme {
   --color-primary: #335ede;
   --color-secondary: #ffdde2;
@@ -11,117 +10,16 @@
     sans-serif;
   --font-serif: "Dawning of a New Day", cursive;
 
-  /* Animations */
-  --animate-fade-in: fadeIn 0.8s ease-out forwards;
-  --animate-slide-up: slideUp 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-  --animate-slide-in-left: slideInLeft 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94)
-    forwards;
-  --animate-slide-in-right: slideInRight 0.8s
-    cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-  --animate-bounce-subtle: bounceSubtle 2s infinite;
-  --animate-float: float 6s ease-in-out infinite;
-
-  /* Backdrop blur */
-  --backdrop-blur-xs: 2px;
-
   /* Border radius */
   --radius-4xl: 2.5rem;
 
   /* Text shadows */
-  --text-shadow-title: 0 6px 6px rgba(51, 94, 222, 0.2);
+  --text-shadow-title: 0 6px 6px rgba(51, 94, 222, 0.1);
 
   --tracking-title-sm: 0.16rem;
   --leading-title: 1.33;
   --text-serif-size: 2rem;
   --breakpoint-xs: 430px;
-}
-
-/* Animation utilities */
-.animate-fade-in {
-  animation: fadeIn 0.8s ease-out forwards;
-}
-
-.animate-slide-up {
-  animation: slideUp 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-}
-
-.animate-slide-in-left {
-  animation: slideInLeft 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-}
-
-.animate-slide-in-right {
-  animation: slideInRight 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-}
-
-.animate-bounce-subtle {
-  animation: bounceSubtle 2s infinite;
-}
-
-.animate-float {
-  animation: float 6s ease-in-out infinite;
-}
-
-/* Keyframe animations */
-@keyframes fadeIn {
-  0% {
-    opacity: 0;
-  }
-  100% {
-    opacity: 1;
-  }
-}
-
-@keyframes slideUp {
-  0% {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes slideInLeft {
-  0% {
-    opacity: 0;
-    transform: translateX(-30px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes slideInRight {
-  0% {
-    opacity: 0;
-    transform: translateX(30px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes bounceSubtle {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-5px);
-  }
-}
-
-@keyframes float {
-  0%,
-  100% {
-    transform: translateY(0px);
-  }
-  50% {
-    transform: translateY(-20px);
-  }
 }
 
 body {

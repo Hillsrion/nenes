@@ -13,6 +13,10 @@
       loading="lazy"
       class="size-full object-contain absolute inset-0"
     />
+    <div
+      v-if="hasImage"
+      class="absolute inset-0 bg-gradient-to-t from-primary/20 to-transparent"
+    ></div>
   </li>
 </template>
 
