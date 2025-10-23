@@ -91,8 +91,6 @@ useHead({
     { rel: "preload", href: "/images/illustrations/6.svg", as: "image" },
     { rel: "preload", href: "/images/illustrations/7.svg", as: "image" },
     { rel: "preload", href: "/images/illustrations/8.svg", as: "image" },
-    // Preload entry cover image
-    { rel: "preload", href: "/images/entry-cover.jpg", as: "image" },
     // DNS prefetch for external resources
     { rel: "dns-prefetch", href: "//fonts.googleapis.com" },
     { rel: "dns-prefetch", href: "//fonts.gstatic.com" },
