@@ -46,19 +46,19 @@ export const useContent = () => {
     },
     {
       title: "Modification de la taille, de la forme ou de la symétrie.",
-      image: "/images/symptoms/symptoms-01_regular.webp",
+      image: "/images/symptoms/symptoms-01.jpg",
     },
     {
       title: `Changement d'aspect de la peau (rougeur, aspect de "peau d'orange", plis)`,
-      image: "/images/symptoms/symptoms-02_regular.webp",
+      image: "/images/symptoms/symptoms-02.jpg",
     },
     {
       title: "Apparition de fossettes ou de croûtes",
-      image: "/images/symptoms/symptoms-03_regular.webp",
+      image: "/images/symptoms/symptoms-03.jpg",
     },
     {
       title: "Écoulement ou modification du mamelon",
-      image: "/images/symptoms/symptoms-04_regular.webp",
+      image: "/images/symptoms/symptoms-04.jpg",
     },
   ];
 
