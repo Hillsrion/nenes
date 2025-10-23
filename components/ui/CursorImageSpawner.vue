@@ -16,6 +16,11 @@
  *
  * A canvas-based image particle system that creates floating images
  * that follow the cursor with distance-based scaling and parallax effects.
+ *
+ * Performance Optimization:
+ * - Images are only loaded on non-touch devices where the effect is used
+ * - On mobile/touch devices, no images are preloaded to save bandwidth
+ * - Canvas setup and animations are completely disabled on touch devices
  */
 
 // @ts-ignore - Nuxt auto-imports
@@ -143,23 +148,28 @@ const forceScaleState = reactive({ value: 0 });
 /**
  * Handle window resize - re-detect device type
  */
-const onResize = () => {
+const onResize = async () => {
   const wasMobileOrTouch = isMobileOrTouch.value;
   isMobileOrTouch.value = detectMobileOrTouch();
 
-  // If device type changed from non-touch to touch, stop animation
+  // If device type changed from non-touch to touch, stop animation and cleanup
   if (!wasMobileOrTouch && isMobileOrTouch.value) {
     stopAnimation();
     stopMouse();
+    // Reset loaded state since images won't be used on touch devices
+    isLoaded.value = false;
+    imageArray.value = [];
   }
-  // If device type changed from touch to non-touch, start animation
+  // If device type changed from touch to non-touch, load images and start animation
   else if (
     wasMobileOrTouch &&
     !isMobileOrTouch.value &&
     !props.disabled &&
-    isLoaded.value &&
     animationsStore.getSectionState("loading") === "isComplete"
   ) {
+    // Load images for desktop interaction
+    await loadImages();
+    setupCanvas();
     startMouse();
     startAnimation(true);
   }
@@ -182,6 +192,15 @@ const onMouseMove = (event: MouseEvent) => {
  * Initialize mouse position to center of canvas
  */
 const initializeMousePosition = () => {
+  // Only initialize if we have valid canvas dimensions and not on mobile/touch
+  if (
+    !canvasState.value.width ||
+    !canvasState.value.height ||
+    isMobileOrTouch.value
+  ) {
+    return;
+  }
+
   // Initialize to center of canvas
   mouse.x = canvasState.value.width / 2;
   mouse.y = canvasState.value.height / 2;
@@ -195,6 +214,11 @@ const initializeMousePosition = () => {
  * Initialize mouse position to actual cursor position
  */
 const initializeMousePositionToCursor = () => {
+  // Don't initialize cursor position on mobile/touch devices
+  if (isMobileOrTouch.value) {
+    return;
+  }
+
   // Get the actual cursor position by listening to the next mousemove
   const handleInitialMove = (event: MouseEvent) => {
     const rect = containerRef.value?.getBoundingClientRect();
@@ -325,6 +349,15 @@ const loadImages = async (): Promise<void> => {
  * Update grid settings
  */
 const updateGridSettings = () => {
+  // Only update grid settings if we have valid canvas dimensions and not on mobile/touch
+  if (
+    !canvasState.value.width ||
+    !canvasState.value.height ||
+    isMobileOrTouch.value
+  ) {
+    return;
+  }
+
   // Responsive sizing - reduced ratios for smaller grid
   if (canvasState.value.width >= 1024) {
     grid.imgSize = canvasState.value.height * 0.06; // Increased from 0.045
@@ -344,7 +377,7 @@ const updateGridSettings = () => {
  * Setup canvas
  */
 const setupCanvas = () => {
-  if (!containerRef.value || !canvasRef.value) return;
+  if (!containerRef.value || !canvasRef.value || isMobileOrTouch.value) return;
 
   // Initialize canvas using the composable
   const canvasComp = useCanvas(containerRef, {
@@ -399,70 +432,75 @@ const animate = (timestamp: number) => {
   target.x = lerp(target.x, mouse.x, 0.15);
   target.y = lerp(target.y, mouse.y, 0.15);
 
-  // Draw images in grid
-  for (let row = -1; row < grid.rows + 1; row++) {
-    for (let col = -1; col < grid.cols + 1; col++) {
-      const imageIndex = modulo(col * grid.cols + row, imageArray.value.length);
-      const image = imageArray.value[imageIndex];
-
-      if (!image) continue;
-
-      const ratio = image.ratio;
-      let width: number, height: number;
-
-      // Calculate dimensions based on aspect ratio
-      if (ratio > 1) {
-        width = grid.imgSize;
-        height = width / ratio;
-      } else {
-        height = grid.imgSize;
-        width = height * ratio;
-      }
-
-      // Calculate position with parallax effect
-      const x = wrap(
-        -grid.step - grid.gap,
-        canvasState.value.width + grid.step,
-        col * grid.step + timestamp * 0.08
-      );
-
-      const y = wrap(
-        -grid.step - grid.gap,
-        canvasState.value.height + grid.step,
-        row * grid.step - timestamp * 0.08
-      );
-
-      // Calculate center position
-      const xOffset = (grid.imgSize - width) / 2;
-      const yOffset = (grid.imgSize - height) / 2;
-      const centerX = x + xOffset + grid.imgSize * 0.5;
-      const centerY = y + yOffset + grid.imgSize * 0.5;
-
-      // Calculate distance from cursor
-      const distance = Math.sqrt(
-        Math.pow(centerX - target.x, 2) + Math.pow(centerY - target.y, 2)
-      );
-
-      // Only draw if within max distance
-      if (distance < grid.maxDistance) {
-        // Calculate scale based on distance
-        const normalizedDistance = distance / grid.maxDistance;
-        const scale =
-          Math.max(0, 4 - normalizedDistance * 4) *
-          forceScaleState.value *
-          props.forceScale;
-
-        const scaledWidth = width * scale;
-        const scaledHeight = height * scale;
-
-        // Draw image
-        ctx.drawImage(
-          image.img,
-          x + (grid.imgSize - scaledWidth) / 2,
-          y + (grid.imgSize - scaledHeight) / 2,
-          scaledWidth,
-          scaledHeight
+  // Draw images in grid only if we have images loaded
+  if (imageArray.value.length > 0) {
+    for (let row = -1; row < grid.rows + 1; row++) {
+      for (let col = -1; col < grid.cols + 1; col++) {
+        const imageIndex = modulo(
+          col * grid.cols + row,
+          imageArray.value.length
         );
+        const image = imageArray.value[imageIndex];
+
+        if (!image) continue;
+
+        const ratio = image.ratio;
+        let width: number, height: number;
+
+        // Calculate dimensions based on aspect ratio
+        if (ratio > 1) {
+          width = grid.imgSize;
+          height = width / ratio;
+        } else {
+          height = grid.imgSize;
+          width = height * ratio;
+        }
+
+        // Calculate position with parallax effect
+        const x = wrap(
+          -grid.step - grid.gap,
+          canvasState.value.width + grid.step,
+          col * grid.step + timestamp * 0.08
+        );
+
+        const y = wrap(
+          -grid.step - grid.gap,
+          canvasState.value.height + grid.step,
+          row * grid.step - timestamp * 0.08
+        );
+
+        // Calculate center position
+        const xOffset = (grid.imgSize - width) / 2;
+        const yOffset = (grid.imgSize - height) / 2;
+        const centerX = x + xOffset + grid.imgSize * 0.5;
+        const centerY = y + yOffset + grid.imgSize * 0.5;
+
+        // Calculate distance from cursor
+        const distance = Math.sqrt(
+          Math.pow(centerX - target.x, 2) + Math.pow(centerY - target.y, 2)
+        );
+
+        // Only draw if within max distance
+        if (distance < grid.maxDistance) {
+          // Calculate scale based on distance
+          const normalizedDistance = distance / grid.maxDistance;
+          const scale =
+            Math.max(0, 4 - normalizedDistance * 4) *
+            forceScaleState.value *
+            props.forceScale;
+
+          const scaledWidth = width * scale;
+          const scaledHeight = height * scale;
+
+          // Draw image
+          ctx.drawImage(
+            image.img,
+            x + (grid.imgSize - scaledWidth) / 2,
+            y + (grid.imgSize - scaledHeight) / 2,
+            scaledWidth,
+            scaledHeight
+          );
+        }
       }
     }
   }
@@ -479,7 +517,8 @@ const startAnimation = (initializePosition = false) => {
     isActive.value ||
     !canvasComposable?.context.value ||
     !canvasComposable?.canvas.value ||
-    isMobileOrTouch.value
+    isMobileOrTouch.value ||
+    !isLoaded.value
   )
     return;
 
@@ -556,12 +595,14 @@ onMounted(async () => {
     await assetPreloader.preloadAllAssets();
   }
 
-  await loadImages();
-  setupCanvas();
-
-  // Only start mouse tracking on non-touch devices
-  // Don't start animation yet - wait for loading section to complete
+  // Only load images and setup canvas on non-touch devices
+  // since cursor images are only used for the desktop interaction effect
   if (!isMobileOrTouch.value) {
+    await loadImages();
+    setupCanvas();
+
+    // Only start mouse tracking on non-touch devices
+    // Don't start animation yet - wait for loading section to complete
     startMouse();
 
     // If loading section is already complete, start animation immediately
@@ -601,8 +642,8 @@ watch(
     ) {
       // Only start if loading section is complete
       startAnimation(true);
-    } else if (assetPreloader.isComplete.value) {
-      // If not loaded but assets are preloaded, load images
+    } else if (assetPreloader.isComplete.value && !isMobileOrTouch.value) {
+      // If not loaded but assets are preloaded and not on mobile/touch, load images
       await loadImages();
       // Don't start yet if loading is not complete
       if (animationsStore.getSectionState("loading") === "isComplete") {
@@ -615,15 +656,19 @@ watch(
 // Watch for loading section state changes
 watch(
   () => animationsStore.getSectionState("loading"),
-  (loadingState) => {
+  async (loadingState) => {
     if (
       loadingState === "isComplete" &&
       !props.disabled &&
-      !isMobileOrTouch.value &&
-      isLoaded.value
+      !isMobileOrTouch.value
     ) {
       // When loading section completes (including translate animation),
-      // initialize mouse position and start animation
+      // load images if not already loaded and start animation
+      if (!isLoaded.value) {
+        await loadImages();
+        setupCanvas();
+      }
+      startMouse();
       startAnimation(true);
     }
   }
@@ -632,7 +677,7 @@ watch(
 // Watch for entry cover scaling - stop animation when cover starts to grow, restart when scrolling back
 watch(
   () => animationsStore.getCoverScaling,
-  (isScaling) => {
+  async (isScaling) => {
     if (isScaling && isActive.value) {
       // Cover is growing - stop the animation
       stopAnimation();
@@ -641,10 +686,15 @@ watch(
       !isActive.value &&
       !props.disabled &&
       !isMobileOrTouch.value &&
-      isLoaded.value &&
       animationsStore.getSectionState("loading") === "isComplete"
     ) {
       // Cover is no longer scaling (scrolled back) - restart the animation
+      // Load images if not already loaded
+      if (!isLoaded.value) {
+        await loadImages();
+        setupCanvas();
+      }
+      startMouse();
       startAnimation(false); // Don't reinitialize position, use current cursor position
     }
   }
