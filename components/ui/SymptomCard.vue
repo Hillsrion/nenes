@@ -10,6 +10,7 @@
       :alt="title"
       width="360"
       height="520"
+      loading="lazy"
       class="size-full object-contain absolute inset-0"
     />
   </li>

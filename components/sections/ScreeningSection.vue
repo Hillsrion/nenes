@@ -95,6 +95,7 @@
                     <img
                       :src="element.image.replace('.jpg', '_regular.webp')"
                       :alt="element.title"
+                      loading="lazy"
                       class="w-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
                   </picture>
