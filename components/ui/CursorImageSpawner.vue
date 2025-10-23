@@ -31,6 +31,32 @@ interface ImageItem {
   url?: string;
 }
 
+// Function to check AVIF support
+const checkAvifSupport = (): boolean => {
+  const canvas =
+    typeof document !== "undefined" ? document.createElement("canvas") : null;
+  if (!canvas) return false;
+  canvas.width = canvas.height = 1;
+  const avifData =
+    "data:image/avif;base64,AAAAHGZ0eXBhYXZpZjhpZjBvbWlmbGEAAAAAHGhlYWRlciNpZmFzAAAAAAhtZGF0AAAAABpgaXZmaA==";
+  return canvas.toDataURL(avifData).indexOf("image/avif") === 5;
+};
+
+const avifSupported = checkAvifSupport();
+
+// Function to check WebP support
+const checkWebPSupport = (): boolean => {
+  const canvas =
+    typeof document !== "undefined" ? document.createElement("canvas") : null;
+  if (!canvas) return false;
+  canvas.width = canvas.height = 1;
+  const webpData =
+    "data:image/webp;base64,UklGRiQAAABXRUJQVlA4IBgAAAAwAQCdASoBAAEAAQAAAPwBAAA=";
+  return canvas.toDataURL(webpData).indexOf("image/webp") === 5;
+};
+
+const webpSupported = checkWebPSupport();
+
 interface GridSettings {
   imgSize: number;
   maxDistance: number;
@@ -257,6 +283,15 @@ const loadImages = async (): Promise<void> => {
         img.crossOrigin = "anonymous";
       }
 
+      // Use AVIF if supported, otherwise WebP if supported, otherwise fallback to JPG
+      if (avifSupported) {
+        img.src = imageData.url.replace(".webp", ".avif");
+      } else if (webpSupported) {
+        img.src = imageData.url;
+      } else {
+        img.src = imageData.url.replace(".webp", ".jpg");
+      }
+
       img.onload = () => {
         // Calculate actual ratio from loaded image
         const ratio = img.width / img.height;
@@ -278,8 +313,6 @@ const loadImages = async (): Promise<void> => {
           resolve();
         }
       };
-
-      img.src = imageData.url;
     });
   });
 

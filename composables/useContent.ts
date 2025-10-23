@@ -44,19 +44,19 @@ export const useContent = () => {
     },
     {
       title: "Modification de la taille, de la forme ou de la symétrie.",
-      image: "/images/symptoms/symptoms-01.jpg",
+      image: "/images/symptoms/symptoms-01_regular.webp",
     },
     {
       title: `Changement d'aspect de la peau (rougeur, aspect de "peau d'orange", plis)`,
-      image: "/images/symptoms/symptoms-02.jpg",
+      image: "/images/symptoms/symptoms-02_regular.webp",
     },
     {
       title: "Apparition de fossettes ou de croûtes",
-      image: "/images/symptoms/symptoms-03.jpg",
+      image: "/images/symptoms/symptoms-03_regular.webp",
     },
     {
       title: "Écoulement ou modification du mamelon",
-      image: "/images/symptoms/symptoms-04.jpg",
+      image: "/images/symptoms/symptoms-04_regular.webp",
     },
   ];
 
@@ -96,20 +96,20 @@ export const useContent = () => {
     },
   ];
   const cursorImages = [
-    "/images/cursor/0D2A8280.jpg",
-    "/images/cursor/0D2A8587.jpg",
-    "/images/cursor/0D2A8610.jpg",
-    "/images/cursor/0D2A8761.jpg",
-    "/images/cursor/0D2A8789.jpg",
-    "/images/cursor/0D2A8819.jpg",
-    "/images/cursor/0D2A8842.jpg",
-    "/images/cursor/0D2A8852.jpg",
-    "/images/cursor/0D2A8855.jpg",
-    "/images/cursor/0D2A8864.jpg",
-    "/images/cursor/0D2A8865.jpg",
-    "/images/cursor/0D2A8909.jpg",
-    "/images/cursor/0D2A8933.jpg",
-    "/images/cursor/0D2A8956.jpg",
+    "/images/cursor/0D2A8280-174x261.webp",
+    "/images/cursor/0D2A8587-174x261.webp",
+    "/images/cursor/0D2A8610-174x261.webp",
+    "/images/cursor/0D2A8761-174x261.webp",
+    "/images/cursor/0D2A8789-174x261.webp",
+    "/images/cursor/0D2A8819-174x261.webp",
+    "/images/cursor/0D2A8842-174x261.webp",
+    "/images/cursor/0D2A8852-174x261.webp",
+    "/images/cursor/0D2A8855-174x261.webp",
+    "/images/cursor/0D2A8864-174x261.webp",
+    "/images/cursor/0D2A8865-174x261.webp",
+    "/images/cursor/0D2A8909-174x261.webp",
+    "/images/cursor/0D2A8933-174x261.webp",
+    "/images/cursor/0D2A8956-174x261.webp",
   ];
 
   return {

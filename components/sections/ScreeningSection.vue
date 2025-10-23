@@ -40,35 +40,57 @@
                 </p>
                 <div class="relative overflow-hidden mt-8">
                   <picture>
+                    <!-- Mobile (<=767px) -->
                     <source
                       type="image/avif"
                       media="(max-width: 767px)"
                       :srcset="element.image.replace('.jpg', '_mobile.avif')"
+                      sizes="100vw"
                     />
                     <source
                       type="image/webp"
                       media="(max-width: 767px)"
                       :srcset="element.image.replace('.jpg', '_mobile.webp')"
+                      sizes="100vw"
                     />
+                    <!-- Tablet (768-820px) - using regular -->
                     <source
                       type="image/avif"
                       media="(min-width: 768px) and (max-width: 820px)"
                       :srcset="element.image.replace('.jpg', '_regular.avif')"
+                      sizes="100vw"
                     />
                     <source
                       type="image/webp"
                       media="(min-width: 768px) and (max-width: 820px)"
                       :srcset="element.image.replace('.jpg', '_regular.webp')"
+                      sizes="100vw"
                     />
+                    <!-- Medium tablet (821-1024px) -->
                     <source
                       type="image/avif"
                       media="(min-width: 821px) and (max-width: 1024px)"
                       :srcset="element.image.replace('.jpg', '_tablet.avif')"
+                      sizes="(min-width: 1024px) 25vw, 100vw"
                     />
                     <source
                       type="image/webp"
                       media="(min-width: 821px) and (max-width: 1024px)"
                       :srcset="element.image.replace('.jpg', '_tablet.webp')"
+                      sizes="(min-width: 1024px) 25vw, 100vw"
+                    />
+                    <!-- Desktop (>1024px) - using regular -->
+                    <source
+                      type="image/avif"
+                      media="(min-width: 1025px)"
+                      :srcset="element.image.replace('.jpg', '_regular.avif')"
+                      sizes="(min-width: 1024px) 25vw, 100vw"
+                    />
+                    <source
+                      type="image/webp"
+                      media="(min-width: 1025px)"
+                      :srcset="element.image.replace('.jpg', '_regular.webp')"
+                      sizes="(min-width: 1024px) 25vw, 100vw"
                     />
                     <img
                       :src="element.image.replace('.jpg', '_regular.webp')"
