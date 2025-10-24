@@ -89,7 +89,9 @@
             <span class="inline-block">
               <template v-if="index === statisticsText.length - 1">
                 <!-- Split last line: first word goes left, rest goes right -->
-                <span class="inline-block animate-split-word-left mr-3">
+                <span
+                  class="inline-block animate-split-word-left sm:mr-3 xs:mr-2 mr-1.5"
+                >
                   {{ textUtils.getFirstWord(line) }}
                 </span>
                 <span class="inline-block animate-split-word-right">
