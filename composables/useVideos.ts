@@ -88,32 +88,47 @@ export function useVideos(options: UseVideosOptions) {
 
   // Video loading method
   const loadVideo = async (url: string): Promise<void> => {
-    if (!url || loadedVideos.value.has(url)) return;
+    if (!url || loadedVideos.value.has(url)) {
+      return Promise.resolve();
+    }
 
-    return new Promise((resolve) => {
+    console.log(`[useVideos] 🔄 Attempting to load video: ${url}`);
+    videoLoading.value = true;
+    console.log(`[useVideos] ⏳ videoLoading: ${videoLoading.value}`);
+
+    return new Promise((resolve, reject) => {
       const video = document.createElement("video");
-      video.preload = "metadata";
+      video.preload = "auto"; // Ensure full video data is preloaded
+      video.playsInline = true; // Essential for iOS autoplay
 
-      const onLoadedData = () => {
+      const onCanPlayThrough = () => {
+        console.log(`[useVideos] 🎉 Video canplaythrough: ${url}`);
         loadedVideos.value.add(url);
-        video.removeEventListener("loadeddata", onLoadedData);
+        video.removeEventListener("canplaythrough", onCanPlayThrough);
         video.removeEventListener("error", onError);
+        videoLoading.value = false; // Reset loading state
+        console.log(`[useVideos] ✅ videoLoading: ${videoLoading.value}`);
         resolve();
       };
 
-      const onError = () => {
-        video.removeEventListener("loadeddata", onLoadedData);
+      const onError = (e: Event) => {
+        console.error(`[useVideos] ❌ Video error loading ${url}:`, e);
+        video.removeEventListener("canplaythrough", onCanPlayThrough);
         video.removeEventListener("error", onError);
-        console.warn(`Failed to preload video: ${url}`);
-        resolve();
+        videoLoading.value = false; // Reset loading state on error
+        console.log(
+          `[useVideos] ✅ videoLoading (on error): ${videoLoading.value}`
+        );
+        reject(new Error(`Failed to load video: ${url}`));
       };
 
-      video.addEventListener("loadeddata", onLoadedData);
+      video.addEventListener("canplaythrough", onCanPlayThrough);
       video.addEventListener("error", onError);
 
       // No need to check for "mobile" or "desktop" in url directly.
       // The getVideoSource function already handles the resolution and format.
       video.src = url;
+      video.load(); // Explicitly trigger loading
     });
   };
 
