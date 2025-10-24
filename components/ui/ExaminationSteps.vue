@@ -255,7 +255,10 @@ const initializeAnimations = async () => {
       duration: 0.2,
       ease: "power2.out",
       onUpdate: function () {
-        store.updateLogoColor(this.progress() < 0.55);
+        const shouldShow = this.progress() < 0.55;
+        if (store.getLogoState !== shouldShow) {
+          store.updateLogoColor(shouldShow);
+        }
       },
       scrollTrigger: {
         trigger: triggerElement.value,
