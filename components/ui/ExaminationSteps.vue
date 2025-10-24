@@ -6,7 +6,7 @@
     <!-- Fixed video at center of viewport with multiple sources -->
     <video
       ref="videoRef"
-      class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full h-full object-cover scale-0 origin-center"
+      class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full h-[100svh] object-cover scale-0 origin-center"
       autoplay
       muted
       loop

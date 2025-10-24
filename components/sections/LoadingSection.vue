@@ -1,12 +1,12 @@
 <template>
   <section
     ref="loadingSectionRef"
-    class="min-h-screen w-full overflow-hidden bg-primary fixed inset-0 -z-10"
+    class="h-[100svh] w-full overflow-hidden bg-primary fixed inset-0 -z-10"
   >
     <!-- Blue background section -->
     <div
       ref="blueSectionRef"
-      class="flex items-center justify-between flex-col gap-8 h-screen p-8"
+      class="flex items-center justify-between flex-col gap-8 h-[100svh] p-8"
     >
       <!-- Logo in blue section -->
       <div ref="logoBlueRef">

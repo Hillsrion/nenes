@@ -134,7 +134,7 @@
 
     <!-- Serif Scroll Indicator -->
     <div
-      class="fixed bottom-8 left-1/2 -translate-x-1/2 z-20 font-serif text-serif-size text-primary transition-opacity duration-500"
+      class="fixed xs:bottom-8 bottom-6 left-1/2 -translate-x-1/2 z-20 font-serif text-serif-size text-primary transition-opacity duration-500"
       :class="{
         'opacity-0 pointer-events-none': animationsStore.cover.isScaling,
       }"
