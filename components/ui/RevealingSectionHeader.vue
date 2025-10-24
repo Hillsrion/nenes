@@ -16,6 +16,7 @@
 import { ref, onUnmounted, watch, nextTick, computed } from "vue";
 import SplitType from "split-type";
 import { useAnimationsStore } from "../../stores";
+import { useHighlightWrapper } from "~/composables/useHighlightWrapper";
 
 // Nuxt composables are auto-imported
 declare const useNuxtApp: () => { $gsap: any };
@@ -30,6 +31,7 @@ const props = defineProps<Props>();
 
 const { $gsap } = useNuxtApp();
 const store = useAnimationsStore();
+const { createHighlightWrapper } = useHighlightWrapper();
 
 // Refs
 const sectionRef = ref<HTMLElement | null>(null);
@@ -90,69 +92,12 @@ const initializeTimelineAnimation = () => {
   // Define the text to highlight (words to match)
   const highlightWords = ["après", "la", "fin", "de", "vos", "règles"];
 
-  // After splitting, find and wrap the words that should be highlighted
-  let highlightWrapper: HTMLElement | null = null;
-  if (splitTypeInstance.words) {
-    const words = Array.from(splitTypeInstance.words) as HTMLElement[];
-    
-    // Find consecutive words that match the highlight text
-    let matchedWords: HTMLElement[] = [];
-    for (let i = 0; i < words.length; i++) {
-      let match = true;
-      const potentialHighlightWords: HTMLElement[] = [];
-      
-      for (let j = 0; j < highlightWords.length; j++) {
-        if (i + j >= words.length) {
-          match = false;
-          break;
-        }
-        
-        // Get the word text and remove punctuation for comparison
-        const wordText = words[i + j].textContent?.trim().replace(/[,;.!?]/g, '') || '';
-        
-        if (wordText !== highlightWords[j]) {
-          match = false;
-          break;
-        }
-        potentialHighlightWords.push(words[i + j]);
-      }
-      
-      if (match && potentialHighlightWords.length === highlightWords.length) {
-        matchedWords = potentialHighlightWords;
-        break;
-      }
-    }
-    
-    // Wrap highlighted words in a container span
-    if (matchedWords.length > 0) {
-      const wrapper = document.createElement('span');
-      wrapper.className = 'selection-highlight relative';
-      
-      // Create the SVG image element
-      const svgImg = document.createElement('img');
-      svgImg.src = '/images/selection-large.svg';
-      svgImg.className = 'selection-svg left-0 top-0 absolute -z-1';
-      svgImg.setAttribute('aria-hidden', 'true');
-      
-      // Insert wrapper before first highlighted word
-      const firstWord = matchedWords[0];
-      firstWord.parentNode?.insertBefore(wrapper, firstWord);
-      
-      // Add the SVG image as first child
-      wrapper.appendChild(svgImg);
-      
-      // Move all highlighted words into the wrapper, preserving spaces
-      matchedWords.forEach((word, index) => {
-        wrapper.appendChild(word);
-        // Add space after each word except the last one
-        if (index < matchedWords.length - 1) {
-          wrapper.appendChild(document.createTextNode(' '));
-        }
-      });
-      
-      highlightWrapper = wrapper;
-    }
-  }
+  // Use composable to find and wrap highlighted words
+  const highlightWrapper = createHighlightWrapper(
+    titleRef.value || document.createElement('div'),
+    highlightWords,
+    '/images/selection-large.svg'
+  );
 
   // Organize words by line for subsequent lines
   const lineWordGroups: HTMLElement[][] = [];
