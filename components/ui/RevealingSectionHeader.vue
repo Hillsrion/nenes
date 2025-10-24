@@ -87,6 +87,73 @@ const initializeTimelineAnimation = () => {
   const container = contentRef.value;
   if (!container) return;
 
+  // Define the text to highlight (words to match)
+  const highlightWords = ["après", "la", "fin", "de", "vos", "règles"];
+
+  // After splitting, find and wrap the words that should be highlighted
+  let highlightWrapper: HTMLElement | null = null;
+  if (splitTypeInstance.words) {
+    const words = Array.from(splitTypeInstance.words) as HTMLElement[];
+    
+    // Find consecutive words that match the highlight text
+    let matchedWords: HTMLElement[] = [];
+    for (let i = 0; i < words.length; i++) {
+      let match = true;
+      const potentialHighlightWords: HTMLElement[] = [];
+      
+      for (let j = 0; j < highlightWords.length; j++) {
+        if (i + j >= words.length) {
+          match = false;
+          break;
+        }
+        
+        // Get the word text and remove punctuation for comparison
+        const wordText = words[i + j].textContent?.trim().replace(/[,;.!?]/g, '') || '';
+        
+        if (wordText !== highlightWords[j]) {
+          match = false;
+          break;
+        }
+        potentialHighlightWords.push(words[i + j]);
+      }
+      
+      if (match && potentialHighlightWords.length === highlightWords.length) {
+        matchedWords = potentialHighlightWords;
+        break;
+      }
+    }
+    
+    // Wrap highlighted words in a container span
+    if (matchedWords.length > 0) {
+      const wrapper = document.createElement('span');
+      wrapper.className = 'selection-highlight relative';
+      
+      // Create the SVG image element
+      const svgImg = document.createElement('img');
+      svgImg.src = '/images/selection-large.svg';
+      svgImg.className = 'selection-svg left-0 top-0 absolute -z-1';
+      svgImg.setAttribute('aria-hidden', 'true');
+      
+      // Insert wrapper before first highlighted word
+      const firstWord = matchedWords[0];
+      firstWord.parentNode?.insertBefore(wrapper, firstWord);
+      
+      // Add the SVG image as first child
+      wrapper.appendChild(svgImg);
+      
+      // Move all highlighted words into the wrapper, preserving spaces
+      matchedWords.forEach((word, index) => {
+        wrapper.appendChild(word);
+        // Add space after each word except the last one
+        if (index < matchedWords.length - 1) {
+          wrapper.appendChild(document.createTextNode(' '));
+        }
+      });
+      
+      highlightWrapper = wrapper;
+    }
+  }
+
   // Organize words by line for subsequent lines
   const lineWordGroups: HTMLElement[][] = [];
   if (allLines.length > 1) {
@@ -99,6 +166,12 @@ const initializeTimelineAnimation = () => {
         lineWordGroups.push(words);
         // Set initial state for words to 0 opacity
         $gsap.set(words, { opacity: 0 });
+        
+        // If this line contains the highlight wrapper, hide the SVG initially
+        const svgInLine = line.querySelector('.selection-svg') as HTMLImageElement;
+        if (svgInLine) {
+          $gsap.set(svgInLine, { opacity: 0 });
+        }
       }
     });
   }
@@ -114,6 +187,12 @@ const initializeTimelineAnimation = () => {
       start: "top top",
       end: "center 30%",
       scrub: 1,
+      onUpdate: (self) => {
+        // Reveal the SVG when the animation progresses past 70%
+        if (self.progress > 0.7 && highlightWrapper) {
+          highlightWrapper.classList.add('revealed');
+        }
+      },
     },
   });
 
@@ -141,6 +220,10 @@ const initializeTimelineAnimation = () => {
 
     lineWordGroups.forEach((words, lineIndex) => {
       const yPercentTo = 50 - yPercentPerLine * (lineIndex + 1);
+      
+      // Find the SVG in this line if it exists
+      const lineElement = words[0]?.parentElement?.closest('.split-line');
+      const svgInLine = lineElement?.querySelector('.selection-svg') as HTMLImageElement;
 
       // Animate this line's words
       tl.to(
@@ -153,6 +236,20 @@ const initializeTimelineAnimation = () => {
         },
         currentTime
       );
+      
+      // If there's an SVG in this line, animate it to appear with the words
+      if (svgInLine) {
+        tl.to(
+          svgInLine,
+          {
+            opacity: 1,
+            duration: 0.4,
+            ease: "power2.out",
+            delay: 0.2, // Slight delay after words start appearing
+          },
+          currentTime
+        );
+      }
 
       // Simultaneously move container up by one "step"
       tl.to(
@@ -245,5 +342,32 @@ onUnmounted(() => {
 /* Ensure proper spacing for split text */
 .split-line + .split-line {
   margin-top: 0.5em;
+}
+
+.selection-highlight {
+  position: relative;
+  display: inline-block;
+}
+
+.selection-highlight .selection-svg {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: calc(100% + 30px);
+  height: 160%;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 0;
+  transition: opacity 0.6s ease 0.3s;
+}
+
+.selection-highlight.revealed .selection-svg {
+  opacity: 1;
+}
+
+.selection-highlight .split-word {
+  position: relative;
+  z-index: 1;
 }
 </style>

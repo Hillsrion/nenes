@@ -225,9 +225,13 @@ const initializeTitleAnimation = () => {
   textRefs.value.forEach((textElement) => {
     if (!textElement) return;
 
+    // Define the words to highlight
+    const highlightWords = ["9", "cas", "sur", "10"];
+
     const splitTypeInstance = new SplitType(textElement, {
-      types: "lines",
+      types: "lines,words",
       lineClass: "split-line",
+      wordClass: "split-word",
       splitClass: "split-text",
       tagName: "span",
     });
@@ -238,6 +242,71 @@ const initializeTitleAnimation = () => {
     // Set initial state and create scroll trigger animation
     nextTick(() => {
       if (!split?.lines?.length) return;
+      
+      // After splitting, find and wrap the words that should be highlighted
+      let highlightWrapper: HTMLElement | null = null;
+      if (split.words) {
+        const words = Array.from(split.words) as HTMLElement[];
+        
+        // Find consecutive words that match the highlight text
+        let matchedWords: HTMLElement[] = [];
+        for (let i = 0; i < words.length; i++) {
+          let match = true;
+          const potentialHighlightWords: HTMLElement[] = [];
+          
+          for (let j = 0; j < highlightWords.length; j++) {
+            if (i + j >= words.length) {
+              match = false;
+              break;
+            }
+            
+            // Get the word text and remove punctuation for comparison
+            const wordText = words[i + j].textContent?.trim().replace(/[,;.!?]/g, '') || '';
+            
+            if (wordText !== highlightWords[j]) {
+              match = false;
+              break;
+            }
+            potentialHighlightWords.push(words[i + j]);
+          }
+          
+          if (match && potentialHighlightWords.length === highlightWords.length) {
+            matchedWords = potentialHighlightWords;
+            break;
+          }
+        }
+        
+        // Wrap highlighted words in a container span
+        if (matchedWords.length > 0) {
+          const wrapper = document.createElement('span');
+          wrapper.className = 'selection-highlight relative';
+          
+          // Create the SVG image element
+          const svgImg = document.createElement('img');
+          svgImg.src = '/images/selection.svg';
+          svgImg.className = 'selection-svg left-0 top-0 absolute -z-1';
+          svgImg.setAttribute('aria-hidden', 'true');
+          
+          // Insert wrapper before first highlighted word
+          const firstWord = matchedWords[0];
+          firstWord.parentNode?.insertBefore(wrapper, firstWord);
+          
+          // Add the SVG image as first child
+          wrapper.appendChild(svgImg);
+          
+          // Move all highlighted words into the wrapper, preserving spaces
+          matchedWords.forEach((word, index) => {
+            wrapper.appendChild(word);
+            // Add space after each word except the last one
+            if (index < matchedWords.length - 1) {
+              wrapper.appendChild(document.createTextNode(' '));
+            }
+          });
+          
+          highlightWrapper = wrapper;
+        }
+      }
+      
       // Create scroll trigger animation that goes from 50% to 100% opacity line by line
       const titleAnimation = $gsap.fromTo(
         split.lines,
@@ -253,6 +322,12 @@ const initializeTitleAnimation = () => {
             start: "top 80%", // Start when section enters viewport
             end: "center center", // End when section reaches center
             scrub: 1, // Smooth scrubbing
+            onUpdate: (self) => {
+              // Reveal the SVG when the animation progresses past 80%
+              if (self.progress > 0.8 && highlightWrapper) {
+                highlightWrapper.classList.add('revealed');
+              }
+            },
           },
         }
       );
@@ -494,3 +569,32 @@ onUnmounted(() => {
 
 // Auto-imported composables
 </script>
+
+<style scoped>
+.selection-highlight {
+  position: relative;
+  display: inline-block;
+}
+
+.selection-highlight .selection-svg {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: calc(100% + 30px);
+  height: 160%;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 0;
+  transition: opacity 0.6s ease 0.3s;
+}
+
+.selection-highlight.revealed .selection-svg {
+  opacity: 1;
+}
+
+.selection-highlight .split-word {
+  position: relative;
+  z-index: 1;
+}
+</style>
