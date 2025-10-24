@@ -460,13 +460,13 @@ const animate = (timestamp: number) => {
         const x = wrap(
           -grid.step - grid.gap,
           canvasState.value.width + grid.step,
-          col * grid.step + timestamp * 0.08
+          col * grid.step + timestamp * 0.06
         );
 
         const y = wrap(
           -grid.step - grid.gap,
           canvasState.value.height + grid.step,
-          row * grid.step - timestamp * 0.08
+          row * grid.step - timestamp * 0.06
         );
 
         // Calculate center position
