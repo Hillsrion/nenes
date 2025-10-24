@@ -1,5 +1,5 @@
 <template>
-  <section class="relative z-20 -mt-[25svh]">
+  <section class="relative z-20 -mt-[30svh]">
     <div
       class="bg-secondary-light py-16 rounded-t-4xl h-full w-full"
       ref="containerRef"
