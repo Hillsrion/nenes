@@ -102,33 +102,12 @@ const { $gsap } = useNuxtApp();
 $gsap.registerPlugin($gsap.ScrollTrigger);
 
 const sectionRef = ref(null);
-let logoScrollTrigger = null;
 let illustrationAnimationTimeline = null;
 let topScrollTrigger = null;
 const illustrationProgress = ref(0);
 
 // Track if section is at top (sticky)
 const isAtTop = ref(false);
-
-// Initialize logo scroll trigger for color change
-const initializeLogoColorChangeAnimation = () => {
-  logoScrollTrigger = $gsap.timeline({
-    scrollTrigger: {
-      trigger: sectionRef.value,
-      start: "top top+=100px",
-      end: "bottom bottom",
-      onEnter: () => {
-        store.updateLogoColor(false);
-      },
-      onLeaveBack: () => {
-        store.updateLogoColor(true);
-      },
-      onEnterBack: () => {
-        store.updateLogoColor(false);
-      },
-    },
-  });
-};
 
 // Initialize scroll trigger to track when section reaches top
 const initializeTopTracking = () => {
@@ -176,7 +155,6 @@ watch(
       sectionRef.value.parentElement
     ) {
       setTimeout(() => {
-        initializeLogoColorChangeAnimation();
         initializeIllustrationAnimation();
         initializeTopTracking();
       }, 1000);
@@ -186,13 +164,6 @@ watch(
 
 // Cleanup on unmount
 onUnmounted(() => {
-  if (logoScrollTrigger && logoScrollTrigger.scrollTrigger) {
-    logoScrollTrigger.scrollTrigger.kill();
-  }
-  if (logoScrollTrigger && logoScrollTrigger.kill) {
-    logoScrollTrigger.kill();
-  }
-
   // Clean up top tracking scroll trigger
   if (topScrollTrigger && topScrollTrigger.scrollTrigger) {
     topScrollTrigger.scrollTrigger.kill();

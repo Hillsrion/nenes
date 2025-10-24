@@ -130,6 +130,9 @@ const overlayRef = ref<HTMLDivElement | null>(null);
 // Current step tracking
 const currentStepIndex = ref(0);
 
+// Video scale tracking for logo color change
+const currentVideoScale = ref(0);
+
 // Current step data
 const currentStep = computed(() => {
   return props.steps[currentStepIndex.value] || null;
@@ -251,6 +254,9 @@ const initializeAnimations = async () => {
       scale: 1,
       duration: 0.2,
       ease: "power2.out",
+      onUpdate: function () {
+        store.updateLogoColor(this.progress() < 0.55);
+      },
       scrollTrigger: {
         trigger: triggerElement.value,
         start: "center 10%",
