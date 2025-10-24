@@ -10,7 +10,7 @@
     >
       <!-- Logo in blue section -->
       <div ref="logoBlueRef">
-        <Logo color="var(--color-secondary)" class="w-[113px] h-8" />
+        <Logo color="var(--color-secondary)" />
       </div>
       <div>
         <!-- Absolutely positioned CHARGEMENT text to the left -->
@@ -49,7 +49,9 @@
           </div>
         </div>
       </div>
-      <p class="font-serif text-secondary text-center text-serif-size">
+      <p
+        class="font-serif text-secondary text-center text-serif-size leading-none"
+      >
         un projet pour la prévention du cancer du sein
       </p>
     </div>
