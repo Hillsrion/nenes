@@ -60,7 +60,7 @@
           </div>
         </div>
         <div
-          class="md:w-auto sm:w-3/5 w-2/5 mx-auto my-8 md:mx-0 md:my-0 md:h-auto h-20"
+          class="md:w-auto sm:w-3/5 w-2/5 mx-auto my-8 md:mx-0 md:my-0 lg:h-auto h-20"
         >
           <ImageSequenceAnimator :progress="illustrationProgress" />
         </div>
