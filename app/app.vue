@@ -50,9 +50,13 @@ import Logo from "~/components/ui/Logo.vue";
 import CursorImageSpawner from "~/components/ui/CursorImageSpawner.vue";
 import { useAnimationsStore } from "~/stores";
 import { useContent } from "~/composables/useContent";
+import { useLenis } from "lenis/vue";
 
 // Store
 const store = useAnimationsStore();
+
+// Lenis instance for scroll control
+const lenis = useLenis();
 
 // Content data from hook
 const {
@@ -118,7 +122,22 @@ watch(
   { immediate: true }
 );
 
+// Watch loading state and control Lenis scrolling
+watch(
+  () => store.sections.loading?.state,
+  (newState) => {
+    if (!lenis.value) return;
+
+    if (newState === "isComplete") {
+      // Re-enable scrolling after loading is complete
+      lenis.value.start();
+    }
+  },
+  { immediate: true }
+);
+
 onMounted(async () => {
   scrollTo(0, 0);
+  lenis.value.stop();
 });
 </script>
