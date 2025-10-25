@@ -92,6 +92,7 @@ import { useAnimationsStore } from "../../stores";
 import { useVideos } from "~/composables/useVideos";
 import { useContent } from "~/composables/useContent";
 import ExaminationCard from "~/components/ui/ExaminationCard.vue";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 // Nuxt composables are auto-imported
 declare const useNuxtApp: () => { $gsap: any };
@@ -330,9 +331,16 @@ watch(
       containerRef.value &&
       containerRef.value.parentElement
     ) {
-      setTimeout(() => {
-        initializeAnimations();
-      }, 1000);
+      nextTick(() => {
+        setTimeout(() => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              initializeAnimations();
+              ScrollTrigger.refresh();
+            });
+          });
+        }, 50);
+      });
     }
   }
 );

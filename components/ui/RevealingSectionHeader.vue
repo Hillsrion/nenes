@@ -17,6 +17,7 @@ import { ref, onUnmounted, watch, nextTick, computed } from "vue";
 import SplitType from "split-type";
 import { useAnimationsStore } from "../../stores";
 import { useHighlightWrapper } from "~/composables/useHighlightWrapper";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 // Nuxt composables are auto-imported
 declare const useNuxtApp: () => { $gsap: any };
@@ -94,9 +95,9 @@ const initializeTimelineAnimation = () => {
 
   // Use composable to find and wrap highlighted words
   const highlightWrapper = createHighlightWrapper(
-    titleRef.value || document.createElement('div'),
+    titleRef.value || document.createElement("div"),
     highlightWords,
-    '/images/selection-large.svg'
+    "/images/selection-large.svg"
   );
 
   // Organize words by line for subsequent lines
@@ -111,9 +112,11 @@ const initializeTimelineAnimation = () => {
         lineWordGroups.push(words);
         // Set initial state for words to 0 opacity
         $gsap.set(words, { opacity: 0 });
-        
+
         // If this line contains the highlight wrapper, hide the SVG initially
-        const svgInLine = line.querySelector('.selection-svg') as HTMLImageElement;
+        const svgInLine = line.querySelector(
+          ".selection-svg"
+        ) as HTMLImageElement;
         if (svgInLine) {
           $gsap.set(svgInLine, { opacity: 0 });
         }
@@ -135,7 +138,7 @@ const initializeTimelineAnimation = () => {
       onUpdate: (self) => {
         // Reveal the SVG when the animation progresses past 70%
         if (self.progress > 0.7 && highlightWrapper) {
-          highlightWrapper.classList.add('revealed');
+          highlightWrapper.classList.add("revealed");
         }
       },
     },
@@ -165,10 +168,12 @@ const initializeTimelineAnimation = () => {
 
     lineWordGroups.forEach((words, lineIndex) => {
       const yPercentTo = 50 - yPercentPerLine * (lineIndex + 1);
-      
+
       // Find the SVG in this line if it exists
-      const lineElement = words[0]?.parentElement?.closest('.split-line');
-      const svgInLine = lineElement?.querySelector('.selection-svg') as HTMLImageElement;
+      const lineElement = words[0]?.parentElement?.closest(".split-line");
+      const svgInLine = lineElement?.querySelector(
+        ".selection-svg"
+      ) as HTMLImageElement;
 
       // Animate this line's words
       tl.to(
@@ -181,7 +186,7 @@ const initializeTimelineAnimation = () => {
         },
         currentTime
       );
-      
+
       // If there's an SVG in this line, animate it to appear with the words
       if (svgInLine) {
         tl.to(
@@ -246,7 +251,16 @@ watch(
   () => store.getSectionState("loading"),
   (loadingState) => {
     if (loadingState === "isComplete" && triggerElement.value) {
-      initializeAnimations();
+      nextTick(() => {
+        setTimeout(() => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              initializeAnimations();
+              ScrollTrigger.refresh();
+            });
+          });
+        }, 50);
+      });
     }
   }
 );

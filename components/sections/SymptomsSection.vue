@@ -33,11 +33,12 @@
 
 <script setup lang="ts">
 import { useNuxtApp } from "nuxt/app";
-import { ref, onUnmounted, watch, PropType } from "vue";
+import { ref, onUnmounted, watch, PropType, nextTick } from "vue";
 import { useAnimationsStore } from "~/stores";
 import { Card } from "~/types";
 import Title from "~/components/ui/Title.vue";
 import SymptomCard from "~/components/ui/SymptomCard.vue";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 const props = defineProps({
   title: {
@@ -202,8 +203,17 @@ watch(
   () => store.getSectionState("loading"),
   (loadingState) => {
     if (loadingState === "isComplete" && sectionRef.value) {
-      initializeTitleAnimation();
-      initializeCarouselAnimation();
+      nextTick(() => {
+        setTimeout(() => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              initializeTitleAnimation();
+              initializeCarouselAnimation();
+              ScrollTrigger.refresh();
+            });
+          });
+        }, 50);
+      });
     }
   }
 );

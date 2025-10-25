@@ -24,11 +24,20 @@
  */
 
 // @ts-ignore - Nuxt auto-imports
-import { ref, reactive, onMounted, onUnmounted, watch, type Ref } from "vue";
+import {
+  ref,
+  reactive,
+  onMounted,
+  onUnmounted,
+  watch,
+  type Ref,
+  nextTick,
+} from "vue";
 import { useCanvas } from "../../composables/useCanvas";
 import { useAssetPreloader } from "../../composables/useAssetPreloader";
 import { useAnimationsStore } from "../../stores";
 import { clamp, modulo, lerp, wrap } from "../../utils/mathUtils";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 interface ImageItem {
   img: HTMLImageElement;
@@ -167,11 +176,19 @@ const onResize = async () => {
     !props.disabled &&
     animationsStore.getSectionState("loading") === "isComplete"
   ) {
-    // Load images for desktop interaction
     await loadImages();
     setupCanvas();
     startMouse();
     startAnimation(true);
+    nextTick(() => {
+      setTimeout(() => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            ScrollTrigger.refresh();
+          });
+        });
+      }, 50);
+    });
   }
 };
 
@@ -612,6 +629,15 @@ onMounted(async () => {
     ) {
       // Initialize position and start animation
       startAnimation(true);
+      nextTick(() => {
+        setTimeout(() => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              ScrollTrigger.refresh();
+            });
+          });
+        }, 50);
+      });
     }
   }
 
@@ -642,12 +668,30 @@ watch(
     ) {
       // Only start if loading section is complete
       startAnimation(true);
+      nextTick(() => {
+        setTimeout(() => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              ScrollTrigger.refresh();
+            });
+          });
+        }, 50);
+      });
     } else if (assetPreloader.isComplete.value && !isMobileOrTouch.value) {
       // If not loaded but assets are preloaded and not on mobile/touch, load images
       await loadImages();
       // Don't start yet if loading is not complete
       if (animationsStore.getSectionState("loading") === "isComplete") {
         startAnimation(true);
+        nextTick(() => {
+          setTimeout(() => {
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => {
+                ScrollTrigger.refresh();
+              });
+            });
+          }, 50);
+        });
       }
     }
   }
@@ -662,14 +706,21 @@ watch(
       !props.disabled &&
       !isMobileOrTouch.value
     ) {
-      // When loading section completes (including translate animation),
-      // load images if not already loaded and start animation
-      if (!isLoaded.value) {
-        await loadImages();
-        setupCanvas();
-      }
-      startMouse();
-      startAnimation(true);
+      nextTick(() => {
+        requestAnimationFrame(async () => {
+          requestAnimationFrame(async () => {
+            // When loading section completes (including translate animation),
+            // load images if not already loaded and start animation
+            if (!isLoaded.value) {
+              await loadImages();
+              setupCanvas();
+            }
+            startMouse();
+            startAnimation(true);
+            ScrollTrigger.refresh();
+          });
+        });
+      });
     }
   }
 );

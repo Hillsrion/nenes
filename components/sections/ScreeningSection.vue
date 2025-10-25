@@ -128,6 +128,7 @@ import SplitType from "split-type";
 import { useAnimationsStore } from "../../stores";
 import { useNuxtApp } from "nuxt/app";
 import { useHighlightWrapper } from "~/composables/useHighlightWrapper";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 // Define the interface for sidebar elements
 interface SidebarElement {
@@ -246,14 +247,14 @@ const initializeTitleAnimation = () => {
     // Set initial state and create scroll trigger animation
     nextTick(() => {
       if (!split?.lines?.length) return;
-      
+
       // Use composable to find and wrap highlighted words
       const highlightWrapper = createHighlightWrapper(
         textElement,
         highlightWords,
-        '/images/selection.svg'
+        "/images/selection.svg"
       );
-      
+
       // Create scroll trigger animation that goes from 50% to 100% opacity line by line
       const titleAnimation = $gsap.fromTo(
         split.lines,
@@ -272,7 +273,7 @@ const initializeTitleAnimation = () => {
             onUpdate: (self) => {
               // Reveal the SVG when the animation progresses past 80%
               if (self.progress > 0.8 && highlightWrapper) {
-                highlightWrapper.classList.add('revealed');
+                highlightWrapper.classList.add("revealed");
               }
             },
           },
@@ -438,21 +439,28 @@ watch(
       sectionRef.value &&
       sectionRef.value.parentElement
     ) {
-      setTimeout(() => {
-        // Always initialize these animations (all screen sizes)
-        initializeLogoColorChangeAnimation();
-        initializeTitleAnimation();
-        initializeTopTracking();
+      nextTick(() => {
+        setTimeout(() => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              // Always initialize these animations (all screen sizes)
+              initializeLogoColorChangeAnimation();
+              initializeTitleAnimation();
+              initializeTopTracking();
 
-        // Initialize matchMedia for desktop-only animations
-        mm = $gsap.matchMedia();
+              // Initialize matchMedia for desktop-only animations
+              mm = $gsap.matchMedia();
 
-        mm.add("(min-width: 1024px)", () => {
-          // Desktop-only animations
-          initializeSidebarAnimation();
-          initializeFadeOutAnimation();
-        });
-      }, 1000);
+              mm.add("(min-width: 1024px)", () => {
+                // Desktop-only animations
+                initializeSidebarAnimation();
+                initializeFadeOutAnimation();
+              });
+              ScrollTrigger.refresh();
+            });
+          });
+        }, 50);
+      });
     }
   }
 );

@@ -89,10 +89,11 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, watch } from "vue";
+import { ref, onMounted, onUnmounted, watch, nextTick } from "vue";
 import { useAnimationsStore } from "../../stores";
 import { useNuxtApp } from "nuxt/app";
 import ImageSequenceAnimator from "~/components/ui/ImageSequenceAnimator.vue";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 // Animation store
 const store = useAnimationsStore();
@@ -154,10 +155,17 @@ watch(
       sectionRef.value &&
       sectionRef.value.parentElement
     ) {
-      setTimeout(() => {
-        initializeIllustrationAnimation();
-        initializeTopTracking();
-      }, 1000);
+      nextTick(() => {
+        setTimeout(() => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              initializeIllustrationAnimation();
+              initializeTopTracking();
+              ScrollTrigger.refresh();
+            });
+          });
+        }, 50);
+      });
     }
   }
 );
