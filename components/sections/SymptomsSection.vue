@@ -139,23 +139,23 @@ const initializeCarouselAnimation = () => {
 
   mm.add(
     {
-      // Mobile (small screens)
-      isMobile: "(max-width: 1023px)",
-      // Desktop (large screens and up)
-      isDesktop: "(min-width: 1024px)",
+      isMobile: "(max-width: 431px)",
     },
     (context: any) => {
       const { isMobile } = context.conditions;
 
+      const mobileRotation = 45;
+      const mobileStagger = 0.12;
+
       carouselAnimation = $gsap.fromTo(
         validRefs,
         {
-          rotation: 30, // Starting angle
+          rotation: isMobile ? mobileRotation : 30, // Starting angle
         },
         {
-          rotation: -30, // Ending angle
+          rotation: isMobile ? -mobileRotation : -30, // Ending angle
           ease: "power1.inOut", // Non-linear movement
-          stagger: 0.09, // Delay between the start of each card
+          stagger: isMobile ? mobileStagger : 0.09, // Delay between the start of each card
           scrollTrigger: {
             trigger: sectionRef.value,
             // On mobile, start after title reveal (at 35% to give a slight overlap)
