@@ -1,6 +1,6 @@
 <template>
   <div ref="globalContainer">
-    <!-- <VueLenis root /> -->
+    <VueLenis root />
 
     <MainLayout ref="mainLayoutRef">
       <!-- Loading Section -->

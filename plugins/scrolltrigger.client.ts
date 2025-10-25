@@ -1,18 +1,18 @@
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import Lenis from "@studio-freight/lenis";
+import { useLenis } from "lenis/vue";
 
 export default defineNuxtPlugin(() => {
   gsap.registerPlugin(ScrollTrigger);
 
   // Initialize Lenis outside of Vue component lifecycle if you want a global instance
   // This ensures Lenis is available for ScrollTrigger immediately
-  const lenis = new Lenis();
+  const lenis = useLenis();
 
-  lenis.on("scroll", ScrollTrigger.update);
+  lenis.value?.on("scroll", ScrollTrigger.update);
 
   gsap.ticker.add((time) => {
-    lenis.raf(time * 1000);
+    lenis.value?.raf(time * 1000);
   });
 
   gsap.ticker.lagSmoothing(0);
@@ -29,9 +29,9 @@ export default defineNuxtPlugin(() => {
   ScrollTrigger.scrollerProxy(document.body, {
     scrollTop(value) {
       if (arguments.length) {
-        lenis.scrollTo(value, { immediate: true });
+        lenis.value?.scrollTo(value, { immediate: true });
       }
-      return lenis.scroll.y; // Corrected: return lenis.scroll.y
+      return lenis.value?.scroll.y; // Corrected: return lenis.scroll.y
     },
     getBoundingClientRect() {
       return {
@@ -54,7 +54,7 @@ export default defineNuxtPlugin(() => {
   });
 
   // Refresh ScrollTrigger on orientation change
-  if (process.client) {
+  if (import.meta.client) {
     window.addEventListener("orientationchange", () => {
       ScrollTrigger.refresh();
     });

@@ -1,7 +1,8 @@
-import { ref, onMounted, onUnmounted, nextTick } from "vue";
+import { ref } from "vue";
 import type { Ref } from "vue";
-import { gsap } from "gsap"; // Import gsap directly
-import { ScrollTrigger } from "gsap/ScrollTrigger"; // Import ScrollTrigger directly
+
+// Nuxt composables are auto-imported
+declare const useNuxtApp: () => { $gsap: any };
 
 /**
  * Statistics text animation composable
@@ -12,7 +13,6 @@ interface StatisticsAnimationOptions {
   sectionRef: Ref<HTMLElement | null>;
   statisticsTextRef: Ref<HTMLElement | null>;
   statisticsText: string[];
-  // scrollContainer?: Ref<HTMLElement | Window>; // New prop, removed as Lenis will handle the scrolling context
 }
 
 export const useStatisticsAnimation = ({
@@ -24,21 +24,19 @@ export const useStatisticsAnimation = ({
   const firstTwoLinesFaded = ref(false);
   const lastLineCentered = ref(false);
 
-  // GSAP Timeline and ScrollTrigger instance
-  let animationTimeline: gsap.core.Timeline | null = null;
-  let mainScrollTrigger: ScrollTrigger | null = null;
+  // GSAP Timeline
+  let animationTimeline: any = null;
 
   /**
-   * Initialize statistics text to full opacity and correct split word positions
+   * Initialize statistics text to full opacity
    */
   const initializeStatisticsText = () => {
     if (!statisticsTextRef.value) return;
 
-    console.log("useStatisticsAnimation: Initializing statistics text.");
-
+    const { $gsap } = useNuxtApp();
     const textSpans = statisticsTextRef.value.children;
     // Initialize all spans to full opacity
-    gsap.set(textSpans, { opacity: 1 });
+    $gsap.set(textSpans, { opacity: 1 });
 
     // Also initialize the split words to their starting position (center)
     const lastLineIndex = textSpans.length - 1;
@@ -48,7 +46,8 @@ export const useStatisticsAnimation = ({
       const splitWordRight = lastLineSpan.children[1]; // Second child
 
       if (splitWordLeft && splitWordRight) {
-        gsap.set([splitWordLeft, splitWordRight], {
+        const { $gsap } = useNuxtApp();
+        $gsap.set([splitWordLeft, splitWordRight], {
           opacity: 1,
           x: 0, // Start at center position
           y: 0, // Start at initial Y position
@@ -71,15 +70,12 @@ export const useStatisticsAnimation = ({
   };
 
   /**
-   * Create the main animation timeline and a separate ScrollTrigger
+   * Create timeline with all animations
    */
   const createAnimationTimeline = () => {
     if (!statisticsTextRef.value || !sectionRef.value) return;
 
-    console.log(
-      "useStatisticsAnimation: Creating animation timeline and ScrollTrigger."
-    );
-
+    const { $gsap } = useNuxtApp();
     const textSpans = statisticsTextRef.value.children;
     const allLinesExceptLast = Array.from(textSpans).slice(0, -1);
     const lastLineIndex = textSpans.length - 1;
@@ -92,11 +88,23 @@ export const useStatisticsAnimation = ({
 
     if (!splitWordLeft || !splitWordRight) return;
 
-    // Create the timeline without a ScrollTrigger property
-    animationTimeline = gsap.timeline();
+    // Create the timeline
+    const timeline = $gsap.timeline({
+      scrollTrigger: {
+        trigger: sectionRef.value,
+        start: "top top",
+        end: "top -200%", // Tighter scroll distance
+        scrub: 0.5,
+        onUpdate: (self: any) => {
+          // Track animation states
+          firstTwoLinesFaded.value = self.progress > 0.1;
+          lastLineCentered.value = self.progress > 0.3;
+        },
+      },
+    });
 
     // Step 1: Fade out all lines except the last one (0-10% of timeline)
-    animationTimeline.to(
+    timeline.to(
       allLinesExceptLast,
       {
         opacity: 0,
@@ -107,7 +115,7 @@ export const useStatisticsAnimation = ({
     );
 
     // Step 2: Center the last line vertically (10-30% of timeline)
-    animationTimeline.to(
+    timeline.to(
       [splitWordLeft, splitWordRight],
       {
         y: () => calculateCenterY(lastLineSpan),
@@ -118,7 +126,7 @@ export const useStatisticsAnimation = ({
     );
 
     // Step 3: Split the words horizontally (40-70% of timeline)
-    animationTimeline.to(
+    timeline.to(
       splitWordLeft,
       {
         x: "-150vw",
@@ -128,7 +136,7 @@ export const useStatisticsAnimation = ({
       0.4
     );
 
-    animationTimeline.to(
+    timeline.to(
       splitWordRight,
       {
         x: "150vw",
@@ -138,31 +146,7 @@ export const useStatisticsAnimation = ({
       0.4
     );
 
-    // Create a separate ScrollTrigger instance and link it to the timeline
-    mainScrollTrigger = ScrollTrigger.create({
-      trigger: sectionRef.value,
-      start: "top top",
-      end: "bottom top",
-      scrub: 0.5,
-      animation: animationTimeline, // Link the timeline to this ScrollTrigger
-      onUpdate: (self: ScrollTrigger) => {
-        // Track animation states based on timeline progress
-        firstTwoLinesFaded.value = self.progress > 0.1;
-        lastLineCentered.value = self.progress > 0.3;
-        // Log update information
-        console.log(
-          `useStatisticsAnimation: onUpdate - progress: ${self.progress.toFixed(
-            2
-          )}, direction: ${self.direction}, scrollTop: ${
-            self.scroller.scrollTop
-          }, start: ${self.start}, end: ${self.end}`
-        );
-      },
-      // scroller: scrollContainer.value, // Use the passed scrollContainer, removed as Lenis will handle the scrolling context
-    });
-    console.log(
-      `useStatisticsAnimation: ScrollTrigger created - id: ${mainScrollTrigger.vars.id}, trigger: ${mainScrollTrigger.trigger}, start: ${mainScrollTrigger.vars.start}, end: ${mainScrollTrigger.vars.end}`
-    );
+    animationTimeline = timeline;
   };
 
   /**
@@ -170,27 +154,11 @@ export const useStatisticsAnimation = ({
    */
   const initializeAnimations = () => {
     if (sectionRef.value && statisticsText.length > 0) {
-      console.log("useStatisticsAnimation: initializeAnimations called.");
-      // Ensure GSAP and ScrollTrigger are registered (defensive, should be in plugin)
-      gsap.registerPlugin(ScrollTrigger);
-
-      // Initialize text visibility first
+      // Initialize all text to full opacity first
       initializeStatisticsText();
 
       // Create the timeline with all animations
       createAnimationTimeline();
-
-      // Extra-stable refresh on iOS after layout settles
-      nextTick(() => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            console.log(
-              "useStatisticsAnimation: Performing ScrollTrigger.refresh() (double rAF)."
-            );
-            ScrollTrigger.refresh();
-          });
-        });
-      });
     }
   };
 
@@ -198,27 +166,24 @@ export const useStatisticsAnimation = ({
    * Cleanup all animations
    */
   const cleanup = () => {
-    console.log("useStatisticsAnimation: Cleaning up animations.");
-    if (mainScrollTrigger) {
-      mainScrollTrigger.kill();
-      mainScrollTrigger = null;
-    }
     if (animationTimeline) {
-      animationTimeline.kill();
+      try {
+        if (animationTimeline.scrollTrigger) {
+          animationTimeline.scrollTrigger.kill();
+        }
+        animationTimeline.kill();
+      } catch (error) {
+        console.warn("Error cleaning up statistics timeline:", error);
+      }
       animationTimeline = null;
     }
   };
-
-  // Lifecycle hooks for cleanup
-  onUnmounted(() => {
-    cleanup();
-  });
 
   return {
     firstTwoLinesFaded,
     lastLineCentered,
     initializeAnimations,
     cleanup,
-    getTimeline: () => animationTimeline, // Still expose timeline for now
+    getTimeline: () => animationTimeline,
   };
 };
