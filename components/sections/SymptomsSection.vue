@@ -3,8 +3,13 @@
     class="py-16 h-[450svh] relative z-20 bg-white -mt-[25svh]"
     ref="sectionRef"
   >
+    <div v-if="isIOS" class="h-svh"></div>
     <div
-      class="h-[100svh] w-full px-8 sticky top-0 left-1/2 z-10 mx-auto flex flex-col justify-center overflow-hidden"
+      class="h-[100svh] w-full px-8 top-0 z-10 mx-auto flex flex-col justify-center overflow-hidden"
+      :class="{
+        sticky: !isIOS,
+        fixed: isIOS,
+      }"
     >
       <div ref="titleWrapperRef">
         <Title ref="titleRef" :title="title" />
@@ -38,8 +43,6 @@ import { useAnimationsStore } from "~/stores";
 import { Card } from "~/types";
 import Title from "~/components/ui/Title.vue";
 import SymptomCard from "~/components/ui/SymptomCard.vue";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { gsap } from "gsap";
 
 const props = defineProps({
   title: {
@@ -51,6 +54,16 @@ const props = defineProps({
     required: true,
   },
 });
+
+// Check if iOS
+const isIOS = computed(() => {
+  return (
+    navigator.userAgent.includes("iPhone") ||
+    navigator.userAgent.includes("iPad")
+  );
+});
+
+const { $gsap } = useNuxtApp();
 
 const sectionRef = ref<HTMLElement | null>(null);
 const titleWrapperRef = ref<HTMLElement | null>(null);
@@ -74,7 +87,7 @@ const initializeTitleAnimation = () => {
   if (!titleWrapperRef.value) return;
 
   // Use matchMedia to have different start positions for mobile vs desktop
-  const mm = gsap.matchMedia();
+  const mm = $gsap.matchMedia();
 
   mm.add(
     {
@@ -85,13 +98,7 @@ const initializeTitleAnimation = () => {
     },
     (context: any) => {
       const { isMobile } = context.conditions;
-
-      // Create a timeline for the title animation
-      const titleAnimationTimeline = gsap.timeline({
-        onComplete: () => console.log("Title animation complete"),
-      });
-
-      titleAnimationTimeline.fromTo(
+      titleAnimation = $gsap.fromTo(
         titleWrapperRef.value,
         {
           scale: 5,
@@ -102,20 +109,18 @@ const initializeTitleAnimation = () => {
           opacity: 1,
           duration: 0.8,
           ease: "power2.out",
+          scrollTrigger: {
+            trigger: sectionRef.value,
+            // On mobile, start much later (when 50% of section has scrolled past viewport top)
+            // This accounts for the negative margin and ensures ScreeningSection is fully past
+            // On desktop, start earlier (when section top is at 30% from top)
+            start: isMobile ? "30% top" : "top 30%",
+            end: isMobile ? "40% top" : "30% bottom",
+            scrub: 1,
+            // markers: true, // Uncomment to debug scroll positions
+          },
         }
       );
-
-      titleAnimation = ScrollTrigger.create({
-        trigger: sectionRef.value,
-        start: isMobile ? "30% top" : "top 30%",
-        end: isMobile ? "40% top" : "30% bottom",
-        scrub: 1,
-        animation: titleAnimationTimeline, // Link timeline to ScrollTrigger
-      });
-
-      // Store timeline and ScrollTrigger for cleanup
-      // titleAnimations.push(titleAnimationTimeline); // This line was removed as per the new_code
-      // titleAnimations.push(titleAnimation); // This line was removed as per the new_code
     }
   );
 };
@@ -128,7 +133,7 @@ const initializeCarouselAnimation = () => {
   const validRefs = cardRefs.value.filter((ref) => ref !== null);
 
   // Use matchMedia to have different start positions for mobile vs desktop
-  const mm = gsap.matchMedia();
+  const mm = $gsap.matchMedia();
 
   mm.add(
     {
@@ -140,12 +145,7 @@ const initializeCarouselAnimation = () => {
     (context: any) => {
       const { isMobile } = context.conditions;
 
-      // Create a timeline for the carousel animation
-      const carouselAnimationTimeline = gsap.timeline({
-        onComplete: () => console.log("Carousel animation complete"),
-      });
-
-      carouselAnimationTimeline.fromTo(
+      carouselAnimation = $gsap.fromTo(
         validRefs,
         {
           rotation: 30, // Starting angle
@@ -154,57 +154,58 @@ const initializeCarouselAnimation = () => {
           rotation: -30, // Ending angle
           ease: "power1.inOut", // Non-linear movement
           stagger: 0.09, // Delay between the start of each card
+          scrollTrigger: {
+            trigger: sectionRef.value,
+            // On mobile, start after title reveal (at 35% to give a slight overlap)
+            // On desktop, start immediately
+            start: isMobile ? "35% top" : "top top",
+            end: "bottom bottom",
+            scrub: true, // Animation progresses with scrolling
+            // markers: true, // Uncomment for debugging
+            onUpdate: (self) => {
+              // Get the actual rotation of the first card element (card at index 0)
+              if (!cardRefs.value[0] || !titleRef.value?.titleElement) return;
+
+              const firstCardElement = cardRefs.value[0];
+              const currentRotation = $gsap.getProperty(
+                firstCardElement,
+                "rotation"
+              ) as number;
+
+              // Hide title when first card reaches approximately 0° (covering the title)
+              // Using a wider threshold of ±5° to reliably catch fast scrolling
+              if (currentRotation <= 5 && !isTitleHidden.value) {
+                isTitleHidden.value = true;
+                if (titleHideAnimation) {
+                  titleHideAnimation.kill();
+                }
+                titleHideAnimation = $gsap.to(titleRef.value.titleElement, {
+                  opacity: 0,
+                  duration: 0.3,
+                  ease: "power2.out",
+                });
+              } else if (
+                currentRotation >= 15 &&
+                isTitleHidden.value &&
+                self.direction === -1
+              ) {
+                console.log("show title");
+                // Show title again when first card starts moving back up (rotation ≈ 15°) and scrolling upward
+                isTitleHidden.value = false;
+                if (titleHideAnimation) {
+                  titleHideAnimation.kill();
+                  titleHideAnimation = null;
+                }
+                $gsap.to(titleRef.value.titleElement, {
+                  opacity: 1,
+                  duration: 0.3,
+                  ease: "power2.out",
+                });
+              }
+            },
+          },
         }
       );
-
-      carouselAnimation = ScrollTrigger.create({
-        trigger: sectionRef.value,
-        start: isMobile ? "35% top" : "top top",
-        end: "bottom bottom",
-        scrub: true, // Animation progresses with scrolling
-        animation: carouselAnimationTimeline, // Link timeline to ScrollTrigger
-        onUpdate: (self) => {
-          // Get the actual rotation of the first card element (card at index 0)
-          if (!cardRefs.value[0] || !titleRef.value?.titleElement) return;
-
-          const firstCardElement = cardRefs.value[0];
-          const currentRotation = gsap.getProperty(
-            firstCardElement,
-            "rotation"
-          ) as number;
-
-          // Hide title when first card reaches approximately 0° (covering the title)
-          // Using a wider threshold of ±5° to reliably catch fast scrolling
-          if (currentRotation <= 5 && !isTitleHidden.value) {
-            isTitleHidden.value = true;
-            // Control titleHideAnimation directly without recreating
-            if (!titleHideAnimation) {
-              titleHideAnimation = gsap.to(titleRef.value.titleElement, {
-                opacity: 0,
-                duration: 0.3,
-                ease: "power2.out",
-              });
-            } else if (titleHideAnimation.reversed()) {
-              titleHideAnimation.play();
-            }
-          } else if (
-            currentRotation >= 15 &&
-            isTitleHidden.value &&
-            self.direction === -1
-          ) {
-            console.log("show title");
-            // Show title again when first card starts moving back up (rotation ≈ 15°) and scrolling upward
-            isTitleHidden.value = false;
-            if (titleHideAnimation) {
-              titleHideAnimation.reverse();
-            }
-          }
-        },
-      });
-
-      // Store timeline and ScrollTrigger for cleanup
-      // titleAnimations.push(carouselAnimationTimeline); // This line was removed as per the new_code
-      // titleAnimations.push(carouselAnimation); // This line was removed as per the new_code
     }
   );
 };
@@ -219,7 +220,6 @@ watch(
             requestAnimationFrame(() => {
               initializeTitleAnimation();
               initializeCarouselAnimation();
-              ScrollTrigger.refresh();
             });
           });
         }, 50);
@@ -229,15 +229,23 @@ watch(
 );
 
 onUnmounted(() => {
-  // Kill matchMedia animations
-  if (mm) {
-    mm.revert();
+  if (titleAnimation && titleAnimation.scrollTrigger) {
+    titleAnimation.scrollTrigger.kill();
+  }
+  if (titleAnimation && titleAnimation.kill) {
+    titleAnimation.kill();
   }
 
-  // Kill individual animations and ScrollTriggers that are not part of matchMedia
-  if (titleAnimation) titleAnimation.kill();
-  if (carouselAnimation) carouselAnimation.kill();
-  if (titleHideAnimation) titleHideAnimation.kill();
+  if (titleHideAnimation && titleHideAnimation.kill) {
+    titleHideAnimation.kill();
+  }
+
+  if (carouselAnimation && carouselAnimation.scrollTrigger) {
+    carouselAnimation.scrollTrigger.kill();
+  }
+  if (carouselAnimation && carouselAnimation.kill) {
+    carouselAnimation.kill();
+  }
 
   // Reset state flag
   isTitleHidden.value = false;
