@@ -89,10 +89,10 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from "vue";
 import { useAnimationsStore } from "../../stores";
-import { useVideos } from "~/composables/useVideos";
-import { useContent } from "~/composables/useContent";
-import ExaminationCard from "~/components/ui/ExaminationCard.vue";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { useVideos } from "../../composables/useVideos";
+import { useContent } from "../../composables/useContent";
+import ExaminationCard from "./ExaminationCard.vue";
+// GSAP with ScrollTrigger is registered globally in the app
 
 // Nuxt composables are auto-imported
 declare const useNuxtApp: () => { $gsap: any };
@@ -283,18 +283,10 @@ const initializeAnimations = async () => {
               onEnter: () => {
                 console.log(`🎯 ScrollTrigger onEnter - Step ${index + 1}`);
                 currentStepIndex.value = index;
-                // Preload videos around this step for better performance
-                setTimeout(() => {
-                  preloadUpcomingVideos();
-                }, 100);
               },
               onEnterBack: () => {
                 console.log(`🔙 ScrollTrigger onEnterBack - Step ${index + 1}`);
                 currentStepIndex.value = index;
-                // Preload videos around this step for better performance
-                setTimeout(() => {
-                  preloadUpcomingVideos();
-                }, 100);
               },
             },
           }
@@ -333,7 +325,7 @@ watch(
           requestAnimationFrame(() => {
             requestAnimationFrame(() => {
               initializeAnimations();
-              ScrollTrigger.refresh();
+              // ScrollTrigger.refresh(); // This line was removed as per the edit hint
             });
           });
         }, 50);

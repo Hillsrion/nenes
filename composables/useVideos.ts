@@ -40,6 +40,16 @@ export function useVideos(options: UseVideosOptions) {
   const isMobileOrTablet = ref(false);
   const isIOS = ref(false);
 
+  // Debounce helper function
+  const debounce = (func: Function, delay: number) => {
+    let timeout: ReturnType<typeof setTimeout>;
+    return function (this: any, ...args: any[]) {
+      const context = this;
+      clearTimeout(timeout);
+      timeout = setTimeout(() => func.apply(context, args), delay);
+    };
+  };
+
   // Initialize mobile/tablet detection and first video
   onMounted(() => {
     const checkDevice = () => {
@@ -169,7 +179,9 @@ export function useVideos(options: UseVideosOptions) {
 
       // Timeout fallback to avoid spinner lock on stubborn platforms
       const timeoutId = window.setTimeout(() => {
-        console.warn(`[useVideos] ⏰ Preload timeout for ${url}, resolving anyway`);
+        console.warn(
+          `[useVideos] ⏰ Preload timeout for ${url}, resolving anyway`
+        );
         settle();
         resolve();
       }, 6000);
@@ -182,7 +194,10 @@ export function useVideos(options: UseVideosOptions) {
     const upcomingIndices = [
       currentIndex + 1,
       currentIndex + 2,
+      currentIndex + 3,
+      currentIndex + 4,
       Math.max(0, currentIndex - 1),
+      Math.max(0, currentIndex - 2),
     ].filter(
       (index) => index >= 0 && index < steps.length && index !== currentIndex
     );
@@ -218,36 +233,50 @@ export function useVideos(options: UseVideosOptions) {
     isTransitioning.value = true;
     console.log("🔄 Starting transition to:", videoUrl);
 
-    // Load the video if not already loaded
+    // Call the transition callback (fade in overlay)
+    if (transitionCallback) {
+      transitionCallback(videoUrl);
+    }
+
+    // Wait for a short duration for the overlay to be fully opaque (e.g., 300ms, matching the tl.to duration)
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    // Load the video if not already loaded (this will happen while the overlay is opaque)
     if (!loadedVideos.value.has(videoUrl)) {
       videoLoading.value = true;
       await loadVideo(videoUrl);
       videoLoading.value = false;
     }
 
-    // Call the transition callback BEFORE updating video URL
-    // This allows the fade-in to happen before the video changes
-    if (transitionCallback) {
-      transitionCallback(videoUrl);
-    }
+    // Update actualVideoUrl while the overlay is opaque
+    actualVideoUrl.value = videoUrl;
+    console.log("✅ Video URL updated to:", videoUrl);
 
-    // Wait for fade-in to complete before updating video URL
-    setTimeout(() => {
-      actualVideoUrl.value = videoUrl;
-      console.log("✅ Video URL updated to:", videoUrl);
-    }, 300);
-
-    // Reset transitioning flag after full transition completes
+    // Reset transitioning flag after full transition completes (after overlay fades out)
     setTimeout(() => {
       isTransitioning.value = false;
       console.log("✓ Transition complete, ready for next video");
     }, 800);
-
-    // Preload upcoming videos after the current transition
-    setTimeout(() => {
-      preloadUpcomingVideos();
-    }, 1000);
   };
+
+  // Watch for current step index changes and trigger video load/preload
+  const debouncedTransitionToVideo = debounce(transitionToVideo, 100);
+
+  watch(currentStepIndex, (newIndex, oldIndex) => {
+    console.log(`🎬 currentStepIndex changed from ${oldIndex} to ${newIndex}`);
+    // Preload videos around this step for better performance immediately
+    preloadUpcomingVideos();
+
+    // If the video for the new step is different from the currently playing one, transition to it.
+    // This check prevents unnecessary transitions if scrolling back to the same video or if the video is already correct.
+    const newVideoUrl = isMobileOrTablet.value
+      ? options.getVideoSource(newIndex, isIOS.value ? "mp4" : "webm", "mobile")
+      : options.getVideoSource(newIndex, isIOS.value ? "mp4" : "webm", "1080p");
+    if (newVideoUrl && actualVideoUrl.value !== newVideoUrl) {
+      console.log("▶️ Triggering transition due to step change...");
+      debouncedTransitionToVideo();
+    }
+  });
 
   // Watch for video URL changes and trigger transition
   watch(currentVideoUrl, (newUrl, oldUrl) => {
