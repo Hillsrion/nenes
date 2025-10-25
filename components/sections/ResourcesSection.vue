@@ -1,11 +1,11 @@
 <template>
   <section
     class="lg:h-screen py-9 bg-primary sticky top-0 z-30 transition-all duration-300 ease-out"
-    :class="{ 'rounded-t-4xl': !isAtTop }"
+    :class="{ 'rounded-t-4xl': !isAtTop, '-mt-4': isIOS }"
     ref="sectionRef"
   >
     <div
-      class="container mx-auto px-6 xl:px-8 h-full flex flex-col justify-between"
+      class="container mx-auto px-6 xl:px-8 h-full flex flex-col ju stify-between"
     >
       <div
         class="flex flex-wrap items-center justify-between flex-1 lg:pt-15 md:pt-10 sm:pt-6 pt-4"
@@ -94,9 +94,12 @@ import { useAnimationsStore } from "../../stores";
 import ImageSequenceAnimator from "~/components/ui/ImageSequenceAnimator.vue";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { gsap } from "gsap";
-
+import { useIsIOS } from "~/composables/useIsIOS";
 // Animation store
 const store = useAnimationsStore();
+
+// Check if iOS
+const { isIOS } = useIsIOS();
 
 // Register ScrollTrigger
 // $gsap.registerPlugin($gsap.ScrollTrigger); // Removed: should be registered globally

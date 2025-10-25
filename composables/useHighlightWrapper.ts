@@ -12,12 +12,12 @@ export const useHighlightWrapper = () => {
   const createHighlightWrapper = (
     textElement: HTMLElement,
     highlightWords: string[],
-    svgSrc: string = '/images/selection.svg'
+    svgSrc: string = "/images/selection.svg"
   ): HTMLElement | null => {
     if (!textElement) return null;
 
     const words = Array.from(
-      textElement.querySelectorAll('.split-word')
+      textElement.querySelectorAll(".split-word")
     ) as HTMLElement[];
 
     if (words.length === 0) return null;
@@ -36,7 +36,7 @@ export const useHighlightWrapper = () => {
 
         // Get the word text and remove punctuation for comparison
         const wordText =
-          words[i + j].textContent?.trim().replace(/[,;.!?]/g, '') || '';
+          words[i + j].textContent?.trim().replace(/[,;.!?]/g, "") || "";
 
         if (wordText !== highlightWords[j]) {
           match = false;
@@ -45,10 +45,7 @@ export const useHighlightWrapper = () => {
         potentialHighlightWords.push(words[i + j]);
       }
 
-      if (
-        match &&
-        potentialHighlightWords.length === highlightWords.length
-      ) {
+      if (match && potentialHighlightWords.length === highlightWords.length) {
         matchedWords = potentialHighlightWords;
         break;
       }
@@ -56,14 +53,17 @@ export const useHighlightWrapper = () => {
 
     // Wrap highlighted words in a container span
     if (matchedWords.length > 0) {
-      const wrapper = document.createElement('span');
-      wrapper.className = 'selection-highlight relative';
+      const wrapper = document.createElement("span");
+      wrapper.className = "selection-highlight relative";
 
       // Create the SVG image element
-      const svgImg = document.createElement('img');
+      const svgImg = document.createElement("img");
       svgImg.src = svgSrc;
-      svgImg.className = 'selection-svg left-0 top-0 absolute -z-1';
-      svgImg.setAttribute('aria-hidden', 'true');
+      svgImg.className = "selection-svg absolute -z-1";
+      svgImg.style.top = "50%";
+      svgImg.style.left = "-5px";
+      svgImg.style.transform = "translateY(-50%)";
+      svgImg.setAttribute("aria-hidden", "true");
 
       // Insert wrapper before first highlighted word
       const firstWord = matchedWords[0];
@@ -77,7 +77,7 @@ export const useHighlightWrapper = () => {
         wrapper.appendChild(word);
         // Add space after each word except the last one
         if (index < matchedWords.length - 1) {
-          wrapper.appendChild(document.createTextNode(' '));
+          wrapper.appendChild(document.createTextNode(" "));
         }
       });
 
