@@ -104,7 +104,13 @@ export function useVideos(options: UseVideosOptions) {
 
   // Video loading method
   const loadVideo = async (url: string): Promise<void> => {
-    if (!url || loadedVideos.value.has(url)) {
+    if (!url) {
+      return Promise.resolve();
+    }
+    if (loadedVideos.value.has(url)) {
+      console.log(
+        `[useVideos] ➡️ Video already in loadedVideos set, skipping load: ${url}`
+      );
       return Promise.resolve();
     }
 
@@ -134,7 +140,6 @@ export function useVideos(options: UseVideosOptions) {
       const onCanPlayThrough = () => {
         console.log(`[useVideos] 🎉 Video canplaythrough: ${url}`);
         settle();
-        console.log(`[useVideos] ✅ videoLoading: ${videoLoading.value}`);
         resolve();
       };
 
@@ -142,14 +147,12 @@ export function useVideos(options: UseVideosOptions) {
         // iOS often fires loadeddata/canplay but not canplaythrough
         console.log(`[useVideos] 🎉 Video loadeddata: ${url}`);
         settle();
-        console.log(`[useVideos] ✅ videoLoading: ${videoLoading.value}`);
         resolve();
       };
 
       const onCanPlay = () => {
         console.log(`[useVideos] 🎉 Video canplay: ${url}`);
         settle();
-        console.log(`[useVideos] ✅ videoLoading: ${videoLoading.value}`);
         resolve();
       };
 
@@ -161,9 +164,6 @@ export function useVideos(options: UseVideosOptions) {
         video.removeEventListener("error", onError);
         clearTimeout(timeoutId);
         videoLoading.value = false; // Reset loading state on error
-        console.log(
-          `[useVideos] ✅ videoLoading (on error): ${videoLoading.value}`
-        );
         reject(new Error(`Failed to load video: ${url}`));
       };
 
@@ -211,10 +211,23 @@ export function useVideos(options: UseVideosOptions) {
         ? options.getVideoSource(index, format, "mobile")
         : options.getVideoSource(index, format, "1080p");
 
-      return url ? loadVideo(url) : Promise.resolve();
+      if (!url) return Promise.resolve();
+
+      if (loadedVideos.value.has(url)) {
+        console.log(
+          `[useVideos] ➡️ Preload: Video already in loadedVideos set: ${url}`
+        );
+        return Promise.resolve();
+      }
+
+      console.log(`[useVideos] 🚀 Preloading video: ${url}`);
+      return loadVideo(url);
     });
 
     await Promise.allSettled(preloadPromises);
+    console.log(
+      `[useVideos] ✅ All preload promises settled. Loaded videos: ${loadedVideos.value.size}`
+    );
   };
 
   // Video transition function
@@ -250,7 +263,7 @@ export function useVideos(options: UseVideosOptions) {
 
     // Update actualVideoUrl while the overlay is opaque
     actualVideoUrl.value = videoUrl;
-    console.log("✅ Video URL updated to:", videoUrl);
+    console.log(`[useVideos] ✅ actualVideoUrl updated to: ${videoUrl}`);
 
     // Reset transitioning flag after full transition completes (after overlay fades out)
     setTimeout(() => {
