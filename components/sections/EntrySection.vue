@@ -205,7 +205,7 @@ const {
   entryCoverRef,
   statisticsTextRef,
   // scrollContainer: props.scrollContainer, // Removed
-  // getTimeline, // No longer needed as useEntryCoverAnimation manages its own ScrollTrigger
+  getTimeline,
 });
 
 const { initializeAnimation: initializeContentElementsAnimation } =
