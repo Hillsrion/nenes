@@ -1,13 +1,14 @@
 <template>
-  <div class="w-full h-screen relative">
-    <div
-      ref="scrollContainer"
-      class="w-full h-full"
-    >
+  <div>
+    <div>
       <slot />
     </div>
   </div>
 </template>
+
+<script setup>
+// No script logic needed as this is now a pure layout wrapper
+</script>
 
 <style scoped>
 /* Component-specific styles only when necessary */

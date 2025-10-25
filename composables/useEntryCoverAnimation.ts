@@ -1,9 +1,8 @@
-import { ref, watch } from "vue";
+import { ref, watch, onUnmounted, nextTick } from "vue";
 import type { Ref } from "vue";
 import { useAnimationsStore } from "../stores";
-
-// Nuxt composables are auto-imported
-declare const useNuxtApp: () => { $gsap: any };
+import { gsap } from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 /**
  * Entry cover image animation composable
@@ -14,20 +13,21 @@ interface EntryCoverAnimationOptions {
   sectionRef: Ref<HTMLElement | null>;
   entryCoverRef: Ref<HTMLElement | null>;
   statisticsTextRef: Ref<HTMLElement | null>;
-  getTimeline?: () => any;
+  // scrollContainer?: Ref<HTMLElement | Window>; // New prop, removed as Lenis will handle the scrolling context
 }
 
 export const useEntryCoverAnimation = ({
   sectionRef,
   entryCoverRef,
   statisticsTextRef,
-  getTimeline,
-}: EntryCoverAnimationOptions) => {
+}: // scrollContainer = ref(window), // Default to window, removed as Lenis will handle the scrolling context
+EntryCoverAnimationOptions) => {
   // Animation state
   const isCoverFullyVisible = ref(false);
 
-  // Animation reference
-  let imageAnimation: any = null;
+  // Animation references
+  let imageAnimationTimeline: gsap.core.Timeline | null = null;
+  let imageScrollTrigger: ScrollTrigger | null = null;
 
   // Animations store
   const animationsStore = useAnimationsStore();
@@ -118,13 +118,13 @@ export const useEntryCoverAnimation = ({
 
     // Get actual viewport dimensions (not document dimensions)
     const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
+    // const viewportHeight = window.innerHeight; // Not used
 
     // Use document.documentElement.clientHeight as a fallback if innerHeight seems wrong
-    const actualViewportHeight =
-      viewportHeight > 2000
-        ? document.documentElement.clientHeight
-        : viewportHeight;
+    // const actualViewportHeight =
+    //   viewportHeight > 2000
+    //     ? document.documentElement.clientHeight
+    //     : viewportHeight; // Not used
 
     // Since the image is fixed positioned and covers the full viewport,
     // we need to calculate the offset to center it on the target point horizontally
@@ -132,8 +132,7 @@ export const useEntryCoverAnimation = ({
     const translateX = targetX - viewportWidth / 2;
 
     // Apply translation using GSAP so it composes with ScrollTrigger scale
-    const { $gsap } = useNuxtApp();
-    $gsap.set(imageElement, { x: translateX });
+    gsap.set(imageElement, { x: translateX });
 
     // // Debug logging to understand positioning
     // console.log("Image positioning:", {
@@ -168,19 +167,15 @@ export const useEntryCoverAnimation = ({
   };
 
   /**
-   * Create animation for entry cover image
-   * Adds the cover animation to the existing statistics timeline
+   * Create animation for entry cover image with its own ScrollTrigger
    */
   const createEntryCoverAnimation = () => {
     if (!entryCoverRef.value || !statisticsTextRef.value || !sectionRef.value)
       return;
 
-    // Get the timeline from the statistics animation
-    const timeline = getTimeline?.();
-    if (!timeline) {
-      console.warn("Timeline not available for cover animation");
-      return;
-    }
+    console.log(
+      "useEntryCoverAnimation: Creating entry cover animation timeline and ScrollTrigger."
+    );
 
     // Get initial position and set up the image
     const initialPos = calculateImagePosition();
@@ -189,7 +184,6 @@ export const useEntryCoverAnimation = ({
     }
 
     // Precompute target max scale once (based on initial split center)
-    const { $gsap } = useNuxtApp();
     const initialCenterX = initialPos.x;
     const initialViewportWidth = window.innerWidth;
     const initialHorizontalOffset = Math.abs(
@@ -200,15 +194,17 @@ export const useEntryCoverAnimation = ({
     const maxScale = 1 + initialCoverageIncrease + 0.05; // small aesthetic extra
 
     // Initialize image to invisible and scaled to 0
-    $gsap.set(entryCoverRef.value, {
+    gsap.set(entryCoverRef.value, {
       opacity: 0,
       transformOrigin: "center center",
       scale: 0,
     });
 
-    // Add cover animation to the timeline, synchronized with word split (40-70% of timeline)
-    // Fade in and start scaling at 0.4
-    timeline.to(
+    // Create the timeline for image animation
+    imageAnimationTimeline = gsap.timeline();
+
+    // Fade in and start scaling at 0.4 of its own timeline duration
+    imageAnimationTimeline.to(
       entryCoverRef.value,
       {
         opacity: 1,
@@ -218,44 +214,62 @@ export const useEntryCoverAnimation = ({
       0.4
     );
 
-    // Scale up as words move apart (40-70% of timeline = 30% duration)
-    imageAnimation = timeline.to(
+    // Scale up as words move apart (0.42 to 0.72 of its own timeline duration)
+    imageAnimationTimeline.to(
       entryCoverRef.value,
       {
         scale: maxScale,
-        duration: 0.3,
+        duration: 0.3, // Duration relative to this timeline
         ease: "power2.out",
-        onUpdate: function () {
-          // Get the current progress of THIS tween within the timeline
-          const tweenProgress = this.progress();
-          const scaleValue = tweenProgress * maxScale;
-
-          // Update the current scale ref so the watcher can detect changes
-          currentScale.value = scaleValue;
-
-          // Get current position for image placement
-          const currentPos = calculateImagePosition();
-
-          // Continuously update position to stay centered between moving words
-          try {
-            if (currentPos && (currentPos.x !== 0 || currentPos.y !== 0)) {
-              throttledPositionUpdate(
-                entryCoverRef.value,
-                currentPos.x,
-                currentPos.y,
-                scaleValue
-              );
-            }
-          } catch (error) {
-            console.warn("Error updating image position:", error);
-          }
-        },
       },
       0.42
     );
 
-    // Store the animation reference for cleanup
-    return imageAnimation;
+    // Create a separate ScrollTrigger for this animation
+    imageScrollTrigger = ScrollTrigger.create({
+      trigger: sectionRef.value,
+      start: "top top",
+      end: "bottom top",
+      scrub: 0.5,
+      animation: imageAnimationTimeline, // Link the new timeline to this ScrollTrigger
+      onUpdate: (self: ScrollTrigger) => {
+        // Get the current progress of THIS ScrollTrigger's linked animation
+        const tweenProgress = self.progress; // self.progress directly relates to the animation progress
+        const scaleValue = tweenProgress * maxScale; // Scale based on ScrollTrigger's progress
+
+        // Update the current scale ref so the watcher can detect changes
+        currentScale.value = scaleValue;
+
+        // Get current position for image placement
+        const currentPos = calculateImagePosition();
+
+        // Continuously update position to stay centered between moving words
+        try {
+          if (currentPos && (currentPos.x !== 0 || currentPos.y !== 0)) {
+            throttledPositionUpdate(
+              entryCoverRef.value,
+              currentPos.x,
+              currentPos.y,
+              scaleValue
+            );
+          }
+        } catch (error) {
+          console.warn("Error updating image position:", error);
+        }
+        console.log(
+          `useEntryCoverAnimation: onUpdate - progress: ${self.progress.toFixed(
+            2
+          )}, direction: ${self.direction}, start: ${self.start}, end: ${
+            self.end
+          }`
+        );
+      },
+      markers: true, // Keep markers for debugging
+      // scroller: scrollContainer.value, // Use the passed scrollContainer, removed as Lenis will handle the scrolling context
+    });
+    console.log(
+      `useEntryCoverAnimation: ScrollTrigger created - id: ${imageScrollTrigger.vars.id}, trigger: ${imageScrollTrigger.trigger}, start: ${imageScrollTrigger.vars.start}, end: ${imageScrollTrigger.vars.end}`
+    );
   };
 
   /**
@@ -263,7 +277,23 @@ export const useEntryCoverAnimation = ({
    */
   const initializeAnimation = () => {
     if (sectionRef.value && entryCoverRef.value && statisticsTextRef.value) {
-      imageAnimation = createEntryCoverAnimation();
+      console.log("useEntryCoverAnimation: initializeAnimation called.");
+      // Ensure GSAP and ScrollTrigger are registered (defensive, should be in plugin)
+      gsap.registerPlugin(ScrollTrigger);
+
+      createEntryCoverAnimation();
+
+      // Extra-stable refresh on iOS after layout settles
+      nextTick(() => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            console.log(
+              "useEntryCoverAnimation: Performing ScrollTrigger.refresh() (double rAF)."
+            );
+            ScrollTrigger.refresh();
+          });
+        });
+      });
     }
   };
 
@@ -271,22 +301,28 @@ export const useEntryCoverAnimation = ({
    * Cleanup animation
    */
   const cleanup = () => {
+    console.log("useEntryCoverAnimation: Cleaning up animations.");
     // Clear any pending position updates
     if (positionUpdateTimeout) {
       clearTimeout(positionUpdateTimeout);
       positionUpdateTimeout = null;
     }
 
-    // Clean up GSAP animations
-    if (imageAnimation) {
-      try {
-        imageAnimation.kill();
-      } catch (error) {
-        console.warn("Error cleaning up image animation:", error);
-      }
-      imageAnimation = null;
+    // Clean up GSAP animations and ScrollTrigger
+    if (imageScrollTrigger) {
+      imageScrollTrigger.kill();
+      imageScrollTrigger = null;
+    }
+    if (imageAnimationTimeline) {
+      imageAnimationTimeline.kill();
+      imageAnimationTimeline = null;
     }
   };
+
+  // Lifecycle hook for cleanup
+  onUnmounted(() => {
+    cleanup();
+  });
 
   return {
     isCoverFullyVisible,

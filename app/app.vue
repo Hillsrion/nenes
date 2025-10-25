@@ -1,8 +1,8 @@
 <template>
   <div ref="globalContainer">
-    <VueLenis root />
+    <!-- <VueLenis root /> -->
 
-    <MainLayout>
+    <MainLayout ref="mainLayoutRef">
       <!-- Loading Section -->
       <LoadingSection v-show="!isLoadingComplete" />
       <div
@@ -98,6 +98,7 @@ useHead({
 });
 
 const globalContainer = ref(null);
+const mainLayoutRef = ref(null); // Ref to MainLayout component
 
 // Computed logo color based on store state
 const logoColor = computed(() => {

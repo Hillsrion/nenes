@@ -170,6 +170,10 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  // scrollContainer: { // Removed, as Lenis will handle the scrolling context
+  //   type: [Object, Window],
+  //   default: () => window,
+  // },
 });
 
 // Refs
@@ -192,6 +196,7 @@ const {
   sectionRef,
   statisticsTextRef,
   statisticsText: props.statisticsText,
+  // scrollContainer: props.scrollContainer, // Removed
 });
 
 const {
@@ -201,7 +206,8 @@ const {
   sectionRef,
   entryCoverRef,
   statisticsTextRef,
-  getTimeline,
+  // scrollContainer: props.scrollContainer, // Removed
+  // getTimeline, // No longer needed as useEntryCoverAnimation manages its own ScrollTrigger
 });
 
 const { initializeAnimation: initializeContentElementsAnimation } =
@@ -214,9 +220,6 @@ const { initializeAnimation: initializeContentElementsAnimation } =
 // Track if animations have been initialized
 let animationsInitialized = false;
 
-// Use gsap.context for better cleanup
-let ctx;
-
 // Set initial state for cover image - must be scale 0 and hidden
 onMounted(() => {
   if (entryCoverRef.value) {
@@ -227,32 +230,7 @@ onMounted(() => {
     });
   }
 
-  // Explicitly register ScrollTrigger here for testing, though it should be in plugin
-  $gsap.registerPlugin(ScrollTrigger);
-
-  // Create a very simple ScrollTrigger that fires at 1px scroll
-  // This is moved to onMounted to ensure it's client-side and not dependent on store state for now
-  const alertTrigger = ScrollTrigger.create({
-    id: "top-1px-alert",
-    start: 1, // absolute scroll position (1px from top)
-    onEnter: () => {
-      console.log("ScrollTrigger entered 1px from top!");
-      alert("Scrolled 1px from the top!");
-      // Kill the trigger after it fires once
-      // alertTrigger.kill(); // Removed, as once: true handles it
-    },
-    once: true, // Only trigger once
-    markers: true,
-  });
-
-  // Extra-stable refresh on iOS after layout settles
-  nextTick(() => {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        ScrollTrigger.refresh();
-      });
-    });
-  });
+  // Old alert trigger and refresh logic removed
 });
 
 // Watch for loading completion before initializing other animations
@@ -268,12 +246,7 @@ watch(
           initializeEntryCoverAnimation();
           initializeContentElementsAnimation();
 
-          // Ensure refresh after all animations are set up
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-              $gsap.ScrollTrigger.refresh();
-            });
-          });
+          // No longer need extra refresh here as composables handle their own
         });
       }
 
@@ -289,7 +262,6 @@ watch(
 onUnmounted(() => {
   // Kill all ScrollTriggers to prevent memory leaks
   ScrollTrigger.getAll().forEach((trigger) => trigger.kill());
-  // Revert the GSAP context
-  if (ctx) ctx.revert();
+  // Removed ctx.revert() as ctx is no longer used for ScrollTriggers directly in EntrySection.vue
 });
 </script>
