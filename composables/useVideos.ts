@@ -14,6 +14,7 @@ interface UseVideosOptions {
   overlayRef: Ref<HTMLDivElement | null>;
   transitionCallback?: (url: string) => void;
   getVideoSource: (
+    stepIndex: number,
     format: "mp4" | "webm",
     resolution: "1080p" | "1440p" | "mobile"
   ) => string;
@@ -60,8 +61,8 @@ export function useVideos(options: UseVideosOptions) {
     console.log("🎬 First step:", firstStep);
     if (firstStep) {
       const firstVideoUrl = isMobileOrTablet.value
-        ? options.getVideoSource("mp4", "mobile") // Use the passed getVideoSource for mobile
-        : options.getVideoSource(isIOS.value ? "mp4" : "webm", "1080p"); // Use the passed getVideoSource for desktop (default 1080p)
+        ? options.getVideoSource(0, "mp4", "mobile")
+        : options.getVideoSource(0, isIOS.value ? "mp4" : "webm", "1080p");
 
       console.log("🎥 First video URL:", firstVideoUrl);
       if (firstVideoUrl) {
@@ -87,8 +88,8 @@ export function useVideos(options: UseVideosOptions) {
 
     const format = isIOS.value ? "mp4" : "webm";
     return isMobileOrTablet.value
-      ? options.getVideoSource(format, "mobile")
-      : options.getVideoSource(format, "1080p");
+      ? options.getVideoSource(currentStepIndex.value, format, "mobile")
+      : options.getVideoSource(currentStepIndex.value, format, "1080p");
   });
 
   // Video loading method
@@ -105,13 +106,39 @@ export function useVideos(options: UseVideosOptions) {
       const video = document.createElement("video");
       video.preload = "auto"; // Ensure full video data is preloaded
       video.playsInline = true; // Essential for iOS autoplay
+      video.muted = true; // Safe for iOS policies even if we don't autoplay during preload
+
+      let settled = false;
+      const settle = () => {
+        if (settled) return;
+        settled = true;
+        loadedVideos.value.add(url);
+        video.removeEventListener("canplaythrough", onCanPlayThrough);
+        video.removeEventListener("loadeddata", onLoadedData);
+        video.removeEventListener("canplay", onCanPlay);
+        video.removeEventListener("error", onError);
+        clearTimeout(timeoutId);
+        videoLoading.value = false; // Reset loading state
+      };
 
       const onCanPlayThrough = () => {
         console.log(`[useVideos] 🎉 Video canplaythrough: ${url}`);
-        loadedVideos.value.add(url);
-        video.removeEventListener("canplaythrough", onCanPlayThrough);
-        video.removeEventListener("error", onError);
-        videoLoading.value = false; // Reset loading state
+        settle();
+        console.log(`[useVideos] ✅ videoLoading: ${videoLoading.value}`);
+        resolve();
+      };
+
+      const onLoadedData = () => {
+        // iOS often fires loadeddata/canplay but not canplaythrough
+        console.log(`[useVideos] 🎉 Video loadeddata: ${url}`);
+        settle();
+        console.log(`[useVideos] ✅ videoLoading: ${videoLoading.value}`);
+        resolve();
+      };
+
+      const onCanPlay = () => {
+        console.log(`[useVideos] 🎉 Video canplay: ${url}`);
+        settle();
         console.log(`[useVideos] ✅ videoLoading: ${videoLoading.value}`);
         resolve();
       };
@@ -119,7 +146,10 @@ export function useVideos(options: UseVideosOptions) {
       const onError = (e: Event) => {
         console.error(`[useVideos] ❌ Video error loading ${url}:`, e);
         video.removeEventListener("canplaythrough", onCanPlayThrough);
+        video.removeEventListener("loadeddata", onLoadedData);
+        video.removeEventListener("canplay", onCanPlay);
         video.removeEventListener("error", onError);
+        clearTimeout(timeoutId);
         videoLoading.value = false; // Reset loading state on error
         console.log(
           `[useVideos] ✅ videoLoading (on error): ${videoLoading.value}`
@@ -128,12 +158,21 @@ export function useVideos(options: UseVideosOptions) {
       };
 
       video.addEventListener("canplaythrough", onCanPlayThrough);
+      video.addEventListener("loadeddata", onLoadedData);
+      video.addEventListener("canplay", onCanPlay);
       video.addEventListener("error", onError);
 
       // No need to check for "mobile" or "desktop" in url directly.
       // The getVideoSource function already handles the resolution and format.
       video.src = url;
       video.load(); // Explicitly trigger loading
+
+      // Timeout fallback to avoid spinner lock on stubborn platforms
+      const timeoutId = window.setTimeout(() => {
+        console.warn(`[useVideos] ⏰ Preload timeout for ${url}, resolving anyway`);
+        settle();
+        resolve();
+      }, 6000);
     });
   };
 
@@ -153,10 +192,9 @@ export function useVideos(options: UseVideosOptions) {
       if (!step) return Promise.resolve();
 
       const format = isIOS.value ? "mp4" : "webm";
-      const mobileVideoUrl = options.getVideoSource(format, "mobile");
-      const desktopVideoUrl = options.getVideoSource(format, "1080p");
-
-      const url = isMobileOrTablet.value ? mobileVideoUrl : desktopVideoUrl;
+      const url = isMobileOrTablet.value
+        ? options.getVideoSource(index, format, "mobile")
+        : options.getVideoSource(index, format, "1080p");
 
       return url ? loadVideo(url) : Promise.resolve();
     });
@@ -229,8 +267,8 @@ export function useVideos(options: UseVideosOptions) {
       const firstStep = steps[0];
       if (firstStep) {
         const firstVideoUrl = isMobileOrTablet.value
-          ? options.getVideoSource("mp4", "mobile") // Use the passed getVideoSource for mobile
-          : options.getVideoSource(isIOS.value ? "mp4" : "webm", "1080p"); // Use the passed getVideoSource for desktop (default 1080p)
+          ? options.getVideoSource(0, "mp4", "mobile")
+          : options.getVideoSource(0, isIOS.value ? "mp4" : "webm", "1080p");
 
         if (firstVideoUrl) {
           loadVideo(firstVideoUrl).then(() => {

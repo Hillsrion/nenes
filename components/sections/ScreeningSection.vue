@@ -129,6 +129,8 @@ import { useAnimationsStore } from "../../stores";
 import { useHighlightWrapper } from "~/composables/useHighlightWrapper";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { gsap } from "gsap";
+import { useContent } from "~/composables/useContent";
+import { useIsIOS } from "~/composables/useIsIOS";
 
 // Define the interface for sidebar elements
 interface SidebarElement {
@@ -368,6 +370,10 @@ const initializeFadeOutAnimation = () => {
       scrub: true, // Smooth scrubbing
       animation: fadeOutAnimation1, // Link animation to ScrollTrigger
     });
+
+    // Store first fade-out animation and its trigger for cleanup
+    titleAnimations.push(fadeOutAnimation1);
+    titleAnimations.push(fadeOutScrollTrigger);
   }
 
   // Second ScrollTrigger: scale down and fade out the container
@@ -390,8 +396,8 @@ const initializeFadeOutAnimation = () => {
   });
 
   // Store second scroll trigger for cleanup
-  titleAnimations.push(fadeOutAnimation1, fadeOutAnimation2);
-  titleAnimations.push(fadeOutScrollTrigger, containerFadeOutScrollTrigger);
+  titleAnimations.push(fadeOutAnimation2);
+  titleAnimations.push(containerFadeOutScrollTrigger);
 };
 
 // Initialize sidebar scroll animation
@@ -452,6 +458,104 @@ const initializeSidebarAnimation = () => {
   titleAnimations.push(sidebarScrollTrigger);
 };
 
+// ------------------------
+// Early video preload when ScreeningSection enters view
+// ------------------------
+const { r2Config } = useContent();
+const { isIOS } = useIsIOS();
+let hasTriggeredPreloadOnce = false;
+const preloadedVideoUrls = new Set<string>();
+
+const buildVideoUrl = (
+  stepIndex: number,
+  format: "mp4" | "webm",
+  resolution: "mobile" | "1080p"
+) => {
+  const hasOptimized = r2Config.stepsWithOptimizedVideos.includes(stepIndex);
+  if (!hasOptimized) return "";
+  const stepNumber = String(stepIndex + 1).padStart(2, "0");
+  const stepFolder = `step-${stepNumber}`;
+  const base = r2Config.baseUrl.replace(/\/$/, "");
+  if (resolution === "mobile") {
+    return `${base}/${stepFolder}/${stepFolder}-mobile.${format}`;
+  }
+  return `${base}/${stepFolder}/${stepFolder}-${resolution}.${format}`;
+};
+
+const preloadVideoUrl = (url: string) => {
+  if (!url || preloadedVideoUrls.has(url)) return Promise.resolve();
+  preloadedVideoUrls.add(url);
+  return new Promise<void>((resolve) => {
+    const video = document.createElement("video");
+    video.preload = "auto";
+    video.playsInline = true;
+    video.muted = true;
+
+    let settled = false;
+    const settle = () => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      resolve();
+    };
+
+    const onCPT = () => settle();
+    const onLD = () => settle();
+    const onCP = () => settle();
+    const onErr = () => settle();
+    const cleanup = () => {
+      video.removeEventListener("canplaythrough", onCPT);
+      video.removeEventListener("loadeddata", onLD);
+      video.removeEventListener("canplay", onCP);
+      video.removeEventListener("error", onErr);
+      clearTimeout(tid);
+    };
+
+    video.addEventListener("canplaythrough", onCPT);
+    video.addEventListener("loadeddata", onLD);
+    video.addEventListener("canplay", onCP);
+    video.addEventListener("error", onErr);
+
+    video.src = url;
+    video.load();
+
+    const tid = window.setTimeout(() => {
+      console.warn(`[ScreeningSection] Preload timeout for ${url}`);
+      settle();
+    }, 6000);
+  });
+};
+
+const setupScreeningPreloadObserver = () => {
+  if (!sectionRef.value || hasTriggeredPreloadOnce) return;
+  const el = sectionRef.value;
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting && !hasTriggeredPreloadOnce) {
+          hasTriggeredPreloadOnce = true;
+          observer.disconnect();
+
+          const useMobile = window.innerWidth <= 768;
+          const format = isIOS.value ? "mp4" : "webm";
+          const resolution = useMobile ? "mobile" : "1080p";
+
+          const stepsToPreload = [0, 1, 2];
+          const urls = stepsToPreload
+            .map((idx) => buildVideoUrl(idx, format, resolution))
+            .filter((u) => !!u);
+
+          Promise.allSettled(urls.map((u) => preloadVideoUrl(u))).then(() => {
+            // no-op; early warmup completed
+          });
+        }
+      });
+    },
+    { threshold: 0.25 }
+  );
+  observer.observe(el);
+};
+
 watch(
   () => store.getSectionState("loading"),
   (loadingState) => {
@@ -478,6 +582,9 @@ watch(
                 initializeFadeOutAnimation();
               });
               ScrollTrigger.refresh();
+
+              // Start IO-based early video preloading once ScreeningSection is visible
+              setupScreeningPreloadObserver();
             });
           });
         }, 50);

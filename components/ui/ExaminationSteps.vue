@@ -14,38 +14,38 @@
     >
       <!-- Mobile WebM sources (better compression, modern browsers) -->
       <source
-        :src="getVideoSource('webm', 'mobile')"
+        :src="getCurrentStepVideoSource('webm', 'mobile')"
         type="video/webm"
         media="(max-width: 768px)"
       />
 
       <!-- Mobile MP4 fallback -->
       <source
-        :src="getVideoSource('mp4', 'mobile')"
+        :src="getCurrentStepVideoSource('mp4', 'mobile')"
         type="video/mp4"
         media="(max-width: 768px)"
       />
 
       <!-- Desktop WebM sources (better compression, modern browsers) -->
       <source
-        :src="getVideoSource('webm', '1440p')"
+        :src="getCurrentStepVideoSource('webm', '1440p')"
         type="video/webm"
         media="(min-width: 1920px)"
       />
       <source
-        :src="getVideoSource('webm', '1080p')"
+        :src="getCurrentStepVideoSource('webm', '1080p')"
         type="video/webm"
         media="(min-width: 1280px)"
       />
 
       <!-- Desktop MP4 sources (fallback, wider compatibility) -->
       <source
-        :src="getVideoSource('mp4', '1440p')"
+        :src="getCurrentStepVideoSource('mp4', '1440p')"
         type="video/mp4"
         media="(min-width: 1920px)"
       />
       <source
-        :src="getVideoSource('mp4', '1080p')"
+        :src="getCurrentStepVideoSource('mp4', '1080p')"
         type="video/mp4"
         media="(min-width: 1280px)"
       />
@@ -140,35 +140,31 @@ const currentStep = computed(() => {
 });
 
 // Helper function to get video source URL based on format and resolution
-const getVideoSource = (
+const getVideoSourceFor = (
+  stepIndex: number,
   format: "mp4" | "webm",
   resolution: "1080p" | "1440p" | "mobile"
 ) => {
-  // Format step number with leading zero (01, 02, 03, etc.)
-  const stepNumber = String(currentStepIndex.value + 1).padStart(2, "0");
+  const stepNumber = String(stepIndex + 1).padStart(2, "0");
   const stepFolder = `step-${stepNumber}`;
 
-  // Check if current step has optimized videos
-  const hasOptimizedVideos = stepsWithOptimizedVideos.includes(
-    currentStepIndex.value
-  );
+  const hasOptimizedVideos = stepsWithOptimizedVideos.includes(stepIndex);
 
   if (hasOptimizedVideos) {
-    // Use optimized video from R2 bucket
-    // R2 URL: https://pub-xxxxx.r2.dev/step-0X/step-0X-{resolution}.{format}
-    // For mobile: https://pub-xxxxx.r2.dev/step-0X/step-0X-mobile.{format}
     const r2PublicUrl = r2Config.baseUrl;
-
     if (resolution === "mobile") {
       return `${r2PublicUrl}/${stepFolder}/${stepFolder}-mobile.${format}`;
     }
-
     return `${r2PublicUrl}/${stepFolder}/${stepFolder}-${resolution}.${format}`;
   }
 
-  // Fallback to original URL for steps without optimized videos
   return actualVideoUrl.value || "";
 };
+
+const getCurrentStepVideoSource = (
+  format: "mp4" | "webm",
+  resolution: "1080p" | "1440p" | "mobile"
+) => getVideoSourceFor(currentStepIndex.value, format, resolution);
 
 // Transition callback to handle fade effect with overlay
 const handleVideoTransition = (url: string) => {
@@ -212,7 +208,8 @@ const {
   videoRef,
   overlayRef,
   transitionCallback: handleVideoTransition,
-  getVideoSource: (format, resolution) => getVideoSource(format, resolution),
+  getVideoSource: (stepIndex, format, resolution) =>
+    getVideoSourceFor(stepIndex, format, resolution),
 });
 
 // Computed trigger element (parent section or current section)
