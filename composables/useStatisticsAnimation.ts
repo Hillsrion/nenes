@@ -158,7 +158,6 @@ export const useStatisticsAnimation = ({
           }, start: ${self.start}, end: ${self.end}`
         );
       },
-      markers: true, // Keep markers for debugging
       // scroller: scrollContainer.value, // Use the passed scrollContainer, removed as Lenis will handle the scrolling context
     });
     console.log(

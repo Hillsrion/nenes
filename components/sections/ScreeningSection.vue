@@ -276,7 +276,6 @@ const initializeTitleAnimation = () => {
         end: "center center", // End when section reaches center
         scrub: 1, // Smooth scrubbing
         animation: titleAnimationTimeline, // Link the timeline to this ScrollTrigger
-        markers: true,
         onUpdate: (self) => {
           // Reveal the SVG when the animation progresses past 80%
           if (self.progress > 0.8 && highlightWrapper) {
@@ -311,7 +310,6 @@ const initializeLogoColorChangeAnimation = () => {
     onEnterBack: () => {
       store.updateLogoColor(true);
     },
-    markers: true, // Add markers for debugging
   });
 };
 
@@ -332,7 +330,6 @@ const initializeTopTracking = () => {
     onLeaveBack: () => {
       isAtTop.value = false;
     },
-    markers: true, // Add markers for debugging
   });
 };
 
@@ -370,7 +367,6 @@ const initializeFadeOutAnimation = () => {
       end: `bottom top+=${vh(35)}`, // End when section bottom reaches viewport top
       scrub: true, // Smooth scrubbing
       animation: fadeOutAnimation1, // Link animation to ScrollTrigger
-      markers: true,
     });
   }
 
@@ -391,7 +387,6 @@ const initializeFadeOutAnimation = () => {
     end: "bottom top", // End when section bottom reaches viewport top
     scrub: true, // Smooth scrubbing
     animation: fadeOutAnimation2, // Link animation to ScrollTrigger
-    markers: true,
   });
 
   // Store second scroll trigger for cleanup
@@ -452,7 +447,6 @@ const initializeSidebarAnimation = () => {
     scrub: true, // Smooth scrubbing
     pin: false, // Don't pin, just transform
     animation: sidebarAnimationTimeline, // Link timeline to ScrollTrigger
-    markers: true,
   });
   titleAnimations.push(sidebarAnimationTimeline);
   titleAnimations.push(sidebarScrollTrigger);

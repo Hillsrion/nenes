@@ -111,7 +111,6 @@ const initializeTitleAnimation = () => {
         end: isMobile ? "40% top" : "30% bottom",
         scrub: 1,
         animation: titleAnimationTimeline, // Link timeline to ScrollTrigger
-        markers: true, // Add markers for debugging
       });
 
       // Store timeline and ScrollTrigger for cleanup
@@ -164,7 +163,6 @@ const initializeCarouselAnimation = () => {
         end: "bottom bottom",
         scrub: true, // Animation progresses with scrolling
         animation: carouselAnimationTimeline, // Link timeline to ScrollTrigger
-        markers: true, // Add markers for debugging
         onUpdate: (self) => {
           // Get the actual rotation of the first card element (card at index 0)
           if (!cardRefs.value[0] || !titleRef.value?.titleElement) return;

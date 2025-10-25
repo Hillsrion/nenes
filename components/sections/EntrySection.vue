@@ -153,9 +153,7 @@ import { useStatisticsAnimation } from "~/composables/useStatisticsAnimation";
 import { useEntryCoverAnimation } from "~/composables/useEntryCoverAnimation";
 import { useContentElementsAnimation } from "~/composables/useContentElementsAnimation";
 import { useAnimationsStore } from "~/stores";
-
-// Use global GSAP instance (should be available through Nuxt GSAP module)
-const { $gsap } = useNuxtApp();
+import { gsap } from "gsap";
 
 // Animations store
 const animationsStore = useAnimationsStore();
@@ -223,8 +221,7 @@ let animationsInitialized = false;
 // Set initial state for cover image - must be scale 0 and hidden
 onMounted(() => {
   if (entryCoverRef.value) {
-    const { $gsap } = useNuxtApp();
-    $gsap.set(entryCoverRef.value, {
+    gsap.set(entryCoverRef.value, {
       scale: 0,
       opacity: 0,
     });

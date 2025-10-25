@@ -131,7 +131,6 @@ const initializeTopTracking = () => {
     onLeaveBack: () => {
       isAtTop.value = false;
     },
-    markers: true, // Add markers for debugging
   });
 };
 
