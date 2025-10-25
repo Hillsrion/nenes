@@ -47,6 +47,7 @@ export default defineNuxtConfig({
     "@nuxtjs/google-fonts",
     "@pinia/nuxt",
     "lenis/nuxt",
+    // ["nuxt-matomo", { matomoUrl: "https://ismaelsebbane.matomo.cloud/", siteId: 1 }],
   ],
 
   typescript: {
@@ -157,6 +158,11 @@ export default defineNuxtConfig({
       r2: {
         publicUrl: process.env.NUXT_PUBLIC_R2_PUBLIC_URL || "",
       },
+      // Matomo configuration
+      matomoUrl:
+        process.env.NUXT_PUBLIC_MATOMO_URL ||
+        "https://ismaelsebbane.matomo.cloud",
+      siteId: process.env.NUXT_PUBLIC_MATOMO_SITE_ID || "1",
     },
   },
 });

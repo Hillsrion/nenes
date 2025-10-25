@@ -3,3 +3,9 @@ export type Card = {
   description: string;
   image: string;
 };
+
+declare global {
+  interface Window {
+    _paq: Array<Array<string | number>>;
+  }
+}
