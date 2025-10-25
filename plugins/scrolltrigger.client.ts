@@ -11,6 +11,12 @@ export default defineNuxtPlugin(() => {
 
   lenis.value?.on("scroll", ScrollTrigger.update);
 
+  // normalize scroll
+  ScrollTrigger.normalizeScroll(true);
+  ScrollTrigger.config({
+    ignoreMobileResize: true, // Prevents false refreshes from iOS address bar
+  });
+
   gsap.ticker.add((time) => {
     lenis.value?.raf(time * 1000);
   });

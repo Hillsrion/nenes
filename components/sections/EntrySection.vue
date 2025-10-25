@@ -78,8 +78,13 @@
           animationsStore?.sections?.loading?.state === 'idle',
       }"
     >
+      <div v-if="isIOS" class="h-svh"></div>
       <div
-        class="max-w-[42rem] h-[100svh] w-full px-8 sticky top-0 z-10 mx-auto flex flex-col justify-center"
+        class="max-w-[42rem] h-[100svh] w-full px-8 top-0 z-10 mx-auto flex flex-col justify-center"
+        :class="{
+          sticky: !isIOS,
+          fixed: isIOS,
+        }"
       >
         <div
           ref="statisticsTextRef"
@@ -172,6 +177,14 @@ const props = defineProps({
   //   type: [Object, Window],
   //   default: () => window,
   // },
+});
+
+// Check if iOS
+const isIOS = computed(() => {
+  return (
+    navigator.userAgent.includes("iPhone") ||
+    navigator.userAgent.includes("iPad")
+  );
 });
 
 // Refs
