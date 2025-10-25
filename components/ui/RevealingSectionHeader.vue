@@ -15,7 +15,7 @@
         ></h2>
       </div>
     </div>
-    <div v-if="isIOS" class="h-svh"></div>
+    <div v-if="isIOS" class="h-[300svh]"></div>
   </div>
 </template>
 
