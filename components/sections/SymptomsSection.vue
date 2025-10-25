@@ -217,7 +217,7 @@ watch(
   (loadingState) => {
     if (loadingState === "isComplete" && sectionRef.value) {
       nextTick(() => {
-        $gsap.delayedCall(1, () => {
+        $gsap.delayedCall(2.5, () => {
           showSymptomsSection.value = true;
         });
         setTimeout(() => {

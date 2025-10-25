@@ -729,9 +729,36 @@ watch(
 watch(
   () => animationsStore.getCoverScaling,
   async (isScaling) => {
-    if (isScaling && isActive.value) {
-      // Cover is growing - stop the animation
-      stopAnimation();
+    if (isScaling) {
+      // Cover is growing - stop the animation smoothly
+      // Safety rail: Ensure isActive is true so stopAnimation works, then stop smoothly
+
+      // Only stop if we're not already stopped
+      if (isActive.value) {
+        stopAnimation();
+      } else {
+        // If for some reason isActive is false but animation is still running,
+        // force stop immediately as a fallback
+        if (animationId) {
+          cancelAnimationFrame(animationId);
+          animationId = null;
+        }
+        forceScaleState.value = 0;
+
+        // Clear the canvas to ensure no lingering images
+        if (
+          canvasComposable?.context.value &&
+          canvasState.value.width &&
+          canvasState.value.height
+        ) {
+          canvasComposable.context.value.clearRect(
+            0,
+            0,
+            canvasState.value.width,
+            canvasState.value.height
+          );
+        }
+      }
     } else if (
       !isScaling &&
       !isActive.value &&

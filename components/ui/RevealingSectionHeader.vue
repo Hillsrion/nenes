@@ -4,6 +4,7 @@
     :class="{
       sticky: !isIOS,
       fixed: isIOS,
+      'opacity-0': !showRevealingHeader,
     }"
   >
     <div ref="contentRef" class="text-center max-w-4xl mx-auto">
@@ -269,7 +270,7 @@ watch(
           });
         }, 50);
       });
-      $gsap.delayedCall(1, () => {
+      $gsap.delayedCall(2.5, () => {
         showRevealingHeader.value = true;
       });
     }
