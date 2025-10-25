@@ -2,6 +2,9 @@
   <section
     class="py-16 h-[450svh] relative z-20 bg-white -mt-[25svh]"
     ref="sectionRef"
+    :class="{
+      'opacity-0': !showSymptomsSection,
+    }"
   >
     <div v-if="isIOS" class="h-svh"></div>
     <div
@@ -37,12 +40,14 @@
 </template>
 
 <script setup lang="ts">
-import { useNuxtApp } from "nuxt/app";
-import { ref, onUnmounted, watch, PropType, nextTick } from "vue";
+import { ref, onUnmounted, watch, PropType, nextTick, computed } from "vue";
 import { useAnimationsStore } from "~/stores";
 import { Card } from "~/types";
 import Title from "~/components/ui/Title.vue";
 import SymptomCard from "~/components/ui/SymptomCard.vue";
+import { useIsIOS } from "~/composables/useIsIOS";
+
+declare const useNuxtApp: () => { $gsap: any };
 
 const props = defineProps({
   title: {
@@ -56,12 +61,7 @@ const props = defineProps({
 });
 
 // Check if iOS
-const isIOS = computed(() => {
-  return (
-    navigator.userAgent.includes("iPhone") ||
-    navigator.userAgent.includes("iPad")
-  );
-});
+const { isIOS } = useIsIOS();
 
 const { $gsap } = useNuxtApp();
 
@@ -75,6 +75,8 @@ let carouselAnimation: any = null;
 let titleHideAnimation: any = null;
 
 const store = useAnimationsStore();
+
+const showSymptomsSection = ref(false);
 
 // Store card refs
 const setCardRef = (el: any, index: number) => {
@@ -215,6 +217,9 @@ watch(
   (loadingState) => {
     if (loadingState === "isComplete" && sectionRef.value) {
       nextTick(() => {
+        $gsap.delayedCall(1, () => {
+          showSymptomsSection.value = true;
+        });
         setTimeout(() => {
           requestAnimationFrame(() => {
             requestAnimationFrame(() => {

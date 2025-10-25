@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div :class="{ 'opacity-0': !showRevealingHeader }">
     <div
       class="h-svh w-full top-0 flex flex-col justify-center items-center px-8 overflow-hidden"
       :class="{
@@ -25,6 +25,7 @@ import SplitType from "split-type";
 import { useAnimationsStore } from "../../stores";
 import { useHighlightWrapper } from "~/composables/useHighlightWrapper";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { useIsIOS } from "~/composables/useIsIOS";
 
 // Nuxt composables are auto-imported
 declare const useNuxtApp: () => { $gsap: any };
@@ -40,6 +41,7 @@ const props = defineProps<Props>();
 const { $gsap } = useNuxtApp();
 const store = useAnimationsStore();
 const { createHighlightWrapper } = useHighlightWrapper();
+const { isIOS } = useIsIOS();
 
 // Refs
 const sectionRef = ref<HTMLElement | null>(null);
@@ -89,13 +91,7 @@ const initializeSplitText = () => {
   });
 };
 
-// Check if iOS
-const isIOS = computed(() => {
-  return (
-    navigator.userAgent.includes("iPhone") ||
-    navigator.userAgent.includes("iPad")
-  );
-});
+const showRevealingHeader = ref(false);
 
 // Combined timeline animation for all lines
 const initializeTimelineAnimation = () => {
@@ -275,6 +271,9 @@ watch(
             });
           });
         }, 50);
+      });
+      $gsap.delayedCall(1, () => {
+        showRevealingHeader.value = true;
       });
     }
   }

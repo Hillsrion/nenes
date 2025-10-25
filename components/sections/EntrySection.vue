@@ -159,6 +159,7 @@ import { useEntryCoverAnimation } from "~/composables/useEntryCoverAnimation";
 import { useContentElementsAnimation } from "~/composables/useContentElementsAnimation";
 import { useAnimationsStore } from "~/stores";
 import { gsap } from "gsap";
+import { useIsIOS } from "~/composables/useIsIOS";
 
 // Animations store
 const animationsStore = useAnimationsStore();
@@ -180,12 +181,7 @@ const props = defineProps({
 });
 
 // Check if iOS
-const isIOS = computed(() => {
-  return (
-    navigator.userAgent.includes("iPhone") ||
-    navigator.userAgent.includes("iPad")
-  );
-});
+const { isIOS } = useIsIOS();
 
 // Refs
 const sectionRef = ref(null);
