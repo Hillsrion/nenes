@@ -88,19 +88,18 @@
   </section>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, nextTick } from "vue";
 import { useAnimationsStore } from "../../stores";
-import { useNuxtApp } from "nuxt/app";
 import ImageSequenceAnimator from "~/components/ui/ImageSequenceAnimator.vue";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { gsap } from "gsap";
 
 // Animation store
 const store = useAnimationsStore();
-const { $gsap } = useNuxtApp();
 
 // Register ScrollTrigger
-$gsap.registerPlugin($gsap.ScrollTrigger);
+// $gsap.registerPlugin($gsap.ScrollTrigger); // Removed: should be registered globally
 
 const sectionRef = ref(null);
 let illustrationAnimationTimeline = null;
@@ -117,24 +116,28 @@ const initializeTopTracking = () => {
   }
 
   // Use the section itself as trigger but with proper positioning
-  topScrollTrigger = $gsap.timeline({
-    scrollTrigger: {
-      trigger: sectionRef.value,
-      start: "top top+=10px",
-      end: "bottom top",
-      onEnter: () => {
-        isAtTop.value = true;
-      },
-      onLeaveBack: () => {
-        isAtTop.value = false;
-      },
+  const topTrackingTimeline = gsap.timeline({
+    onComplete: () => console.log("Top tracking timeline complete"),
+  });
+
+  topScrollTrigger = ScrollTrigger.create({
+    trigger: sectionRef.value,
+    start: "top top+=10px",
+    end: "bottom top",
+    animation: topTrackingTimeline, // Link timeline to ScrollTrigger
+    onEnter: () => {
+      isAtTop.value = true;
     },
+    onLeaveBack: () => {
+      isAtTop.value = false;
+    },
+    markers: true, // Add markers for debugging
   });
 };
 
 // Initialize illustration animation
 const initializeIllustrationAnimation = () => {
-  illustrationAnimationTimeline = $gsap.to(
+  illustrationAnimationTimeline = gsap.to(
     {},
     {
       duration: 10, // Adjust duration for desired speed

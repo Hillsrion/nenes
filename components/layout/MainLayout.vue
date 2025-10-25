@@ -1,6 +1,6 @@
 <template>
-  <div>
-    <div>
+  <div class="relative">
+    <div ref="scrollContainer">
       <slot />
     </div>
   </div>

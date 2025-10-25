@@ -159,7 +159,6 @@ export const useStatisticsAnimation = ({
         );
       },
       markers: true, // Keep markers for debugging
-      pin: true, // Enable pinning for this section
       // scroller: scrollContainer.value, // Use the passed scrollContainer, removed as Lenis will handle the scrolling context
     });
     console.log(
