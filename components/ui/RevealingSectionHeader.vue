@@ -270,7 +270,7 @@ watch(
           });
         }, 50);
       });
-      $gsap.delayedCall(2.5, () => {
+      $gsap.delayedCall(1.5, () => {
         showRevealingHeader.value = true;
       });
     }
