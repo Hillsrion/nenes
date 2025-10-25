@@ -8,6 +8,7 @@
         :title="selfExaminationHeader"
         :parent-section="containerRef"
       />
+      <div v-if="isIOS" class="h-[300svh]"></div>
       <ExaminationSteps :steps="steps" :parent-section="containerRef" />
     </div>
   </section>
@@ -18,8 +19,10 @@ import RevealingSectionHeader from "~/components/ui/RevealingSectionHeader.vue";
 import ExaminationSteps from "~/components/ui/ExaminationSteps.vue";
 import { useContent } from "~/composables/useContent";
 import { ref } from "vue";
-
+import { useIsIOS } from "~/composables/useIsIOS";
 const { selfExaminationHeader } = useContent();
+
+const { isIOS } = useIsIOS();
 
 const { steps } = defineProps({
   steps: {

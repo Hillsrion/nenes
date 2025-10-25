@@ -1,21 +1,18 @@
 <template>
-  <div :class="{ 'opacity-0': !showRevealingHeader }">
-    <div
-      class="h-svh w-full top-0 flex flex-col justify-center items-center px-8 overflow-hidden"
-      :class="{
-        sticky: !isIOS,
-        fixed: isIOS,
-      }"
-    >
-      <div ref="contentRef" class="text-center max-w-4xl mx-auto">
-        <h2
-          ref="titleRef"
-          class="text-2xl xs:text-3xl sm:text-4xl md:text-5xl font-medium text-primary leading-title"
-          v-html="title"
-        ></h2>
-      </div>
+  <div
+    class="h-svh w-full top-0 flex flex-col justify-center items-center px-8 overflow-hidden"
+    :class="{
+      sticky: !isIOS,
+      fixed: isIOS,
+    }"
+  >
+    <div ref="contentRef" class="text-center max-w-4xl mx-auto">
+      <h2
+        ref="titleRef"
+        class="text-2xl xs:text-3xl sm:text-4xl md:text-5xl font-medium text-primary leading-title"
+        v-html="title"
+      ></h2>
     </div>
-    <div v-if="isIOS" class="h-[300svh]"></div>
   </div>
 </template>
 
