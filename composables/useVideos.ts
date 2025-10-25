@@ -37,17 +37,21 @@ export function useVideos(options: UseVideosOptions) {
 
   // Device detection
   const isMobileOrTablet = ref(false);
+  const isIOS = ref(false);
 
   // Initialize mobile/tablet detection and first video
   onMounted(() => {
     const checkDevice = () => {
       isMobileOrTablet.value = window.innerWidth <= 768;
+      isIOS.value = /iPad|iPhone|iPod/.test(navigator.userAgent);
     };
 
     checkDevice();
     console.log(
       "📱 Device detected - isMobileOrTablet:",
-      isMobileOrTablet.value
+      isMobileOrTablet.value,
+      "isIOS:",
+      isIOS.value
     );
     window.addEventListener("resize", checkDevice);
 
@@ -57,7 +61,7 @@ export function useVideos(options: UseVideosOptions) {
     if (firstStep) {
       const firstVideoUrl = isMobileOrTablet.value
         ? options.getVideoSource("mp4", "mobile") // Use the passed getVideoSource for mobile
-        : options.getVideoSource("mp4", "1080p"); // Use the passed getVideoSource for desktop (default 1080p)
+        : options.getVideoSource(isIOS.value ? "mp4" : "webm", "1080p"); // Use the passed getVideoSource for desktop (default 1080p)
 
       console.log("🎥 First video URL:", firstVideoUrl);
       if (firstVideoUrl) {
@@ -81,9 +85,10 @@ export function useVideos(options: UseVideosOptions) {
     const currentStep = steps[currentStepIndex.value];
     if (!currentStep) return "";
 
+    const format = isIOS.value ? "mp4" : "webm";
     return isMobileOrTablet.value
-      ? options.getVideoSource("webm", "mobile")
-      : options.getVideoSource("webm", "1080p");
+      ? options.getVideoSource(format, "mobile")
+      : options.getVideoSource(format, "1080p");
   });
 
   // Video loading method
@@ -147,8 +152,9 @@ export function useVideos(options: UseVideosOptions) {
       const step = steps[index];
       if (!step) return Promise.resolve();
 
-      const mobileVideoUrl = options.getVideoSource("webm", "mobile");
-      const desktopVideoUrl = options.getVideoSource("webm", "1080p");
+      const format = isIOS.value ? "mp4" : "webm";
+      const mobileVideoUrl = options.getVideoSource(format, "mobile");
+      const desktopVideoUrl = options.getVideoSource(format, "1080p");
 
       const url = isMobileOrTablet.value ? mobileVideoUrl : desktopVideoUrl;
 
@@ -224,7 +230,7 @@ export function useVideos(options: UseVideosOptions) {
       if (firstStep) {
         const firstVideoUrl = isMobileOrTablet.value
           ? options.getVideoSource("mp4", "mobile") // Use the passed getVideoSource for mobile
-          : options.getVideoSource("mp4", "1080p"); // Use the passed getVideoSource for desktop (default 1080p)
+          : options.getVideoSource(isIOS.value ? "mp4" : "webm", "1080p"); // Use the passed getVideoSource for desktop (default 1080p)
 
         if (firstVideoUrl) {
           loadVideo(firstVideoUrl).then(() => {

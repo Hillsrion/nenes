@@ -54,7 +54,7 @@ export default defineNuxtConfig({
       compilerOptions: {
         resolveJsonModule: true,
       },
-      include: ["imageSizes.d.ts"],
+      include: ["imageSizes.d.ts", "../.nuxt/tsconfig.json"],
     },
   },
 
