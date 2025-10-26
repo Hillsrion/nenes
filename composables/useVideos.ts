@@ -39,6 +39,7 @@ export function useVideos(options: UseVideosOptions) {
   // Device detection
   const isMobileOrTablet = ref(false);
   const isIOS = ref(false);
+  const isLargeScreen = ref(false);
 
   // Debounce helper function
   const debounce = (func: Function, delay: number) => {
@@ -310,6 +311,7 @@ export function useVideos(options: UseVideosOptions) {
     actualVideoUrl,
     isTransitioning,
     isMobileOrTablet,
+    isLargeScreen,
 
     // Methods
     loadVideo,

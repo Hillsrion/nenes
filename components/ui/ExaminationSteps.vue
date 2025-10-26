@@ -13,43 +13,65 @@
       preload="auto"
       playsinline
     >
-      <!-- Mobile WebM sources (better compression, modern browsers) -->
-      <source
-        :src="getCurrentStepVideoSource('webm', 'mobile')"
-        type="video/webm"
-        media="(max-width: 768px)"
-      />
+      <!-- iOS: MP4 first (native hardware acceleration) -->
+      <template v-if="isIOSDevice">
+        <!-- Mobile MP4 for iOS -->
+        <source
+          :src="getCurrentStepVideoSource('mp4', 'mobile')"
+          type="video/mp4"
+          media="(max-width: 768px)"
+        />
+        <!-- Desktop MP4 sources for iOS -->
+        <source
+          :src="getCurrentStepVideoSource('mp4', '1440p')"
+          type="video/mp4"
+          media="(min-width: 1920px)"
+        />
+        <source
+          :src="getCurrentStepVideoSource('mp4', '1080p')"
+          type="video/mp4"
+          media="(min-width: 769px)"
+        />
+      </template>
 
-      <!-- Mobile MP4 fallback -->
-      <source
-        :src="getCurrentStepVideoSource('mp4', 'mobile')"
-        type="video/mp4"
-        media="(max-width: 768px)"
-      />
+      <!-- Non-iOS: WebM first (better compression), MP4 fallback -->
+      <template v-else>
+        <!-- Mobile WebM sources -->
+        <source
+          :src="getCurrentStepVideoSource('webm', 'mobile')"
+          type="video/webm"
+          media="(max-width: 768px)"
+        />
+        <source
+          :src="getCurrentStepVideoSource('mp4', 'mobile')"
+          type="video/mp4"
+          media="(max-width: 768px)"
+        />
 
-      <!-- Desktop WebM sources (better compression, modern browsers) -->
-      <source
-        :src="getCurrentStepVideoSource('webm', '1440p')"
-        type="video/webm"
-        media="(min-width: 1920px)"
-      />
-      <source
-        :src="getCurrentStepVideoSource('webm', '1080p')"
-        type="video/webm"
-        media="(min-width: 1280px)"
-      />
+        <!-- Desktop WebM sources -->
+        <source
+          :src="getCurrentStepVideoSource('webm', '1440p')"
+          type="video/webm"
+          media="(min-width: 1920px)"
+        />
+        <source
+          :src="getCurrentStepVideoSource('webm', '1080p')"
+          type="video/webm"
+          media="(min-width: 769px)"
+        />
 
-      <!-- Desktop MP4 sources (fallback, wider compatibility) -->
-      <source
-        :src="getCurrentStepVideoSource('mp4', '1440p')"
-        type="video/mp4"
-        media="(min-width: 1920px)"
-      />
-      <source
-        :src="getCurrentStepVideoSource('mp4', '1080p')"
-        type="video/mp4"
-        media="(min-width: 1280px)"
-      />
+        <!-- Desktop MP4 fallback -->
+        <source
+          :src="getCurrentStepVideoSource('mp4', '1440p')"
+          type="video/mp4"
+          media="(min-width: 1920px)"
+        />
+        <source
+          :src="getCurrentStepVideoSource('mp4', '1080p')"
+          type="video/mp4"
+          media="(min-width: 769px)"
+        />
+      </template>
 
       <!-- Default fallback -->
       <source :src="actualVideoUrl" type="video/mp4" />
@@ -199,6 +221,7 @@ const {
   actualVideoUrl,
   isTransitioning,
   isMobileOrTablet,
+  isLargeScreen,
   loadVideo,
   preloadUpcomingVideos,
   transitionToVideo,
@@ -211,6 +234,12 @@ const {
   transitionCallback: handleVideoTransition,
   getVideoSource: (stepIndex, format, resolution) =>
     getVideoSourceFor(stepIndex, format, resolution),
+});
+
+// iOS device detection for conditional source ordering
+const isIOSDevice = ref(false);
+onMounted(() => {
+  isIOSDevice.value = /iPad|iPhone|iPod/.test(navigator.userAgent);
 });
 
 // Computed trigger element (parent section or current section)
