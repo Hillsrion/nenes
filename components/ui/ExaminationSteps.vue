@@ -205,7 +205,7 @@ const handleVideoTransition = (url: string) => {
     ease: "power2.inOut",
   })
     // Keep black for a moment while video switches
-    .to({}, { duration: 0.1 })
+    .to({}, { duration: 0.2 })
     // Fade out overlay (reveal new video)
     .to(overlayRef.value, {
       opacity: 0,

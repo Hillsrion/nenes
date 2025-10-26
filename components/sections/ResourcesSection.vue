@@ -76,10 +76,7 @@
             >Anaïs</a
           >
           - Photos & Dev par
-          <a
-            href="https://www.instagram.com/ismaelsbn"
-            target="_blank"
-            class="underline"
+          <a href="https://ismaelsebbane.com" target="_blank" class="underline"
             >Ismaël</a
           >
         </p>
