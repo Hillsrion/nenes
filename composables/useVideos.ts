@@ -303,24 +303,6 @@ export function useVideos(options: UseVideosOptions) {
     }
   });
 
-  // Preload the first video when current step changes to 0
-  watch(currentStepIndex, (newIndex) => {
-    if (newIndex === 0) {
-      const firstStep = steps[0];
-      if (firstStep) {
-        const firstVideoUrl = isMobileOrTablet.value
-          ? options.getVideoSource(0, "mp4", "mobile")
-          : options.getVideoSource(0, isIOS.value ? "mp4" : "webm", "1080p");
-
-        if (firstVideoUrl) {
-          loadVideo(firstVideoUrl).then(() => {
-            actualVideoUrl.value = firstVideoUrl;
-          });
-        }
-      }
-    }
-  });
-
   return {
     // State
     loadedVideos,

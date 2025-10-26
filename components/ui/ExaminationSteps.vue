@@ -10,6 +10,7 @@
       autoplay
       muted
       loop
+      preload="auto"
       playsinline
     >
       <!-- Mobile WebM sources (better compression, modern browsers) -->
