@@ -140,9 +140,10 @@ const initializeCarouselAnimation = () => {
   mm.add(
     {
       isMobile: "(max-width: 431px)",
+      isDesktop: "(min-width: 432px)",
     },
     (context: any) => {
-      const { isMobile } = context.conditions;
+      const { isMobile, isDesktop } = context.conditions;
 
       const mobileRotation = 45;
       const mobileStagger = 0.12;
@@ -153,9 +154,9 @@ const initializeCarouselAnimation = () => {
           rotation: isMobile ? mobileRotation : 30, // Starting angle
         },
         {
-          rotation: isMobile ? -mobileRotation : -30, // Ending angle
+          rotation: isMobile ? -mobileRotation : isDesktop ? -45 : -30, // Ending angle
           ease: "power1.inOut", // Non-linear movement
-          stagger: isMobile ? mobileStagger : 0.09, // Delay between the start of each card
+          stagger: isMobile ? mobileStagger : isDesktop ? 0.12 : 0.09, // Delay between the start of each card
           scrollTrigger: {
             trigger: sectionRef.value,
             // On mobile, start after title reveal (at 35% to give a slight overlap)
