@@ -1,7 +1,7 @@
 <template>
   <section
     ref="loadingSectionRef"
-    class="h-[100svh] w-full overflow-hidden bg-primary fixed inset-0 -z-10"
+    class="h-[100svh] w-full overflow-hidden bg-primary fixed inset-0 -z-1000"
   >
     <!-- Blue background section -->
     <div

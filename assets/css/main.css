@@ -20,6 +20,7 @@
   --leading-title: 1.33;
   --text-serif-size: 2rem;
   --breakpoint-xs: 430px;
+  --breakpoint-xs-plus: 450px;
 }
 
 body {

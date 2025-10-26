@@ -1,6 +1,6 @@
 <template>
   <section
-    class="py-16 h-[450svh] relative z-20 bg-white -mt-[25svh]"
+    class="py-16 h-[450svh] relative z-20 bg-white sm:-mt-[25svh]"
     ref="sectionRef"
     :class="{
       'opacity-0': !showSymptomsSection,
@@ -139,13 +139,13 @@ const initializeCarouselAnimation = () => {
 
   mm.add(
     {
-      isMobile: "(max-width: 431px)",
-      isDesktop: "(min-width: 432px)",
+      isMobile: "(max-width: 450px)",
+      isDesktop: "(min-width: 451px)",
     },
     (context: any) => {
       const { isMobile, isDesktop } = context.conditions;
 
-      const mobileRotation = 45;
+      const mobileRotation = 40;
       const mobileStagger = 0.12;
 
       carouselAnimation = $gsap.fromTo(

@@ -13,6 +13,10 @@ export default defineNuxtConfig({
       ],
       meta: [
         {
+          name: "viewport",
+          content: "width=device-width, initial-scale=1, maximum-scale=5",
+        },
+        {
           name: "description",
           content: "Un projet pour la prévention du cancer du sein",
         },
