@@ -1,12 +1,14 @@
-import { computed } from "vue";
+import { ref, onMounted } from "vue";
 
 export function useIsIOS() {
-  const isIOS = computed(() => {
-    if (!navigator) return false;
-    return (
-      navigator.userAgent.includes("iPhone") ||
-      navigator.userAgent.includes("iPad")
-    );
+  const isIOS = ref(false);
+
+  onMounted(() => {
+    const userAgent = navigator.userAgent || "";
+    // Detect iPhone/iPad/iPod, and newer iPads reporting as Macintosh with touch
+    isIOS.value =
+      /iPhone|iPad|iPod/.test(userAgent) ||
+      (userAgent.includes("Macintosh") && navigator.maxTouchPoints > 0);
   });
 
   return {
