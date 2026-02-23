@@ -1,4 +1,4 @@
-import { ref, computed, onMounted, onUnmounted, watch, Ref } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch, type Ref } from "vue";
 
 interface Step {
   content: string;
@@ -42,12 +42,11 @@ export function useVideos(options: UseVideosOptions) {
   const isLargeScreen = ref(false);
 
   // Debounce helper function
-  const debounce = (func: Function, delay: number) => {
+  const debounce = <T extends (...args: any[]) => void>(func: T, delay: number) => {
     let timeout: ReturnType<typeof setTimeout>;
-    return function (this: any, ...args: any[]) {
-      const context = this;
+    return (...args: Parameters<T>) => {
       clearTimeout(timeout);
-      timeout = setTimeout(() => func.apply(context, args), delay);
+      timeout = setTimeout(() => func(...args), delay);
     };
   };
 
@@ -59,26 +58,17 @@ export function useVideos(options: UseVideosOptions) {
     };
 
     checkDevice();
-    console.log(
-      "📱 Device detected - isMobileOrTablet:",
-      isMobileOrTablet.value,
-      "isIOS:",
-      isIOS.value
-    );
     window.addEventListener("resize", checkDevice);
 
     // Initialize the first video URL after device is checked
     const firstStep = steps[0];
-    console.log("🎬 First step:", firstStep);
     if (firstStep) {
       const firstVideoUrl = isMobileOrTablet.value
         ? options.getVideoSource(0, "mp4", "mobile")
         : options.getVideoSource(0, isIOS.value ? "mp4" : "webm", "1080p");
 
-      console.log("🎥 First video URL:", firstVideoUrl);
       if (firstVideoUrl) {
         actualVideoUrl.value = firstVideoUrl;
-        console.log("✅ Set actualVideoUrl to:", actualVideoUrl.value);
         loadVideo(firstVideoUrl);
       }
     }
@@ -109,15 +99,10 @@ export function useVideos(options: UseVideosOptions) {
       return Promise.resolve();
     }
     if (loadedVideos.value.has(url)) {
-      console.log(
-        `[useVideos] ➡️ Video already in loadedVideos set, skipping load: ${url}`
-      );
       return Promise.resolve();
     }
 
-    console.log(`[useVideos] 🔄 Attempting to load video: ${url}`);
     videoLoading.value = true;
-    console.log(`[useVideos] ⏳ videoLoading: ${videoLoading.value}`);
 
     return new Promise((resolve, reject) => {
       const video = document.createElement("video");
@@ -139,26 +124,21 @@ export function useVideos(options: UseVideosOptions) {
       };
 
       const onCanPlayThrough = () => {
-        console.log(`[useVideos] 🎉 Video canplaythrough: ${url}`);
         settle();
         resolve();
       };
 
       const onLoadedData = () => {
-        // iOS often fires loadeddata/canplay but not canplaythrough
-        console.log(`[useVideos] 🎉 Video loadeddata: ${url}`);
         settle();
         resolve();
       };
 
       const onCanPlay = () => {
-        console.log(`[useVideos] 🎉 Video canplay: ${url}`);
         settle();
         resolve();
       };
 
-      const onError = (e: Event) => {
-        console.error(`[useVideos] ❌ Video error loading ${url}:`, e);
+      const onError = () => {
         video.removeEventListener("canplaythrough", onCanPlayThrough);
         video.removeEventListener("loadeddata", onLoadedData);
         video.removeEventListener("canplay", onCanPlay);
@@ -180,9 +160,6 @@ export function useVideos(options: UseVideosOptions) {
 
       // Timeout fallback to avoid spinner lock on stubborn platforms
       const timeoutId = window.setTimeout(() => {
-        console.warn(
-          `[useVideos] ⏰ Preload timeout for ${url}, resolving anyway`
-        );
         settle();
         resolve();
       }, 6000);
@@ -215,20 +192,13 @@ export function useVideos(options: UseVideosOptions) {
       if (!url) return Promise.resolve();
 
       if (loadedVideos.value.has(url)) {
-        console.log(
-          `[useVideos] ➡️ Preload: Video already in loadedVideos set: ${url}`
-        );
         return Promise.resolve();
       }
 
-      console.log(`[useVideos] 🚀 Preloading video: ${url}`);
       return loadVideo(url);
     });
 
     await Promise.allSettled(preloadPromises);
-    console.log(
-      `[useVideos] ✅ All preload promises settled. Loaded videos: ${loadedVideos.value.size}`
-    );
   };
 
   // Video transition function
@@ -245,7 +215,6 @@ export function useVideos(options: UseVideosOptions) {
 
     // Set transitioning flag
     isTransitioning.value = true;
-    console.log("🔄 Starting transition to:", videoUrl);
 
     // Call the transition callback (fade in overlay)
     if (transitionCallback) {
@@ -264,20 +233,17 @@ export function useVideos(options: UseVideosOptions) {
 
     // Update actualVideoUrl while the overlay is opaque
     actualVideoUrl.value = videoUrl;
-    console.log(`[useVideos] ✅ actualVideoUrl updated to: ${videoUrl}`);
 
     // Reset transitioning flag after full transition completes (after overlay fades out)
     setTimeout(() => {
       isTransitioning.value = false;
-      console.log("✓ Transition complete, ready for next video");
     }, 800);
   };
 
   // Watch for current step index changes and trigger video load/preload
   const debouncedTransitionToVideo = debounce(transitionToVideo, 100);
 
-  watch(currentStepIndex, (newIndex, oldIndex) => {
-    console.log(`🎬 currentStepIndex changed from ${oldIndex} to ${newIndex}`);
+  watch(currentStepIndex, (newIndex) => {
     // Preload videos around this step for better performance immediately
     preloadUpcomingVideos();
 
@@ -287,20 +253,14 @@ export function useVideos(options: UseVideosOptions) {
       ? options.getVideoSource(newIndex, isIOS.value ? "mp4" : "webm", "mobile")
       : options.getVideoSource(newIndex, isIOS.value ? "mp4" : "webm", "1080p");
     if (newVideoUrl && actualVideoUrl.value !== newVideoUrl) {
-      console.log("▶️ Triggering transition due to step change...");
       debouncedTransitionToVideo();
     }
   });
 
   // Watch for video URL changes and trigger transition
   watch(currentVideoUrl, (newUrl, oldUrl) => {
-    console.log("🎬 currentVideoUrl changed from:", oldUrl, "to:", newUrl);
-    console.log("🔒 isTransitioning:", isTransitioning.value);
     if (newUrl !== oldUrl && !isTransitioning.value) {
-      console.log("▶️ Triggering transition...");
       transitionToVideo();
-    } else if (isTransitioning.value) {
-      console.log("⏸️ Transition blocked - already transitioning");
     }
   });
 

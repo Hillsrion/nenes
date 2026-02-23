@@ -109,13 +109,7 @@ onMounted(async () => {
 
   try {
     // Preload all critical assets before starting the loading sequence
-    const { preloadAllAssets, isComplete } = useAssetPreloader({
-      onProgress: (loaded, total) => {
-        console.log(`Preloading assets: ${loaded}/${total}`);
-      },
-      onComplete: () => {
-        console.log("All critical assets preloaded successfully");
-      },
+    const { preloadAllAssets } = useAssetPreloader({
       onError: (error) => {
         console.warn("Asset preloading failed:", error);
         // Continue with loading sequence even if preloading fails

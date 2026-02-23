@@ -4,7 +4,6 @@ import {
   onUnmounted,
   watch,
   type Ref,
-  type WritableComputedRef,
 } from "vue";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useAnimationsStore } from "~/stores";
@@ -15,7 +14,7 @@ interface AssetPreloaderLike {
 }
 
 interface UseCursorLifecycleOptions {
-  disabled: Ref<boolean> | WritableComputedRef<boolean>;
+  disabled: Ref<boolean>;
   isLoaded: Ref<boolean>;
   isActive: Ref<boolean>;
   isMobileOrTouch: Ref<boolean>;
