@@ -86,68 +86,33 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch, nextTick } from "vue";
+import { ref, onUnmounted, watch, nextTick } from "vue";
 import { useAnimationsStore } from "../../stores";
 import ImageSequenceAnimator from "~/components/ui/ImageSequenceAnimator.vue";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { gsap } from "gsap";
 import { useIsIOS } from "~/composables/useIsIOS";
+import { useResourcesAnimations } from "~/composables/resources/useResourcesAnimations";
 // Animation store
 const store = useAnimationsStore();
 
 // Check if iOS
 const { isIOS } = useIsIOS();
 
-// Register ScrollTrigger
-// $gsap.registerPlugin($gsap.ScrollTrigger); // Removed: should be registered globally
-
-const sectionRef = ref(null);
-let illustrationAnimationTimeline = null;
-let topScrollTrigger = null;
+const sectionRef = ref<HTMLElement | null>(null);
 const illustrationProgress = ref(0);
 
 // Track if section is at top (sticky)
 const isAtTop = ref(false);
 
-// Initialize scroll trigger to track when section reaches top
-const initializeTopTracking = () => {
-  if (!sectionRef.value) {
-    return;
-  }
-
-  // Use the section itself as trigger but with proper positioning
-  const topTrackingTimeline = gsap.timeline({
-    onComplete: () => console.log("Top tracking timeline complete"),
-  });
-
-  topScrollTrigger = ScrollTrigger.create({
-    trigger: sectionRef.value,
-    start: "top top+=10px",
-    end: "bottom top",
-    animation: topTrackingTimeline, // Link timeline to ScrollTrigger
-    onEnter: () => {
-      isAtTop.value = true;
-    },
-    onLeaveBack: () => {
-      isAtTop.value = false;
-    },
-  });
-};
-
-// Initialize illustration animation
-const initializeIllustrationAnimation = () => {
-  illustrationAnimationTimeline = gsap.to(
-    {},
-    {
-      duration: 10, // Adjust duration for desired speed
-      repeat: -1, // Infinite loop
-      ease: "none",
-      onUpdate: function () {
-        illustrationProgress.value = this.progress() * 100;
-      },
-    }
-  );
-};
+const {
+  initializeTopTracking,
+  initializeIllustrationAnimation,
+  cleanupResourcesAnimations,
+} = useResourcesAnimations({
+  sectionRef,
+  illustrationProgress,
+  isAtTop,
+});
 
 watch(
   () => store.getSectionState("loading"),
@@ -174,17 +139,7 @@ watch(
 
 // Cleanup on unmount
 onUnmounted(() => {
-  // Clean up top tracking scroll trigger
-  if (topScrollTrigger && topScrollTrigger.scrollTrigger) {
-    topScrollTrigger.scrollTrigger.kill();
-  }
-  if (topScrollTrigger && topScrollTrigger.kill) {
-    topScrollTrigger.kill();
-  }
-
-  if (illustrationAnimationTimeline && illustrationAnimationTimeline.kill) {
-    illustrationAnimationTimeline.kill();
-  }
+  cleanupResourcesAnimations();
 });
 
 const resources = [
