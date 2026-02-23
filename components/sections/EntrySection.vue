@@ -152,7 +152,6 @@
 </template>
 
 <script setup>
-import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useTextUtils } from "~/composables/useTextUtils";
 import { useStatisticsAnimation } from "~/composables/useStatisticsAnimation";
 import { useEntryCoverAnimation } from "~/composables/useEntryCoverAnimation";
@@ -198,6 +197,7 @@ const {
   firstTwoLinesFaded,
   lastLineCentered,
   initializeAnimations: initializeStatisticsAnimations,
+  cleanup: cleanupStatisticsAnimations,
   getTimeline,
 } = useStatisticsAnimation({
   sectionRef,
@@ -209,6 +209,7 @@ const {
 const {
   isCoverFullyVisible,
   initializeAnimation: initializeEntryCoverAnimation,
+  cleanup: cleanupEntryCoverAnimation,
 } = useEntryCoverAnimation({
   sectionRef,
   entryCoverRef,
@@ -217,7 +218,10 @@ const {
   getTimeline,
 });
 
-const { initializeAnimation: initializeContentElementsAnimation } =
+const {
+  initializeAnimation: initializeContentElementsAnimation,
+  cleanup: cleanupContentElementsAnimation,
+} =
   useContentElementsAnimation({
     textRefs,
     sectionRef,
@@ -264,10 +268,9 @@ watch(
 
 // Note: All animation logic has been moved to composables for better organization
 
-// Cleanup on unmount
 onUnmounted(() => {
-  // Kill all ScrollTriggers to prevent memory leaks
-  ScrollTrigger.getAll().forEach((trigger) => trigger.kill());
-  // Removed ctx.revert() as ctx is no longer used for ScrollTriggers directly in EntrySection.vue
+  cleanupStatisticsAnimations();
+  cleanupEntryCoverAnimation();
+  cleanupContentElementsAnimation();
 });
 </script>
