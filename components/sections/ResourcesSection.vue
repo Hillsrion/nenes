@@ -86,7 +86,6 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onUnmounted, watch, nextTick } from "vue";
 import { useAnimationsStore } from "../../stores";
 import ImageSequenceAnimator from "~/components/ui/ImageSequenceAnimator.vue";
 import { ScrollTrigger } from "gsap/ScrollTrigger";

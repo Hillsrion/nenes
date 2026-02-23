@@ -1,4 +1,4 @@
-import { reactive, type Ref } from "vue";
+import type { Ref } from "vue";
 import { clamp } from "~/utils/mathUtils";
 
 interface CursorPoint {

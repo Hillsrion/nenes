@@ -1,4 +1,4 @@
-import { nextTick, type Ref } from "vue";
+import type { Ref } from "vue";
 import SplitType from "split-type";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { gsap } from "gsap";

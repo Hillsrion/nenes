@@ -22,7 +22,6 @@
 
 <script setup lang="ts">
 import CardContent from "~/components/ui/CardContent.vue";
-import { computed } from "vue";
 
 const { image } = defineProps({
   title: {

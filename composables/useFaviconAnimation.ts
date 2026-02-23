@@ -1,5 +1,3 @@
-import { ref, onMounted, onUnmounted } from "vue";
-
 export const useFaviconAnimation = () => {
   const currentFaviconIndex = ref(0);
   const animationInterval = ref<NodeJS.Timeout | null>(null);

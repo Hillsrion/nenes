@@ -40,7 +40,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onUnmounted, watch, PropType, nextTick } from "vue";
+import type { PropType } from "vue";
 import { useAnimationsStore } from "~/stores";
 import { Card } from "~/types";
 import Title from "~/components/ui/Title.vue";

@@ -1,5 +1,3 @@
-import { ref, onMounted } from "vue";
-
 export function useIsIOS() {
   const isIOS = ref(false);
 

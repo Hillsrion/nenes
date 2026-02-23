@@ -10,7 +10,6 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from "vue";
 import { gsap } from "gsap";
 
 interface Props {

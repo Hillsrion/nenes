@@ -116,13 +116,7 @@
 </template>
 
 <script setup lang="ts">
-import {
-  ref,
-  nextTick,
-  onUnmounted,
-  watch,
-  type ComponentPublicInstance,
-} from "vue";
+import type { ComponentPublicInstance } from "vue";
 import { useAnimationsStore } from "../../stores";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { gsap } from "gsap";

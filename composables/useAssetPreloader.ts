@@ -6,7 +6,6 @@
  */
 
 import { useRuntimeConfig } from "nuxt/app";
-import { ref, readonly } from "vue";
 
 interface AssetPreloaderOptions {
   onProgress?: (loaded: number, total: number) => void;

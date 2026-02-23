@@ -18,7 +18,6 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onUnmounted, watch, nextTick, computed } from "vue";
 import SplitType from "split-type";
 import { useAnimationsStore } from "../../stores";
 import { useHighlightWrapper } from "~/composables/useHighlightWrapper";

@@ -110,7 +110,6 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch, nextTick } from "vue";
 import { useAnimationsStore } from "../../stores";
 import { useVideos } from "../../composables/useVideos";
 import { useExaminationVideoSources } from "~/composables/examination/useExaminationVideoSources";

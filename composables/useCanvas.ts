@@ -1,4 +1,4 @@
-import { ref, onMounted, onUnmounted, Ref, readonly } from "vue";
+import type { Ref } from "vue";
 
 interface CanvasOptions {
   autoResize?: boolean;

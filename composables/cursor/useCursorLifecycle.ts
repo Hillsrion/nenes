@@ -1,10 +1,4 @@
-import {
-  nextTick,
-  onMounted,
-  onUnmounted,
-  watch,
-  type Ref,
-} from "vue";
+import type { Ref } from "vue";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useAnimationsStore } from "~/stores";
 

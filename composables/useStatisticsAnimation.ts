@@ -1,4 +1,3 @@
-import { ref } from "vue";
 import type { Ref } from "vue";
 
 // Nuxt composables are auto-imported

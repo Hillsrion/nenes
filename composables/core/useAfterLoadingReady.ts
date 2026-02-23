@@ -1,4 +1,3 @@
-import { nextTick, onScopeDispose, watch } from "vue";
 import { useAnimationsStore } from "~/stores";
 
 type LoadingState = "idle" | "isAnimating" | "isComplete";

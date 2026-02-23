@@ -11,7 +11,6 @@
 </template>
 
 <script setup lang="ts">
-import { ref, toRef } from "vue";
 import { useAssetPreloader } from "../../composables/useAssetPreloader";
 import { useDeviceStore } from "../../stores";
 import { useCursorPointer } from "~/composables/cursor/useCursorPointer";

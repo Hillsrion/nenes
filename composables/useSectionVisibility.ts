@@ -1,4 +1,3 @@
-import { ref } from "vue";
 import { useIntersectionObserver } from "@vueuse/core";
 
 export function useSectionVisibility(threshold = 0.1) {

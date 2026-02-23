@@ -18,7 +18,6 @@
 import RevealingSectionHeader from "~/components/ui/RevealingSectionHeader.vue";
 import ExaminationSteps from "~/components/ui/ExaminationSteps.vue";
 import { useContent } from "~/composables/useContent";
-import { ref } from "vue";
 import { useIsIOS } from "~/composables/useIsIOS";
 const { selfExaminationHeader } = useContent();
 

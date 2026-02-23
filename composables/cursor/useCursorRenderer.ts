@@ -1,4 +1,4 @@
-import { reactive, ref, type Ref } from "vue";
+import type { Ref } from "vue";
 import { useCanvas } from "~/composables/useCanvas";
 import { lerp, modulo, wrap } from "~/utils/mathUtils";
 import type { CursorGridSettings } from "~/composables/cursor/useCursorGrid";
