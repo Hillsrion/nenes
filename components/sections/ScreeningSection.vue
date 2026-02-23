@@ -119,18 +119,17 @@
 import {
   ref,
   nextTick,
-  onMounted,
   onUnmounted,
   watch,
   type ComponentPublicInstance,
 } from "vue";
-import SplitType from "split-type";
 import { useAnimationsStore } from "../../stores";
-import { useHighlightWrapper } from "~/composables/useHighlightWrapper";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { gsap } from "gsap";
-import { useContent } from "~/composables/useContent";
-import { useIsIOS } from "~/composables/useIsIOS";
+import { useScreeningTitleAnimation } from "~/composables/screening/useScreeningTitleAnimation";
+import { useScreeningSidebarAnimation } from "~/composables/screening/useScreeningSidebarAnimation";
+import { useScreeningFadeOut } from "~/composables/screening/useScreeningFadeOut";
+import { useScreeningWarmup } from "~/composables/screening/useScreeningWarmup";
 
 // Define the interface for sidebar elements
 interface SidebarElement {
@@ -149,32 +148,10 @@ const props = withDefaults(defineProps<Props>(), {
   title: () => "",
 });
 
-// Animation store
 const store = useAnimationsStore();
-
-// Composables
-const { createHighlightWrapper } = useHighlightWrapper();
-
-// Register ScrollTrigger
-// gsap.registerPlugin(gsap.ScrollTrigger); // Removed: should be registered globally
-
-// Utility function to convert vh percentage to px string
-const vh = (percentage: number): string => {
-  if (percentage < 0 || percentage > 100) {
-    throw new Error("Percentage must be between 0 and 100");
-  }
-  const viewportHeight = window.innerHeight;
-  const pixels = (viewportHeight * percentage) / 100;
-  return `${Math.round(pixels)}px`;
-};
-
-// ScrollTrigger timeline refs for cleanup
 let logoScrollTrigger: ScrollTrigger | null = null;
-let sidebarScrollTrigger: ScrollTrigger | null = null;
-let fadeOutScrollTrigger: ScrollTrigger | null = null;
-let containerFadeOutScrollTrigger: ScrollTrigger | null = null; // New ref for the second fade out ScrollTrigger
 let topScrollTrigger: ScrollTrigger | null = null;
-let mm: any = null; // matchMedia instance
+let mm: gsap.MatchMedia | null = null;
 
 const sectionRef = ref<HTMLElement | null>(null);
 const sidebarRef = ref<HTMLElement | null>(null);
@@ -182,13 +159,9 @@ const containerRef = ref<HTMLElement | null>(null);
 const titleRef = ref<HTMLElement | null>(null);
 const lastImageRef = ref<HTMLImageElement | null>(null);
 
-// Track if section is at top (sticky)
 const isAtTop = ref(false);
-
-// Title refs for split text animation
 const textRefs = ref<HTMLElement[]>([]);
 
-// Set text ref function (following the pattern from useSplitTextAnimation)
 const setTextRef = (
   el: Element | ComponentPublicInstance | null,
   index: number
@@ -198,102 +171,46 @@ const setTextRef = (
   }
 };
 
-// Set last image ref function
-const setLastImageRef = (el: any, index: number) => {
+const setLastImageRef = (el: Element | null, index: number) => {
   if (el instanceof HTMLElement && index === props.sidebarElements.length - 1) {
-    lastImageRef.value = el.querySelector("img");
+    lastImageRef.value = el.querySelector("img") as HTMLImageElement | null;
   }
 };
 
-// Set title ref function
-const setTitleRef = (el: any) => {
+const setTitleRef = (el: Element | ComponentPublicInstance | null) => {
   if (el) {
-    titleRef.value = el;
+    titleRef.value = el as HTMLElement;
     setTextRef(el, 0);
   }
 };
 
-// Store animations and split instances for cleanup
-const titleAnimations: any[] = [];
-const splitInstances: any[] = [];
-
-// Initialize split text animation for title with 50% starting opacity
-const initializeTitleAnimation = () => {
-  if (!textRefs.value.length || !sectionRef.value) return;
-
-  const triggerElement = sectionRef.value.parentElement;
-  if (!triggerElement) {
-    console.warn(
-      "initializeTitleAnimation: sectionRef.parentElement not found"
-    );
-    return;
-  }
-
-  textRefs.value.forEach((textElement) => {
-    if (!textElement) return;
-
-    // Define the words to highlight
-    const highlightWords = ["9", "cas", "sur", "10"];
-
-    const splitTypeInstance = new SplitType(textElement, {
-      types: "lines,words",
-      lineClass: "split-line",
-      wordClass: "split-word",
-      splitClass: "split-text",
-      tagName: "span",
-    });
-
-    const split = splitTypeInstance;
-    splitInstances.push(splitTypeInstance);
-
-    // Set initial state and create scroll trigger animation
-    nextTick(() => {
-      if (!split?.lines?.length) return;
-
-      // Use composable to find and wrap highlighted words
-      const highlightWrapper = createHighlightWrapper(
-        textElement,
-        highlightWords,
-        "/images/selection.svg"
-      );
-
-      // Create scroll trigger animation that goes from 50% to 100% opacity line by line
-      const titleAnimationTimeline = gsap.timeline();
-
-      titleAnimationTimeline.fromTo(
-        split.lines,
-        {
-          opacity: 0.4,
-        },
-        {
-          opacity: 1,
-          ease: "power2.out",
-          stagger: 0.05, // Stagger each line
-        }
-      );
-
-      const titleScrollTrigger = ScrollTrigger.create({
-        trigger: triggerElement,
-        start: "top 80%", // Start when section enters viewport
-        end: "center center", // End when section reaches center
-        scrub: 1, // Smooth scrubbing
-        animation: titleAnimationTimeline, // Link the timeline to this ScrollTrigger
-        onUpdate: (self) => {
-          // Reveal the SVG when the animation progresses past 80%
-          if (self.progress > 0.8 && highlightWrapper) {
-            highlightWrapper.classList.add("revealed");
-          }
-        },
-      });
-
-      // Store animation and ScrollTrigger for cleanup
-      titleAnimations.push(titleAnimationTimeline);
-      titleAnimations.push(titleScrollTrigger);
-    });
+const { initializeTitleAnimation, cleanupTitleAnimation } =
+  useScreeningTitleAnimation({
+    sectionRef,
+    textRefs,
   });
-};
 
-// Initialize logo scroll trigger for color change
+const { initializeSidebarAnimation, cleanupSidebarAnimation } =
+  useScreeningSidebarAnimation({
+    sidebarRef,
+    sectionRef,
+    titleRef,
+    lastImageRef,
+    containerRef,
+  });
+
+const { initializeFadeOutAnimation, cleanupFadeOutAnimation } =
+  useScreeningFadeOut({
+    containerRef,
+    sidebarRef,
+    sectionRef,
+  });
+
+const { setupScreeningPreloadObserver, cleanupWarmupObserver } =
+  useScreeningWarmup({
+    sectionRef,
+  });
+
 const initializeLogoColorChangeAnimation = () => {
   if (!sectionRef.value?.parentElement) {
     return;
@@ -315,13 +232,11 @@ const initializeLogoColorChangeAnimation = () => {
   });
 };
 
-// Initialize scroll trigger to track when section reaches top
 const initializeTopTracking = () => {
   if (!sectionRef.value) {
     return;
   }
 
-  // Use the section itself as trigger for consistency
   topScrollTrigger = ScrollTrigger.create({
     trigger: sectionRef.value,
     start: "top top",
@@ -333,227 +248,6 @@ const initializeTopTracking = () => {
       isAtTop.value = false;
     },
   });
-};
-
-// Initialize fade out animation for the container
-const initializeFadeOutAnimation = () => {
-  if (!containerRef.value || !sidebarRef.value || !sectionRef.value) return;
-
-  // Get all sidebar elements except the last one
-  const sidebarElements = Array.from(sidebarRef.value.children);
-  const otherElements = sidebarElements.slice(0, -1); // All except last
-
-  // Get the last element's title and paragraph
-  const lastElement = sidebarElements[sidebarElements.length - 1];
-  const lastElementTitle = lastElement?.querySelector("h3");
-  const lastElementParagraph = lastElement?.querySelector("p");
-
-  // Build array of elements to animate, filtering out null/undefined values
-  const elementsToFade = [...otherElements];
-  if (lastElementTitle) elementsToFade.push(lastElementTitle);
-  if (lastElementParagraph) elementsToFade.push(lastElementParagraph);
-
-  // First ScrollTrigger: fade out other sidebar elements and last element's title/paragraph
-  if (elementsToFade.length > 0) {
-    const fadeOutAnimation1 = gsap.timeline({
-      onComplete: () => console.log("Fade out 1 complete"),
-    });
-    fadeOutAnimation1.to(elementsToFade, {
-      opacity: 0,
-      ease: "power2.out",
-    });
-
-    fadeOutScrollTrigger = ScrollTrigger.create({
-      trigger: sectionRef.value,
-      start: `center top+=${vh(20)}`, // Start 26vh after center reaches top
-      end: `bottom top+=${vh(35)}`, // End when section bottom reaches viewport top
-      scrub: true, // Smooth scrubbing
-      animation: fadeOutAnimation1, // Link animation to ScrollTrigger
-    });
-
-    // Store first fade-out animation and its trigger for cleanup
-    titleAnimations.push(fadeOutAnimation1);
-    titleAnimations.push(fadeOutScrollTrigger);
-  }
-
-  // Second ScrollTrigger: scale down and fade out the container
-  const fadeOutAnimation2 = gsap.timeline({
-    onComplete: () => console.log("Fade out 2 complete"),
-  });
-  fadeOutAnimation2.to(containerRef.value, {
-    scale: 0.7, // Scale down to disappear
-    opacity: 0, // Fade out to transparent
-    y: vh(30),
-    ease: "power2.out",
-  });
-
-  containerFadeOutScrollTrigger = ScrollTrigger.create({
-    trigger: sectionRef.value,
-    start: "center top", // Start 200px before sidebar animation ends
-    end: "bottom top", // End when section bottom reaches viewport top
-    scrub: true, // Smooth scrubbing
-    animation: fadeOutAnimation2, // Link animation to ScrollTrigger
-  });
-
-  // Store second scroll trigger for cleanup
-  titleAnimations.push(fadeOutAnimation2);
-  titleAnimations.push(containerFadeOutScrollTrigger);
-};
-
-// Initialize sidebar scroll animation
-const initializeSidebarAnimation = () => {
-  if (
-    !sidebarRef.value ||
-    !sectionRef.value ||
-    !titleRef.value ||
-    !lastImageRef.value ||
-    !containerRef.value
-  )
-    return;
-
-  // Ensure parentElement exists and is a valid element
-  const triggerElement = containerRef.value.parentElement;
-  if (!triggerElement) {
-    console.warn(
-      "initializeSidebarAnimation: containerRef.parentElement not found"
-    );
-    return;
-  }
-
-  // Calculate the maximum y offset needed to align the last image top with title top
-  const titleRect = titleRef.value.getBoundingClientRect();
-  const lastImageRect = lastImageRef.value.getBoundingClientRect();
-  const sidebarRect = sidebarRef.value.getBoundingClientRect();
-
-  // Calculate how much the sidebar needs to move up so that the last image top aligns with title top
-  // The title top is relative to viewport, last image top is relative to its container
-  const titleTopRelativeToSidebar = titleRect.top - sidebarRect.top;
-  const lastImageTopRelativeToSidebar = lastImageRect.top - sidebarRect.top;
-
-  // The offset needed is the difference between these positions
-  const maxOffset = lastImageTopRelativeToSidebar - titleTopRelativeToSidebar;
-
-  // Create scroll trigger animation for sidebar movement
-  const sidebarAnimationTimeline = gsap.timeline();
-  sidebarAnimationTimeline.fromTo(
-    sidebarRef.value,
-    {
-      y: 0, // Start position (0px)
-    },
-    {
-      y: -maxOffset, // Move up by calculated offset to align last image with title
-      ease: "none", // Linear movement with scroll
-    }
-  );
-
-  sidebarScrollTrigger = ScrollTrigger.create({
-    trigger: triggerElement,
-    start: "top top", // Start when section top reaches viewport top
-    end: "center top", // End when section bottom reaches viewport top
-    scrub: true, // Smooth scrubbing
-    pin: false, // Don't pin, just transform
-    animation: sidebarAnimationTimeline, // Link timeline to ScrollTrigger
-  });
-  titleAnimations.push(sidebarAnimationTimeline);
-  titleAnimations.push(sidebarScrollTrigger);
-};
-
-// ------------------------
-// Early video preload when ScreeningSection enters view
-// ------------------------
-const { r2Config } = useContent();
-const { isIOS } = useIsIOS();
-let hasTriggeredPreloadOnce = false;
-const preloadedVideoUrls = new Set<string>();
-
-const buildVideoUrl = (
-  stepIndex: number,
-  format: "mp4" | "webm",
-  resolution: "mobile" | "1080p"
-) => {
-  const hasOptimized = r2Config.stepsWithOptimizedVideos.includes(stepIndex);
-  if (!hasOptimized) return "";
-  const stepNumber = String(stepIndex + 1).padStart(2, "0");
-  const stepFolder = `step-${stepNumber}`;
-  const base = r2Config.baseUrl.replace(/\/$/, "");
-  if (resolution === "mobile") {
-    return `${base}/${stepFolder}/${stepFolder}-mobile.${format}`;
-  }
-  return `${base}/${stepFolder}/${stepFolder}-${resolution}.${format}`;
-};
-
-const preloadVideoUrl = (url: string) => {
-  if (!url || preloadedVideoUrls.has(url)) return Promise.resolve();
-  preloadedVideoUrls.add(url);
-  return new Promise<void>((resolve) => {
-    const video = document.createElement("video");
-    video.preload = "auto";
-    video.playsInline = true;
-    video.muted = true;
-
-    let settled = false;
-    const settle = () => {
-      if (settled) return;
-      settled = true;
-      cleanup();
-      resolve();
-    };
-
-    const onCPT = () => settle();
-    const onLD = () => settle();
-    const onCP = () => settle();
-    const onErr = () => settle();
-    const cleanup = () => {
-      video.removeEventListener("canplaythrough", onCPT);
-      video.removeEventListener("loadeddata", onLD);
-      video.removeEventListener("canplay", onCP);
-      video.removeEventListener("error", onErr);
-      clearTimeout(tid);
-    };
-
-    video.addEventListener("canplaythrough", onCPT);
-    video.addEventListener("loadeddata", onLD);
-    video.addEventListener("canplay", onCP);
-    video.addEventListener("error", onErr);
-
-    video.src = url;
-    video.load();
-
-    const tid = window.setTimeout(() => {
-      console.warn(`[ScreeningSection] Preload timeout for ${url}`);
-      settle();
-    }, 6000);
-  });
-};
-
-const setupScreeningPreloadObserver = () => {
-  if (!sectionRef.value || hasTriggeredPreloadOnce) return;
-  const el = sectionRef.value;
-  const observer = new IntersectionObserver(
-    (entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting && !hasTriggeredPreloadOnce) {
-          hasTriggeredPreloadOnce = true;
-          observer.disconnect();
-
-          const useMobile = window.innerWidth <= 768;
-          const format = isIOS.value ? "mp4" : "webm";
-          const resolution = useMobile ? "mobile" : "1080p";
-
-          const stepsToPreload = [0, 1, 2];
-          const urls = stepsToPreload
-            .map((idx) => buildVideoUrl(idx, format, resolution))
-            .filter((u) => !!u);
-
-          Promise.allSettled(urls.map((u) => preloadVideoUrl(u))).then(() => {
-            // no-op; early warmup completed
-          });
-        }
-      });
-    },
-    { threshold: 0.25 }
-  );
-  observer.observe(el);
 };
 
 watch(
@@ -573,17 +267,13 @@ watch(
               initializeTitleAnimation();
               initializeTopTracking();
 
-              // Initialize matchMedia for desktop-only animations
               mm = gsap.matchMedia();
-
               mm.add("(min-width: 1024px)", () => {
-                // Desktop-only animations
                 initializeSidebarAnimation();
                 initializeFadeOutAnimation();
               });
               ScrollTrigger.refresh();
 
-              // Start IO-based early video preloading once ScreeningSection is visible
               setupScreeningPreloadObserver();
             });
           });
@@ -593,36 +283,15 @@ watch(
   }
 );
 
-// Cleanup on unmount
 onUnmounted(() => {
-  // Revert matchMedia (this will automatically clean up all animations and ScrollTriggers created within it)
-  if (mm) {
-    mm.revert();
-  }
-
-  // Clean up title animations and their ScrollTriggers
-  titleAnimations.forEach((anim) => {
-    if (anim.kill) {
-      anim.kill();
-    }
-  });
-
-  // Clean up split instances
-  splitInstances.forEach((instance) => {
-    if (instance && instance.revert) {
-      instance.revert();
-    }
-  });
-
-  // Clean up individual ScrollTriggers
-  if (logoScrollTrigger) logoScrollTrigger.kill();
-  if (topScrollTrigger) topScrollTrigger.kill();
-  if (sidebarScrollTrigger) sidebarScrollTrigger.kill();
-  if (fadeOutScrollTrigger) fadeOutScrollTrigger.kill();
-  if (containerFadeOutScrollTrigger) containerFadeOutScrollTrigger.kill();
+  mm?.revert();
+  cleanupTitleAnimation();
+  cleanupSidebarAnimation();
+  cleanupFadeOutAnimation();
+  cleanupWarmupObserver();
+  logoScrollTrigger?.kill();
+  topScrollTrigger?.kill();
 });
-
-// Auto-imported composables
 </script>
 
 <style scoped>
