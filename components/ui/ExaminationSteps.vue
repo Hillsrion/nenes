@@ -113,7 +113,8 @@
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from "vue";
 import { useAnimationsStore } from "../../stores";
 import { useVideos } from "../../composables/useVideos";
-import { useContent } from "../../composables/useContent";
+import { useExaminationVideoSources } from "~/composables/examination/useExaminationVideoSources";
+import { useExaminationScrollTriggers } from "~/composables/examination/useExaminationScrollTriggers";
 import ExaminationCard from "./ExaminationCard.vue";
 // GSAP with ScrollTrigger is registered globally in the app
 
@@ -136,14 +137,6 @@ const props = defineProps<Props>();
 
 const { $gsap } = useNuxtApp();
 const store = useAnimationsStore();
-const { r2Config } = useContent();
-
-// GSAP with ScrollTrigger is registered globally in the app
-
-// Configuration: Track which steps have optimized videos on R2 (from centralized config)
-// Add step indices here as you upload more folders to R2
-// Example: [0, 1, 2, 3, 4] for all steps
-const stepsWithOptimizedVideos = r2Config.stepsWithOptimizedVideos;
 
 // Refs
 const videoRef = ref<HTMLVideoElement | null>(null);
@@ -151,49 +144,19 @@ const containerRef = ref<HTMLElement | null>(null);
 const cardRefs = ref<(HTMLElement | null)[]>([]);
 const overlayRef = ref<HTMLDivElement | null>(null);
 
-// Current step tracking
 const currentStepIndex = ref(0);
+const stepsCount = computed(() => props.steps.length);
+const fallbackVideoUrl = ref("");
 
-// Video scale tracking for logo color change
-const currentVideoScale = ref(0);
-
-// Current step data
-const currentStep = computed(() => {
-  return props.steps[currentStepIndex.value] || null;
-});
-
-// Helper function to get video source URL based on format and resolution
-const getVideoSourceFor = (
-  stepIndex: number,
-  format: "mp4" | "webm",
-  resolution: "1080p" | "1440p" | "mobile"
-) => {
-  const stepNumber = String(stepIndex + 1).padStart(2, "0");
-  const stepFolder = `step-${stepNumber}`;
-
-  const hasOptimizedVideos = stepsWithOptimizedVideos.includes(stepIndex);
-
-  if (hasOptimizedVideos) {
-    const r2PublicUrl = r2Config.baseUrl;
-    if (resolution === "mobile") {
-      return `${r2PublicUrl}/${stepFolder}/${stepFolder}-mobile.${format}`;
-    }
-    return `${r2PublicUrl}/${stepFolder}/${stepFolder}-${resolution}.${format}`;
-  }
-
-  return actualVideoUrl.value || "";
-};
-
-const getCurrentStepVideoSource = (
-  format: "mp4" | "webm",
-  resolution: "1080p" | "1440p" | "mobile"
-) => getVideoSourceFor(currentStepIndex.value, format, resolution);
+const { getVideoSourceFor, getCurrentStepVideoSource } =
+  useExaminationVideoSources({
+    currentStepIndex,
+    fallbackVideoUrl,
+  });
 
 // Transition callback to handle fade effect with overlay
 const handleVideoTransition = (url: string) => {
   if (!overlayRef.value) return;
-
-  console.log("🎬 Handling fade transition for:", url);
 
   // Create GSAP timeline for smooth fade transition
   const tl = $gsap.timeline();
@@ -216,16 +179,8 @@ const handleVideoTransition = (url: string) => {
 
 // Use the videos composable
 const {
-  loadedVideos,
   videoLoading,
   actualVideoUrl,
-  isTransitioning,
-  isMobileOrTablet,
-  isLargeScreen,
-  loadVideo,
-  preloadUpcomingVideos,
-  transitionToVideo,
-  currentVideoUrl,
 } = useVideos({
   steps: props.steps,
   currentStepIndex: currentStepIndex,
@@ -235,6 +190,14 @@ const {
   getVideoSource: (stepIndex, format, resolution) =>
     getVideoSourceFor(stepIndex, format, resolution),
 });
+
+const { initializeStepScrollTriggers, cleanupStepScrollTriggers } =
+  useExaminationScrollTriggers({
+    $gsap,
+    cardRefs,
+    stepsCount,
+    currentStepIndex,
+  });
 
 // iOS device detection for conditional source ordering
 const isIOSDevice = ref(false);
@@ -297,46 +260,13 @@ const initializeAnimations = async () => {
     }
   );
 
-  // Video URL switching using GSAP with ScrollTrigger
-  nextTick(() => {
-    props.steps.forEach((_, index) => {
-      const cardElement = cardRefs.value[index];
-      if (cardElement) {
-        $gsap.fromTo(
-          {},
-          {},
-          {
-            scrollTrigger: {
-              trigger: cardElement,
-              start: "top 50%",
-              end: "bottom 50%",
-              onEnter: () => {
-                console.log(`🎯 ScrollTrigger onEnter - Step ${index + 1}`);
-                currentStepIndex.value = index;
-              },
-              onEnterBack: () => {
-                console.log(`🔙 ScrollTrigger onEnterBack - Step ${index + 1}`);
-                currentStepIndex.value = index;
-              },
-            },
-          }
-        );
-      }
-    });
-  });
+  initializeStepScrollTriggers();
 };
-
-// Watch for current step index changes
-watch(currentStepIndex, (newIndex, oldIndex) => {
-  console.log(`📊 currentStepIndex changed from ${oldIndex} to ${newIndex}`);
-  console.log(`🎥 Current step:`, props.steps[newIndex]);
-});
 
 // Watch for video URL changes and reload video
 watch(actualVideoUrl, (newUrl) => {
-  console.log("📹 Video URL changed to:", newUrl);
+  fallbackVideoUrl.value = newUrl || "";
   if (newUrl && videoRef.value) {
-    console.log("🔄 Reloading video element");
     videoRef.value.load();
   }
 });
@@ -367,6 +297,7 @@ watch(
 // Cleanup
 onUnmounted(() => {
   // Kill all GSAP animations and ScrollTriggers
+  cleanupStepScrollTriggers();
   $gsap.killTweensOf([videoRef.value, overlayRef.value, ...cardRefs.value]);
 });
 </script>
