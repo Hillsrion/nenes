@@ -7,7 +7,8 @@ type TSection =
   | "self-examination-header"
   | "self-examination"
   | "symptoms"
-  | "resources";
+  | "resources"
+  | "bust";
 
 type TSectionAnimationState = "idle" | "isAnimating" | "isComplete";
 
@@ -19,6 +20,7 @@ const sections: Record<TSection, { state: TSectionAnimationState }> = {
   "self-examination": { state: "idle" },
   symptoms: { state: "idle" },
   resources: { state: "idle" },
+  bust: { state: "idle" },
 };
 
 // Logo state

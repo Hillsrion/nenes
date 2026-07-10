@@ -28,6 +28,8 @@
         />
         <SymptomsSection :title="symptomsMainTitle" :cards="symptomsCards" />
 
+        <BustSection />
+
         <SelfExaminationSection :steps="selfExaminationSteps" />
 
         <!-- Resources Section -->
@@ -45,6 +47,7 @@ import EntrySection from "~/components/sections/EntrySection.vue";
 import ScreeningSection from "~/components/sections/ScreeningSection.vue";
 import SelfExaminationSection from "~/components/sections/SelfExaminationSection.vue";
 import SymptomsSection from "~/components/sections/SymptomsSection.vue";
+import BustSection from "~/components/sections/BustSection.vue";
 import ResourcesSection from "~/components/sections/ResourcesSection.vue";
 import Logo from "~/components/ui/Logo.vue";
 import CursorImageSpawner from "~/components/ui/CursorImageSpawner.vue";
