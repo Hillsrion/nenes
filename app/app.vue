@@ -64,11 +64,47 @@
         </div>
       </header>
 
+      <aside
+        class="absolute left-5 top-24 z-30 w-[min(19rem,calc(100%-2.5rem))] rounded-3xl border border-primary/10 bg-white/92 p-4 shadow-xl backdrop-blur md:left-8 md:top-28"
+      >
+        <div class="mb-4 px-1">
+          <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-[#f472b6]">
+            Prototype pédagogique
+          </p>
+          <h2 class="mt-1 text-lg font-bold">Illustrer un symptôme</h2>
+        </div>
+
+        <div class="flex flex-col gap-2">
+          <button
+            v-for="symptom in previewSymptoms"
+            :key="symptom.id"
+            type="button"
+            class="rounded-2xl border px-4 py-3 text-left transition"
+            :class="
+              activePreviewSymptom === symptom.id
+                ? 'border-[#e95678]/35 bg-[#fff0f4] text-primary shadow-sm'
+                : 'border-primary/5 bg-white/70 text-secondary hover:border-primary/15 hover:bg-white'
+            "
+            @click="activePreviewSymptom = symptom.id"
+          >
+            <span class="block text-sm font-bold">{{ symptom.label }}</span>
+            <span class="mt-0.5 block text-[11px] leading-snug opacity-75">
+              {{ symptom.short }}
+            </span>
+          </button>
+        </div>
+
+        <p class="mt-4 border-t border-primary/10 px-1 pt-3 text-[11px] leading-relaxed text-secondary">
+          {{ activePreviewSymptomContent.description }}
+        </p>
+      </aside>
+
       <main class="h-full pt-20 md:pt-16">
         <ThreeBustViewer
           model-url="/models/bust-photo-test.glb"
           :auto-rotate="false"
           :enable-zoom="true"
+          :symptom-type="activePreviewSymptom"
         />
       </main>
 
@@ -101,6 +137,56 @@ import { useLenis } from "lenis/vue";
 const store = useAnimationsStore();
 const route = useRoute();
 const isThreeDPreview = computed(() => route.query.preview3d === "photo");
+type PreviewSymptom = "none" | "asymmetry" | "skin" | "dimpling" | "nipple";
+
+const activePreviewSymptom = ref<PreviewSymptom>("skin");
+const previewSymptoms: Array<{
+  id: PreviewSymptom;
+  label: string;
+  short: string;
+  description: string;
+}> = [
+  {
+    id: "none",
+    label: "Modèle neutre",
+    short: "Masquer les annotations",
+    description: "Le maillage original, sans modification ni annotation.",
+  },
+  {
+    id: "asymmetry",
+    label: "Taille ou asymétrie",
+    short: "Comparer les deux volumes",
+    description:
+      "Les deux contours de tailles différentes attirent l’attention sur un changement récent de volume ou de symétrie.",
+  },
+  {
+    id: "skin",
+    label: "Aspect de la peau",
+    short: "Rougeur et peau d’orange",
+    description:
+      "La zone rouge ponctuée illustre une rougeur persistante ou une texture de peau d’orange à surveiller.",
+  },
+  {
+    id: "dimpling",
+    label: "Fossettes ou croûtes",
+    short: "Petites zones localisées",
+    description:
+      "Les cercles sombres signalent des rétractions, fossettes ou croûtes inhabituelles sur la peau.",
+  },
+  {
+    id: "nipple",
+    label: "Mamelon ou écoulement",
+    short: "Modification localisée",
+    description:
+      "Le repère et la goutte montrent une modification du mamelon ou un écoulement spontané.",
+  },
+];
+
+const activePreviewSymptomContent = computed(
+  () =>
+    previewSymptoms.find((symptom) => symptom.id === activePreviewSymptom.value) ??
+    previewSymptoms[0]
+);
 
 // Lenis instance for scroll control
 const lenis = useLenis();

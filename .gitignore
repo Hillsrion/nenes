@@ -25,3 +25,10 @@ logs
 
 # Local Netlify folder
 .netlify
+
+# Local 3D experiments and sensitive source material
+/breast-images/
+/public/models/
+/0D2A*.[jJ][pP][gG]
+/0D2A*.[jJ][pP][eE][gG]
+/session-ses_*.md

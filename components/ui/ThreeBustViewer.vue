@@ -21,11 +21,14 @@ import { ref, onMounted, onUnmounted, watch } from "vue";
 import * as THREE from "three";
 import { gsap } from "gsap";
 
+type SymptomType = "none" | "asymmetry" | "skin" | "dimpling" | "nipple";
+
 interface Props {
   modelUrl?: string;
   scrollProgress?: number; // 0 to 100
   autoRotate?: boolean;
   enableZoom?: boolean;
+  symptomType?: SymptomType;
   shapeType?: "round" | "asymmetric" | "ptose" | "mastectomy";
 }
 
@@ -34,6 +37,7 @@ const props = withDefaults(defineProps<Props>(), {
   scrollProgress: 0,
   autoRotate: true,
   enableZoom: false,
+  symptomType: "none",
   shapeType: "round",
 });
 
@@ -47,6 +51,9 @@ let scene: THREE.Scene | null = null;
 let camera: THREE.PerspectiveCamera | null = null;
 let modelGroup: THREE.Group | null = null;
 let mockBust: THREE.Group | null = null;
+let symptomRoot: THREE.Group | null = null;
+const symptomLayers = new Map<SymptomType, THREE.Group>();
+const symptomPulseObjects: THREE.Object3D[] = [];
 let controls: any = null;
 let animationFrameId = 0;
 
@@ -91,6 +98,217 @@ const goldMaterial = new THREE.MeshPhysicalMaterial({
   clearcoat: 1.0,
   clearcoatRoughness: 0.1,
 });
+
+interface SurfaceAnchor {
+  point: THREE.Vector3;
+  normal: THREE.Vector3;
+}
+
+const markerForward = new THREE.Vector3(0, 0, 1);
+
+const findFrontSurface = (
+  loadedModel: THREE.Object3D,
+  x: number,
+  y: number
+): SurfaceAnchor | null => {
+  if (!modelGroup) return null;
+
+  modelGroup.updateMatrixWorld(true);
+
+  const raycaster = new THREE.Raycaster(
+    new THREE.Vector3(x, y, 3),
+    new THREE.Vector3(0, 0, -1)
+  );
+  const hit = raycaster
+    .intersectObject(loadedModel, true)
+    .find((intersection) => intersection.face && intersection.object instanceof THREE.Mesh);
+
+  if (!hit?.face) return null;
+
+  const mesh = hit.object as THREE.Mesh;
+  const normalMatrix = new THREE.Matrix3().getNormalMatrix(mesh.matrixWorld);
+  const worldNormal = hit.face.normal.clone().applyMatrix3(normalMatrix).normalize();
+  const inverseGroupMatrix = new THREE.Matrix4().copy(modelGroup.matrixWorld).invert();
+
+  return {
+    point: modelGroup.worldToLocal(hit.point.clone()),
+    normal: worldNormal.transformDirection(inverseGroupMatrix).normalize(),
+  };
+};
+
+const placeOnSurface = (
+  object: THREE.Object3D,
+  anchor: SurfaceAnchor,
+  offset = 0.018
+) => {
+  object.position.copy(anchor.point).addScaledVector(anchor.normal, offset);
+  object.quaternion.setFromUnitVectors(markerForward, anchor.normal);
+};
+
+const registerPulse = (object: THREE.Object3D) => {
+  object.userData.baseScale = object.scale.clone();
+  symptomPulseObjects.push(object);
+};
+
+const addSurfaceRing = (
+  layer: THREE.Group,
+  anchor: SurfaceAnchor,
+  innerRadius: number,
+  outerRadius: number,
+  color: number,
+  opacity = 0.9
+) => {
+  const marker = new THREE.Mesh(
+    new THREE.RingGeometry(innerRadius, outerRadius, 64),
+    new THREE.MeshBasicMaterial({
+      color,
+      transparent: true,
+      opacity,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    })
+  );
+  marker.renderOrder = 10;
+  placeOnSurface(marker, anchor);
+  registerPulse(marker);
+  layer.add(marker);
+};
+
+const addSkinPatch = (layer: THREE.Group, anchor: SurfaceAnchor) => {
+  const patch = new THREE.Group();
+  const patchMaterial = new THREE.MeshBasicMaterial({
+    color: 0xd94c64,
+    transparent: true,
+    opacity: 0.4,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+  });
+  const patchDisc = new THREE.Mesh(new THREE.CircleGeometry(0.24, 64), patchMaterial);
+  patchDisc.renderOrder = 9;
+  patch.add(patchDisc);
+
+  const poreOffsets = [
+    [-0.11, 0.05],
+    [-0.05, 0.13],
+    [0.04, 0.11],
+    [0.12, 0.04],
+    [-0.13, -0.05],
+    [-0.04, -0.02],
+    [0.07, -0.04],
+    [0.01, -0.13],
+  ];
+  const poreMaterial = new THREE.MeshBasicMaterial({
+    color: 0x8f253c,
+    transparent: true,
+    opacity: 0.8,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+  });
+
+  poreOffsets.forEach(([x, y]) => {
+    const pore = new THREE.Mesh(new THREE.CircleGeometry(0.015, 20), poreMaterial);
+    pore.position.set(x, y, 0.004);
+    pore.renderOrder = 11;
+    patch.add(pore);
+  });
+
+  placeOnSurface(patch, anchor, 0.02);
+  registerPulse(patch);
+  layer.add(patch);
+};
+
+const addNippleMarker = (
+  layer: THREE.Group,
+  loadedModel: THREE.Object3D,
+  x: number,
+  y: number
+) => {
+  const anchor = findFrontSurface(loadedModel, x, y);
+  if (!anchor) return;
+
+  addSurfaceRing(layer, anchor, 0.075, 0.1, 0xb42347, 0.95);
+
+  const center = new THREE.Mesh(
+    new THREE.SphereGeometry(0.038, 24, 16),
+    new THREE.MeshBasicMaterial({ color: 0x8f1837 })
+  );
+  center.position.copy(anchor.point).addScaledVector(anchor.normal, 0.04);
+  center.renderOrder = 12;
+  layer.add(center);
+
+  const dropletAnchor = findFrontSurface(loadedModel, x, y - 0.18);
+  if (dropletAnchor) {
+    const droplet = new THREE.Mesh(
+      new THREE.SphereGeometry(0.034, 24, 16),
+      new THREE.MeshPhysicalMaterial({
+        color: 0xc72850,
+        roughness: 0.28,
+        clearcoat: 0.7,
+      })
+    );
+    droplet.scale.set(0.72, 1.35, 0.72);
+    droplet.position.copy(dropletAnchor.point).addScaledVector(dropletAnchor.normal, 0.045);
+    droplet.renderOrder = 12;
+    registerPulse(droplet);
+    layer.add(droplet);
+  }
+};
+
+const updateSymptomVisibility = (symptom: SymptomType) => {
+  symptomLayers.forEach((layer, type) => {
+    layer.visible = symptom !== "none" && type === symptom;
+  });
+};
+
+const buildSymptomLayers = (loadedModel: THREE.Object3D) => {
+  if (!modelGroup) return;
+
+  symptomRoot = new THREE.Group();
+  symptomRoot.name = "symptom-overlays";
+  modelGroup.add(symptomRoot);
+
+  const createLayer = (type: SymptomType) => {
+    const layer = new THREE.Group();
+    layer.name = `symptom-${type}`;
+    layer.visible = false;
+    symptomRoot?.add(layer);
+    symptomLayers.set(type, layer);
+    return layer;
+  };
+
+  const asymmetryLayer = createLayer("asymmetry");
+  const leftBreast = findFrontSurface(loadedModel, -0.34, 0.32);
+  const rightBreast = findFrontSurface(loadedModel, 0.34, 0.32);
+  if (leftBreast) addSurfaceRing(asymmetryLayer, leftBreast, 0.27, 0.3, 0xe08a2e);
+  if (rightBreast) addSurfaceRing(asymmetryLayer, rightBreast, 0.34, 0.38, 0xc24b65);
+
+  const skinLayer = createLayer("skin");
+  const skinAnchor = findFrontSurface(loadedModel, 0.35, 0.38);
+  if (skinAnchor) addSkinPatch(skinLayer, skinAnchor);
+
+  const dimplingLayer = createLayer("dimpling");
+  [
+    [-0.42, 0.4],
+    [-0.28, 0.25],
+    [-0.4, 0.12],
+  ].forEach(([x, y], index) => {
+    const anchor = findFrontSurface(loadedModel, x, y);
+    if (!anchor) return;
+    addSurfaceRing(
+      dimplingLayer,
+      anchor,
+      0.035 + index * 0.006,
+      0.065 + index * 0.008,
+      0x9e2944,
+      0.95
+    );
+  });
+
+  const nippleLayer = createLayer("nipple");
+  addNippleMarker(nippleLayer, loadedModel, 0.34, 0.26);
+
+  updateSymptomVisibility(props.symptomType);
+};
 
 // Helper: Build a beautiful stylized mock bust
 const createStylizedMockBust = (): THREE.Group => {
@@ -345,6 +563,7 @@ const initThree = async () => {
           loadedModel.position.y += 0.2; // Adjust vertical center
 
           modelGroup.add(loadedModel);
+          buildSymptomLayers(loadedModel);
           isLoading.value = false;
         },
         undefined,
@@ -406,6 +625,8 @@ const updateRotationFromScroll = (progress: number) => {
 const tick = () => {
   if (!renderer || !scene || !camera) return;
 
+  const elapsedTime = clock.getElapsedTime();
+
   // Update controls
   if (controls) {
     controls.update();
@@ -414,7 +635,6 @@ const tick = () => {
   // Handle auto rotation when not scrolling or user dragging
   if (modelGroup && props.autoRotate && (!controls || controls.state === -1)) {
     // Subtle breathing animation + slow auto spin
-    const elapsedTime = clock.getElapsedTime();
     modelGroup.position.y = 0.25 + Math.sin(elapsedTime * 1.5) * 0.05;
     
     // Only auto spin if scroll progress is not actively mutating rotation
@@ -422,6 +642,13 @@ const tick = () => {
       modelGroup.rotation.y += 0.003;
     }
   }
+
+  const symptomPulse = 1 + Math.sin(elapsedTime * 3.2) * 0.045;
+  symptomPulseObjects.forEach((object) => {
+    if (!object.visible && !object.parent?.visible) return;
+    const baseScale = object.userData.baseScale as THREE.Vector3 | undefined;
+    if (baseScale) object.scale.copy(baseScale).multiplyScalar(symptomPulse);
+  });
 
   // If scrollProgress is driven by GSAP, apply it
   if (props.scrollProgress !== 0) {
@@ -462,6 +689,15 @@ onUnmounted(() => {
   baseMaterial.dispose();
   generatedShapeMaterial.dispose();
   goldMaterial.dispose();
+
+  if (symptomRoot) {
+    symptomRoot.traverse((child) => {
+      if (!(child instanceof THREE.Mesh)) return;
+      child.geometry.dispose();
+      const materials = Array.isArray(child.material) ? child.material : [child.material];
+      materials.forEach((material) => material.dispose());
+    });
+  }
   
   if (mockBust) {
     mockBust.traverse((child) => {
@@ -492,6 +728,13 @@ watch(
     if (newVal !== undefined) {
       updateRotationFromScroll(newVal);
     }
+  }
+);
+
+watch(
+  () => props.symptomType,
+  (newSymptom) => {
+    updateSymptomVisibility(newSymptom);
   }
 );
 </script>
