@@ -28,6 +28,7 @@ logs
 
 # Local 3D experiments and sensitive source material
 /breast-images/
+/private-3d-inputs/
 /public/models/
 /0D2A*.[jJ][pP][gG]
 /0D2A*.[jJ][pP][eE][gG]

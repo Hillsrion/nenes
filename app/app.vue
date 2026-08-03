@@ -54,7 +54,7 @@
           <h1 class="text-lg font-bold md:text-xl">Reconstruction 3D depuis une photo</h1>
         </div>
         <div class="flex items-center gap-4 text-xs font-medium text-secondary md:text-sm">
-          <span>115 110 sommets · 4,0 Mo · 40,5 s</span>
+          <span>{{ previewModelName }} · aperçu local</span>
           <a
             href="/"
             class="rounded-full border border-primary/15 bg-white px-4 py-2 text-primary transition hover:border-primary/30"
@@ -101,7 +101,7 @@
 
       <main class="h-full pt-20 md:pt-16">
         <ThreeBustViewer
-          model-url="/models/bust-photo-test.glb"
+          :model-url="previewModelUrl"
           :auto-rotate="false"
           :enable-zoom="true"
           :symptom-type="activePreviewSymptom"
@@ -137,6 +137,16 @@ import { useLenis } from "lenis/vue";
 const store = useAnimationsStore();
 const route = useRoute();
 const isThreeDPreview = computed(() => route.query.preview3d === "photo");
+const previewModelName = computed(() => {
+  const requestedModel = Array.isArray(route.query.model)
+    ? route.query.model[0]
+    : route.query.model;
+
+  return requestedModel && /^[a-zA-Z0-9][a-zA-Z0-9._-]*\.glb$/.test(requestedModel)
+    ? requestedModel
+    : "bust-photo-symptoms.glb";
+});
+const previewModelUrl = computed(() => "/models/" + previewModelName.value);
 type PreviewSymptom = "none" | "asymmetry" | "skin" | "dimpling" | "nipple";
 
 const activePreviewSymptom = ref<PreviewSymptom>("skin");

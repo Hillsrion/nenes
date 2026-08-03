@@ -52,8 +52,10 @@ let camera: THREE.PerspectiveCamera | null = null;
 let modelGroup: THREE.Group | null = null;
 let mockBust: THREE.Group | null = null;
 let symptomRoot: THREE.Group | null = null;
+let embeddedSkinLayer: THREE.Object3D | null = null;
 const symptomLayers = new Map<SymptomType, THREE.Group>();
 const symptomPulseObjects: THREE.Object3D[] = [];
+const symptomMorphMeshes: THREE.Mesh[] = [];
 let controls: any = null;
 let animationFrameId = 0;
 
@@ -255,8 +257,24 @@ const addNippleMarker = (
 };
 
 const updateSymptomVisibility = (symptom: SymptomType) => {
+  symptomMorphMeshes.forEach((mesh) => {
+    if (!mesh.morphTargetInfluences || !mesh.morphTargetDictionary) return;
+
+    Object.values(mesh.morphTargetDictionary).forEach((index) => {
+      mesh.morphTargetInfluences![index] = 0;
+    });
+
+    if (symptom === "asymmetry" || symptom === "dimpling") {
+      const targetIndex = mesh.morphTargetDictionary[symptom];
+      if (targetIndex !== undefined) mesh.morphTargetInfluences[targetIndex] = 1;
+    }
+  });
+
+  if (embeddedSkinLayer) embeddedSkinLayer.visible = symptom === "skin";
+
   symptomLayers.forEach((layer, type) => {
-    layer.visible = symptom !== "none" && type === symptom;
+    const replacedByEmbeddedLayer = type === "skin" && Boolean(embeddedSkinLayer);
+    layer.visible = symptom !== "none" && type === symptom && !replacedByEmbeddedLayer;
   });
 };
 
@@ -542,11 +560,21 @@ const initThree = async () => {
               );
 
               // Shape-only GLBs contain geometry without a material or texture.
-              if (!hasTexture) {
+              if (!hasTexture && !child.userData.preserveMaterial) {
                 child.material = generatedShapeMaterial;
+              }
+
+              if (
+                child.morphTargetDictionary?.asymmetry !== undefined ||
+                child.morphTargetDictionary?.dimpling !== undefined
+              ) {
+                symptomMorphMeshes.push(child);
               }
             }
           });
+
+          embeddedSkinLayer = loadedModel.getObjectByName("SYMPTOM_skin") ?? null;
+          if (embeddedSkinLayer) embeddedSkinLayer.visible = false;
 
           // Center the loaded model inside the group
           const box = new THREE.Box3().setFromObject(loadedModel);
