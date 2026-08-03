@@ -34,10 +34,51 @@
 
         <!-- Resources Section -->
         <ResourcesSection />
-        <CursorImageSpawner :images="cursorImages" />
+        <CursorImageSpawner :images="cursorImages" :disabled="isThreeDPreview" />
       </div>
     </MainLayout>
   </div>
+
+  <ClientOnly>
+    <div
+      v-if="isThreeDPreview"
+      class="fixed inset-0 z-[10000] overflow-hidden bg-[#fff5f8] text-primary"
+    >
+      <header
+        class="absolute inset-x-0 top-0 z-20 flex flex-wrap items-center justify-between gap-3 border-b border-primary/10 bg-white/90 px-5 py-4 backdrop-blur md:px-8"
+      >
+        <div>
+          <p class="text-xs font-bold uppercase tracking-[0.2em] text-[#f472b6]">
+            Test local · forme seule
+          </p>
+          <h1 class="text-lg font-bold md:text-xl">Reconstruction 3D depuis une photo</h1>
+        </div>
+        <div class="flex items-center gap-4 text-xs font-medium text-secondary md:text-sm">
+          <span>115 110 sommets · 4,0 Mo · 40,5 s</span>
+          <a
+            href="/"
+            class="rounded-full border border-primary/15 bg-white px-4 py-2 text-primary transition hover:border-primary/30"
+          >
+            Retour au site
+          </a>
+        </div>
+      </header>
+
+      <main class="h-full pt-20 md:pt-16">
+        <ThreeBustViewer
+          model-url="/models/bust-photo-test.glb"
+          :auto-rotate="false"
+          :enable-zoom="true"
+        />
+      </main>
+
+      <div
+        class="pointer-events-none absolute bottom-5 left-1/2 z-20 -translate-x-1/2 rounded-full border border-primary/10 bg-white/90 px-4 py-2 text-center text-xs font-medium text-primary shadow-sm backdrop-blur"
+      >
+        Glisser pour tourner · molette ou pincement pour zoomer
+      </div>
+    </div>
+  </ClientOnly>
 </template>
 
 <script setup lang="ts">
@@ -51,12 +92,15 @@ import BustSection from "~/components/sections/BustSection.vue";
 import ResourcesSection from "~/components/sections/ResourcesSection.vue";
 import Logo from "~/components/ui/Logo.vue";
 import CursorImageSpawner from "~/components/ui/CursorImageSpawner.vue";
+import ThreeBustViewer from "~/components/ui/ThreeBustViewer.vue";
 import { useAnimationsStore } from "~/stores";
 import { useContent } from "~/composables/useContent";
 import { useLenis } from "lenis/vue";
 
 // Store
 const store = useAnimationsStore();
+const route = useRoute();
+const isThreeDPreview = computed(() => route.query.preview3d === "photo");
 
 // Lenis instance for scroll control
 const lenis = useLenis();
@@ -82,11 +126,13 @@ const isLoadingComplete = computed(
 useHead({
   htmlAttrs: {
     class: computed(() =>
-      !isLoadingComplete.value ? "overflow-hidden h-screen" : ""
+      !isThreeDPreview.value && !isLoadingComplete.value ? "overflow-hidden h-screen" : ""
     ),
   },
   bodyAttrs: {
-    class: computed(() => (!isLoadingComplete.value ? "overflow-hidden" : "")),
+    class: computed(() =>
+      !isThreeDPreview.value && !isLoadingComplete.value ? "overflow-hidden" : ""
+    ),
   },
   link: [
     // Preload critical illustrations that appear in loading sequence
@@ -140,6 +186,8 @@ watch(
 );
 
 onMounted(async () => {
+  if (isThreeDPreview.value) return;
+
   scrollTo(0, 0);
   lenis.value.stop();
   // Matomo tracking code

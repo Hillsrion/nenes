@@ -25,6 +25,7 @@ interface Props {
   modelUrl?: string;
   scrollProgress?: number; // 0 to 100
   autoRotate?: boolean;
+  enableZoom?: boolean;
   shapeType?: "round" | "asymmetric" | "ptose" | "mastectomy";
 }
 
@@ -32,6 +33,7 @@ const props = withDefaults(defineProps<Props>(), {
   modelUrl: "",
   scrollProgress: 0,
   autoRotate: true,
+  enableZoom: false,
   shapeType: "round",
 });
 
@@ -70,6 +72,15 @@ const baseMaterial = new THREE.MeshStandardMaterial({
   color: 0xf5e0eb, // Soft pastel cream pink
   roughness: 0.5,
   metalness: 0.1,
+});
+
+// Neutral clay material for shape-only photogrammetry exports.
+const generatedShapeMaterial = new THREE.MeshPhysicalMaterial({
+  color: 0xf3c8d8,
+  roughness: 0.72,
+  metalness: 0,
+  clearcoat: 0.08,
+  clearcoatRoughness: 0.8,
 });
 
 // Gold Kintsugi style material for the mastectomy scar
@@ -245,7 +256,7 @@ const initThree = async () => {
   controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
   controls.dampingFactor = 0.05;
-  controls.enableZoom = false; // Disable zoom to not interfere with page scrolling
+  controls.enableZoom = props.enableZoom;
   controls.enablePan = false;
   controls.minPolarAngle = Math.PI / 3; // Keep rotation bounded vertically
   controls.maxPolarAngle = Math.PI / 1.7;
@@ -300,9 +311,21 @@ const initThree = async () => {
             if (child instanceof THREE.Mesh) {
               child.castShadow = true;
               child.receiveShadow = true;
-              // Only override material if it doesn't have a high quality custom PBR material
-              if (!child.material || (child.material as THREE.Material).name === "default") {
-                child.material = skinMaterial;
+
+              if (!child.geometry.getAttribute("normal")) {
+                child.geometry.computeVertexNormals();
+              }
+
+              const sourceMaterials = Array.isArray(child.material)
+                ? child.material
+                : [child.material];
+              const hasTexture = sourceMaterials.some((material) =>
+                Boolean((material as THREE.MeshStandardMaterial | undefined)?.map)
+              );
+
+              // Shape-only GLBs contain geometry without a material or texture.
+              if (!hasTexture) {
+                child.material = generatedShapeMaterial;
               }
             }
           });
@@ -437,6 +460,7 @@ onUnmounted(() => {
   // Dispose geometries and materials
   skinMaterial.dispose();
   baseMaterial.dispose();
+  generatedShapeMaterial.dispose();
   goldMaterial.dispose();
   
   if (mockBust) {
