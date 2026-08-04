@@ -36,15 +36,17 @@ globalThis.FileReader ??= NodeFileReader;
 
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const projectDirectory = path.resolve(scriptDirectory, "..");
+const cliArguments = process.argv.slice(2);
+if (cliArguments[0] === "--") cliArguments.shift();
 const inputPath = path.resolve(
   projectDirectory,
-  process.argv[2] ?? "public/models/bust-photo-test.glb"
+  cliArguments[0] ?? "public/models/bust-photo-test.glb"
 );
 const outputPath = path.resolve(
   projectDirectory,
-  process.argv[3] ?? "public/models/bust-photo-symptoms.glb"
+  cliArguments[1] ?? "public/models/bust-photo-symptoms.glb"
 );
-const modelLabel = process.argv[4] ?? path.basename(outputPath, path.extname(outputPath));
+const modelLabel = cliArguments[2] ?? path.basename(outputPath, path.extname(outputPath));
 
 const smoothstep = (edge0, edge1, value) => {
   const normalized = THREE.MathUtils.clamp((value - edge0) / (edge1 - edge0), 0, 1);
@@ -69,10 +71,50 @@ const loadGLB = async (filePath) => {
 
 const findPrimaryMesh = (root) => {
   let primaryMesh = null;
+  let primaryVertexCount = 0;
   root.traverse((child) => {
-    if (child instanceof THREE.Mesh && !primaryMesh) primaryMesh = child;
+    if (!(child instanceof THREE.Mesh)) return;
+    const vertexCount = child.geometry.getAttribute("position")?.count ?? 0;
+    if (vertexCount > primaryVertexCount) {
+      primaryMesh = child;
+      primaryVertexCount = vertexCount;
+    }
   });
   return primaryMesh;
+};
+
+const createMorphNormalAttribute = (geometry, positionDelta, name) => {
+  const sourcePositions = geometry.getAttribute("position");
+  const sourceNormals = geometry.getAttribute("normal");
+  const deformedGeometry = geometry.clone();
+  const deformedPositions = sourcePositions.clone();
+
+  for (let index = 0; index < sourcePositions.count; index += 1) {
+    deformedPositions.setXYZ(
+      index,
+      sourcePositions.getX(index) + positionDelta[index * 3],
+      sourcePositions.getY(index) + positionDelta[index * 3 + 1],
+      sourcePositions.getZ(index) + positionDelta[index * 3 + 2]
+    );
+  }
+
+  deformedGeometry.morphAttributes = {};
+  deformedGeometry.setAttribute("position", deformedPositions);
+  deformedGeometry.deleteAttribute("normal");
+  deformedGeometry.computeVertexNormals();
+
+  const deformedNormals = deformedGeometry.getAttribute("normal");
+  const normalDelta = new Float32Array(sourceNormals.count * 3);
+  for (let index = 0; index < sourceNormals.count; index += 1) {
+    normalDelta[index * 3] = deformedNormals.getX(index) - sourceNormals.getX(index);
+    normalDelta[index * 3 + 1] = deformedNormals.getY(index) - sourceNormals.getY(index);
+    normalDelta[index * 3 + 2] = deformedNormals.getZ(index) - sourceNormals.getZ(index);
+  }
+
+  deformedGeometry.dispose();
+  const attribute = new THREE.Float32BufferAttribute(normalDelta, 3);
+  attribute.name = name;
+  return attribute;
 };
 
 const addMorphTargets = (mesh) => {
@@ -88,6 +130,7 @@ const addMorphTargets = (mesh) => {
   const half = size.clone().multiplyScalar(0.5);
 
   const asymmetry = new Float32Array(positions.count * 3);
+  const skin = new Float32Array(positions.count * 3);
   const dimpling = new Float32Array(positions.count * 3);
 
   const rightCenter = new THREE.Vector3(
@@ -133,27 +176,60 @@ const addMorphTargets = (mesh) => {
         half.y * 0.28
       ) * frontWeight;
 
-    const asymmetryOffset = rightWeight * 0.09 - leftWeight * 0.035;
+    // One breast gains volume while the other changes only slightly. The visual
+    // comparison remains readable without adding an annotation around the body.
+    const asymmetryOffset =
+      rightWeight * half.z * 0.27 - leftWeight * half.z * 0.035;
     asymmetry[index * 3] = normal.x * asymmetryOffset;
     asymmetry[index * 3 + 1] = normal.y * asymmetryOffset;
     asymmetry[index * 3 + 2] = normal.z * asymmetryOffset;
 
-    let dimpleWeight = 0;
+    const skinWeight =
+      gaussian2D(
+        vertex.x,
+        vertex.y,
+        rightCenter.x,
+        rightCenter.y + half.y * 0.03,
+        half.x * 0.31,
+        half.y * 0.23
+      ) * frontWeight;
+    const skinX = (vertex.x - rightCenter.x) / (half.x * 0.31);
+    const skinY = (vertex.y - rightCenter.y) / (half.y * 0.23);
+    const cellularWave =
+      Math.sin(skinX * 18.5 + Math.sin(skinY * 3.1) * 0.8) *
+      Math.sin(skinY * 20.5 - Math.sin(skinX * 2.7) * 0.7);
+    const pore = Math.pow(Math.max(0, cellularWave), 5);
+    const fineRelief =
+      Math.sin(skinX * 31.3 + skinY * 7.1) *
+      Math.sin(skinY * 28.7 - skinX * 5.3);
+    const skinOffset =
+      skinWeight * half.z * (0.007 + fineRelief * 0.004 - pore * 0.04);
+    skin[index * 3] = normal.x * skinOffset;
+    skin[index * 3 + 1] = normal.y * skinOffset;
+    skin[index * 3 + 2] = normal.z * skinOffset;
+
+    let dimpleOffset = 0;
     for (const [dimpleX, dimpleY] of dimpleCenters) {
-      dimpleWeight = Math.max(
-        dimpleWeight,
-        gaussian2D(
-          vertex.x,
-          vertex.y,
-          dimpleX,
-          dimpleY,
-          half.x * 0.075,
-          half.y * 0.06
-        )
+      const inner = gaussian2D(
+        vertex.x,
+        vertex.y,
+        dimpleX,
+        dimpleY,
+        half.x * 0.058,
+        half.y * 0.046
       );
+      const outer = gaussian2D(
+        vertex.x,
+        vertex.y,
+        dimpleX,
+        dimpleY,
+        half.x * 0.105,
+        half.y * 0.082
+      );
+      const raisedRim = Math.max(0, outer - inner);
+      dimpleOffset +=
+        (-inner * half.z * 0.115 + raisedRim * half.z * 0.028) * frontWeight;
     }
-    dimpleWeight *= frontWeight;
-    const dimpleOffset = -dimpleWeight * 0.075;
     dimpling[index * 3] = normal.x * dimpleOffset;
     dimpling[index * 3 + 1] = normal.y * dimpleOffset;
     dimpling[index * 3 + 2] = normal.z * dimpleOffset;
@@ -161,85 +237,28 @@ const addMorphTargets = (mesh) => {
 
   const asymmetryAttribute = new THREE.Float32BufferAttribute(asymmetry, 3);
   asymmetryAttribute.name = "asymmetry";
+  const skinAttribute = new THREE.Float32BufferAttribute(skin, 3);
+  skinAttribute.name = "skin";
   const dimplingAttribute = new THREE.Float32BufferAttribute(dimpling, 3);
   dimplingAttribute.name = "dimpling";
 
   geometry.morphTargetsRelative = true;
-  geometry.morphAttributes.position = [asymmetryAttribute, dimplingAttribute];
+  geometry.morphAttributes.position = [
+    asymmetryAttribute,
+    skinAttribute,
+    dimplingAttribute,
+  ];
+  geometry.morphAttributes.normal = [
+    createMorphNormalAttribute(geometry, asymmetry, "asymmetry"),
+    createMorphNormalAttribute(geometry, skin, "skin"),
+    createMorphNormalAttribute(geometry, dimpling, "dimpling"),
+  ];
   mesh.updateMorphTargets();
-  mesh.morphTargetDictionary = { asymmetry: 0, dimpling: 1 };
-  mesh.morphTargetInfluences = [0, 0];
-  mesh.userData.symptomMorphTargets = ["asymmetry", "dimpling"];
+  mesh.morphTargetDictionary = { asymmetry: 0, skin: 1, dimpling: 2 };
+  mesh.morphTargetInfluences = [0, 0, 0];
+  mesh.userData.symptomMorphTargets = ["asymmetry", "skin", "dimpling"];
 
   return { bounds, center, half };
-};
-
-const addEmbeddedRedness = (scene, mesh, center, half) => {
-  scene.updateMatrixWorld(true);
-
-  const targetX = center.x + half.x * 0.35;
-  const targetY = center.y + half.y * 0.13;
-  const raycaster = new THREE.Raycaster(
-    new THREE.Vector3(targetX, targetY, center.z + half.z + 1),
-    new THREE.Vector3(0, 0, -1)
-  );
-  const hit = raycaster.intersectObject(mesh, false)[0];
-  if (!hit?.face) throw new Error("Unable to anchor the redness patch on the mesh");
-
-  const anchor = mesh.worldToLocal(hit.point.clone());
-  const normalMatrix = new THREE.Matrix3().getNormalMatrix(mesh.matrixWorld);
-  const worldNormal = hit.face.normal.clone().applyMatrix3(normalMatrix).normalize();
-  const localNormal = worldNormal
-    .transformDirection(new THREE.Matrix4().copy(mesh.matrixWorld).invert())
-    .normalize();
-
-  const patch = new THREE.Group();
-  patch.name = "SYMPTOM_skin";
-  patch.userData.symptom = "skin";
-  patch.position.copy(anchor).addScaledVector(localNormal, 0.012);
-  patch.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), localNormal);
-
-  const disc = new THREE.Mesh(
-    new THREE.CircleGeometry(0.18, 64),
-    new THREE.MeshBasicMaterial({
-      color: 0xd94c64,
-      transparent: true,
-      opacity: 0.42,
-      side: THREE.DoubleSide,
-      depthWrite: false,
-    })
-  );
-  disc.name = "SYMPTOM_skin_redness";
-  disc.userData.preserveMaterial = true;
-  patch.add(disc);
-
-  const poreMaterial = new THREE.MeshBasicMaterial({
-    color: 0x8f253c,
-    transparent: true,
-    opacity: 0.85,
-    side: THREE.DoubleSide,
-    depthWrite: false,
-  });
-  const poreOffsets = [
-    [-0.08, 0.04],
-    [-0.035, 0.1],
-    [0.035, 0.085],
-    [0.09, 0.03],
-    [-0.095, -0.04],
-    [-0.025, -0.015],
-    [0.06, -0.035],
-    [0.005, -0.095],
-  ];
-
-  poreOffsets.forEach(([x, y], index) => {
-    const pore = new THREE.Mesh(new THREE.CircleGeometry(0.011, 20), poreMaterial);
-    pore.name = `SYMPTOM_skin_pore_${index + 1}`;
-    pore.userData.preserveMaterial = true;
-    pore.position.set(x, y, 0.003);
-    patch.add(pore);
-  });
-
-  mesh.add(patch);
 };
 
 const exportGLB = async (scene) => {
@@ -260,8 +279,8 @@ if (!primaryMesh) throw new Error(`No mesh found in ${inputPath}`);
 gltf.scene.name = modelLabel;
 gltf.scene.userData.modelLabel = modelLabel;
 
-const { center, half } = addMorphTargets(primaryMesh);
-addEmbeddedRedness(gltf.scene, primaryMesh, center, half);
+primaryMesh.getObjectByName("SYMPTOM_skin")?.removeFromParent();
+addMorphTargets(primaryMesh);
 
 const output = await exportGLB(gltf.scene);
 if (!(output instanceof ArrayBuffer)) throw new Error("GLB exporter returned a non-binary result");
@@ -269,4 +288,4 @@ await writeFile(outputPath, Buffer.from(output));
 
 console.log(`Generated ${path.relative(projectDirectory, outputPath)}`);
 console.log(`Model label: ${modelLabel}`);
-console.log("Embedded symptoms: asymmetry morph, dimpling morph, redness layer");
+console.log("Embedded symptoms: asymmetry, skin relief and dimpling morphs");

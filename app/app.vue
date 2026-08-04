@@ -352,28 +352,28 @@ const previewSymptoms: Array<{
     label: "Taille ou asymétrie",
     short: "Comparer les deux volumes",
     description:
-      "Les deux contours de tailles différentes attirent l’attention sur un changement récent de volume ou de symétrie.",
+      "La différence de volume est montrée directement par la forme des deux seins, sans contour ajouté.",
   },
   {
     id: "skin",
     label: "Aspect de la peau",
     short: "Rougeur et peau d’orange",
     description:
-      "La zone rouge ponctuée illustre une rougeur persistante ou une texture de peau d’orange à surveiller.",
+      "La rougeur et le microrelief intégrés au maillage illustrent une texture de peau d’orange à surveiller.",
   },
   {
     id: "dimpling",
     label: "Fossettes ou croûtes",
     short: "Petites zones localisées",
     description:
-      "Les cercles sombres signalent des rétractions, fossettes ou croûtes inhabituelles sur la peau.",
+      "Les rétractions du maillage et les petits reliefs irréguliers illustrent fossettes ou croûtes inhabituelles.",
   },
   {
     id: "nipple",
     label: "Mamelon ou écoulement",
     short: "Modification localisée",
     description:
-      "Le repère et la goutte montrent une modification du mamelon ou un écoulement spontané.",
+      "Des gouttes se forment au mamelon, se détachent puis tombent pour illustrer un écoulement spontané.",
   },
 ];
 

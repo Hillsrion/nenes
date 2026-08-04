@@ -101,8 +101,11 @@ multivue se trouve dans `docs/PHOTO_TO_3D_INSTALLATION.md`.
 
 ## Ajouter les variantes de symptômes
 
-Le générateur actuel ajoute deux morph targets, `asymmetry` et `dimpling`, plus
-une couche de rougeur intégrée :
+Le générateur ajoute trois morph targets, `asymmetry`, `skin` et `dimpling`.
+`skin` déforme réellement le maillage pour créer le microrelief de peau
+d'orange ; `dimpling` crée les rétractions et leurs bords en relief. Les
+normales de chaque morph sont exportées afin que ces détails réagissent à la
+lumière :
 
     pnpm model:symptoms -- \
       public/models/bust-02-base.glb \
@@ -111,7 +114,9 @@ une couche de rougeur intégrée :
 Le placement automatique suppose un modèle debout avec X horizontal, Y
 vertical et Z orienté vers l'avant. Toujours contrôler visuellement le
 résultat. Des variantes complètes du modèle ne sont pas nécessaires pour ces
-trois symptômes ; les morph targets et les matériaux suffisent.
+trois symptômes ; les morph targets et les couleurs de sommets suffisent. Les
+petites croûtes 3D et les gouttes animées sont ajoutées par le viewer et ne
+créent pas de copie supplémentaire du GLB.
 
 ## Nommer les variantes de volume par fruit
 
@@ -143,6 +148,9 @@ Le troisième argument de `model:symptoms` est enregistré dans les métadonnée
 du GLB. Tant que `bust-orange.glb` n'existe pas, le sélecteur affiche
 automatiquement `bust-photo-symptoms.glb`, le modèle de référence. Il n'est
 donc pas nécessaire de créer des fichiers factices pour compléter le catalogue.
+Les noms finaux déclarés dans le catalogue doivent toujours être produits par
+`model:symptoms` : ne pas renommer directement un fichier `*-base.glb`, car il
+ne contiendrait ni l'asymétrie ni les fossettes.
 
 ## Tester sans modifier le code
 
