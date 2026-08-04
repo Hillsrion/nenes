@@ -1,9 +1,15 @@
 <template>
   <div ref="containerRef" class="relative w-full h-full min-h-[350px] md:min-h-[500px]">
+    <div
+      aria-hidden="true"
+      class="absolute inset-0 transition-all duration-700"
+      :class="materialBackdropClass"
+    />
+
     <!-- Loading indicator -->
     <div
       v-if="isLoading"
-      class="absolute inset-0 flex items-center justify-center bg-transparent transition-opacity duration-300 pointer-events-none"
+      class="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-transparent transition-opacity duration-300"
     >
       <div class="flex flex-col items-center gap-3">
         <div class="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
@@ -12,16 +18,17 @@
     </div>
 
     <!-- WebGL Canvas -->
-    <canvas ref="canvasRef" class="w-full h-full block touch-none" />
+    <canvas ref="canvasRef" class="relative z-10 block h-full w-full touch-none" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from "vue";
+import { computed, ref, onMounted, onUnmounted, watch } from "vue";
 import * as THREE from "three";
 import { gsap } from "gsap";
 
 type SymptomType = "none" | "asymmetry" | "skin" | "dimpling" | "nipple";
+type MaterialStyle = "original" | "glass" | "glow" | "iridescent";
 
 interface Props {
   modelUrl?: string;
@@ -29,6 +36,7 @@ interface Props {
   autoRotate?: boolean;
   enableZoom?: boolean;
   symptomType?: SymptomType;
+  materialStyle?: MaterialStyle;
   shapeType?: "round" | "asymmetric" | "ptose" | "mastectomy";
 }
 
@@ -38,7 +46,21 @@ const props = withDefaults(defineProps<Props>(), {
   autoRotate: true,
   enableZoom: false,
   symptomType: "none",
+  materialStyle: "original",
   shapeType: "round",
+});
+
+const materialBackdropClass = computed(() => {
+  if (props.materialStyle === "glass") {
+    return "bg-[radial-gradient(circle_at_55%_45%,rgba(255,255,255,0.96)_0%,rgba(219,238,255,0.72)_34%,rgba(255,221,237,0.38)_62%,transparent_78%)]";
+  }
+  if (props.materialStyle === "glow") {
+    return "bg-[radial-gradient(circle_at_55%_48%,#4b164b_0%,#1c0a2d_44%,#080411_78%)]";
+  }
+  if (props.materialStyle === "iridescent") {
+    return "bg-[radial-gradient(circle_at_55%_45%,rgba(255,255,255,0.95)_0%,rgba(213,255,250,0.6)_30%,rgba(230,216,255,0.55)_55%,rgba(255,226,239,0.35)_76%,transparent_88%)]";
+  }
+  return "bg-transparent";
 });
 
 const containerRef = ref<HTMLDivElement | null>(null);
@@ -56,7 +78,15 @@ let embeddedSkinLayer: THREE.Object3D | null = null;
 const symptomLayers = new Map<SymptomType, THREE.Group>();
 const symptomPulseObjects: THREE.Object3D[] = [];
 const symptomMorphMeshes: THREE.Mesh[] = [];
+const modelMaterialEntries: Array<{
+  mesh: THREE.Mesh;
+  originalMaterial: THREE.Material | THREE.Material[];
+  hasTexture: boolean;
+}> = [];
 let controls: any = null;
+let composer: any = null;
+let bloomPass: any = null;
+let environmentTexture: THREE.Texture | null = null;
 let animationFrameId = 0;
 
 // Individual meshes for shape morphing
@@ -85,12 +115,122 @@ const baseMaterial = new THREE.MeshStandardMaterial({
 
 // Neutral clay material for shape-only photogrammetry exports.
 const generatedShapeMaterial = new THREE.MeshPhysicalMaterial({
-  color: 0xf3c8d8,
-  roughness: 0.72,
+  color: 0xe2aabf,
+  roughness: 0.78,
   metalness: 0,
+  envMapIntensity: 0.18,
   clearcoat: 0.08,
   clearcoatRoughness: 0.8,
 });
+
+const glassMaterial = new THREE.MeshPhysicalMaterial({
+  color: 0xffd8ea,
+  roughness: 0.08,
+  metalness: 0,
+  transmission: 0.88,
+  thickness: 1.25,
+  ior: 1.42,
+  attenuationColor: new THREE.Color(0xff8fbd),
+  attenuationDistance: 1.8,
+  envMapIntensity: 1.35,
+  clearcoat: 1,
+  clearcoatRoughness: 0.06,
+  transparent: true,
+  opacity: 0.94,
+  side: THREE.DoubleSide,
+});
+
+const glowMaterial = new THREE.MeshPhysicalMaterial({
+  color: 0x160315,
+  emissive: 0xff087f,
+  emissiveIntensity: 0.72,
+  roughness: 0.34,
+  metalness: 0.08,
+  envMapIntensity: 0.3,
+  clearcoat: 0.45,
+  clearcoatRoughness: 0.28,
+});
+
+const iridescentMaterial = new THREE.MeshPhysicalMaterial({
+  color: 0xbba7e8,
+  roughness: 0.22,
+  metalness: 0.18,
+  transmission: 0.08,
+  thickness: 0.6,
+  ior: 1.34,
+  envMapIntensity: 0.75,
+  clearcoat: 0.78,
+  clearcoatRoughness: 0.12,
+  iridescence: 1,
+  iridescenceIOR: 1.45,
+  iridescenceThicknessRange: [160, 680],
+  sheen: 0.9,
+  sheenColor: new THREE.Color(0x69f3e5),
+  sheenRoughness: 0.28,
+});
+
+const materialForStyle = (style: MaterialStyle) => {
+  if (style === "glass") return glassMaterial;
+  if (style === "glow") return glowMaterial;
+  if (style === "iridescent") return iridescentMaterial;
+  return null;
+};
+
+const applyMaterialStyle = (style: MaterialStyle) => {
+  const experimentMaterial = materialForStyle(style);
+
+  if (scene) {
+    scene.background = style === "glow" ? new THREE.Color(0x080411) : null;
+  }
+
+  modelMaterialEntries.forEach(({ mesh, originalMaterial, hasTexture }) => {
+    mesh.material =
+      style === "original"
+        ? hasTexture
+          ? originalMaterial
+          : generatedShapeMaterial
+        : experimentMaterial ?? originalMaterial;
+
+    const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    materials.forEach((material) => {
+      material.needsUpdate = true;
+    });
+  });
+
+  if (bloomPass) {
+    bloomPass.strength = style === "glow" ? 0.68 : style === "iridescent" ? 0.12 : 0;
+    bloomPass.radius = style === "glow" ? 0.46 : 0.2;
+    bloomPass.threshold = style === "glow" ? 0.58 : 0.78;
+  }
+
+  if (renderer) {
+    renderer.toneMappingExposure =
+      style === "glow" ? 0.72 : style === "glass" ? 1.2 : style === "iridescent" ? 0.9 : 1.1;
+  }
+};
+
+const registerModelMaterials = (root: THREE.Object3D, keepUntexturedOriginal = false) => {
+  root.traverse((child) => {
+    if (!(child instanceof THREE.Mesh) || child.userData.preserveMaterial) return;
+
+    const sourceMaterials = Array.isArray(child.material)
+      ? child.material
+      : [child.material];
+    const hasTexture =
+      keepUntexturedOriginal ||
+      sourceMaterials.some((material) =>
+        Boolean((material as THREE.MeshStandardMaterial | undefined)?.map)
+      );
+
+    modelMaterialEntries.push({
+      mesh: child,
+      originalMaterial: child.material,
+      hasTexture,
+    });
+  });
+
+  applyMaterialStyle(props.materialStyle);
+};
 
 // Gold Kintsugi style material for the mastectomy scar
 const goldMaterial = new THREE.MeshPhysicalMaterial({
@@ -487,6 +627,26 @@ const initThree = async () => {
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.1;
 
+  const [{ RoomEnvironment }, { EffectComposer }, { RenderPass }, { UnrealBloomPass }] =
+    await Promise.all([
+      import("three/examples/jsm/environments/RoomEnvironment.js"),
+      import("three/examples/jsm/postprocessing/EffectComposer.js"),
+      import("three/examples/jsm/postprocessing/RenderPass.js"),
+      import("three/examples/jsm/postprocessing/UnrealBloomPass.js"),
+    ]);
+  const pmremGenerator = new THREE.PMREMGenerator(renderer);
+  const roomEnvironment = new RoomEnvironment();
+  environmentTexture = pmremGenerator.fromScene(roomEnvironment, 0.04).texture;
+  scene.environment = environmentTexture;
+  roomEnvironment.dispose();
+  pmremGenerator.dispose();
+
+  composer = new EffectComposer(renderer);
+  composer.addPass(new RenderPass(scene, camera));
+  bloomPass = new UnrealBloomPass(new THREE.Vector2(width, height), 0, 0.2, 0.78);
+  composer.addPass(bloomPass);
+  applyMaterialStyle(props.materialStyle);
+
   // OrbitControls
   const { OrbitControls } = await import("three/examples/jsm/controls/OrbitControls.js");
   controls = new OrbitControls(camera, renderer.domElement);
@@ -552,18 +712,6 @@ const initThree = async () => {
                 child.geometry.computeVertexNormals();
               }
 
-              const sourceMaterials = Array.isArray(child.material)
-                ? child.material
-                : [child.material];
-              const hasTexture = sourceMaterials.some((material) =>
-                Boolean((material as THREE.MeshStandardMaterial | undefined)?.map)
-              );
-
-              // Shape-only GLBs contain geometry without a material or texture.
-              if (!hasTexture && !child.userData.preserveMaterial) {
-                child.material = generatedShapeMaterial;
-              }
-
               if (
                 child.morphTargetDictionary?.asymmetry !== undefined ||
                 child.morphTargetDictionary?.dimpling !== undefined
@@ -572,6 +720,8 @@ const initThree = async () => {
               }
             }
           });
+
+          registerModelMaterials(loadedModel);
 
           embeddedSkinLayer = loadedModel.getObjectByName("SYMPTOM_skin") ?? null;
           if (embeddedSkinLayer) embeddedSkinLayer.visible = false;
@@ -618,6 +768,7 @@ const initThree = async () => {
 const loadMockBust = () => {
   if (!modelGroup) return;
   mockBust = createStylizedMockBust();
+  registerModelMaterials(mockBust, true);
   modelGroup.add(mockBust);
   
   // Set initial shape immediately without animation
@@ -638,6 +789,7 @@ const handleResize = () => {
   camera.updateProjectionMatrix();
 
   renderer.setSize(width, height);
+  composer?.setSize(width, height);
 };
 
 // Scroll Reaction
@@ -683,7 +835,12 @@ const tick = () => {
     updateRotationFromScroll(props.scrollProgress);
   }
 
-  renderer.render(scene, camera);
+  if (props.materialStyle === "glow") {
+    glowMaterial.emissiveIntensity = 0.7 + Math.sin(elapsedTime * 1.8) * 0.08;
+  }
+
+  if (composer && props.materialStyle === "glow") composer.render();
+  else renderer.render(scene, camera);
   animationFrameId = requestAnimationFrame(tick);
 };
 
@@ -711,11 +868,16 @@ onUnmounted(() => {
   if (renderer) {
     renderer.dispose();
   }
+  composer?.dispose?.();
+  environmentTexture?.dispose();
   
   // Dispose geometries and materials
   skinMaterial.dispose();
   baseMaterial.dispose();
   generatedShapeMaterial.dispose();
+  glassMaterial.dispose();
+  glowMaterial.dispose();
+  iridescentMaterial.dispose();
   goldMaterial.dispose();
 
   if (symptomRoot) {
@@ -763,6 +925,13 @@ watch(
   () => props.symptomType,
   (newSymptom) => {
     updateSymptomVisibility(newSymptom);
+  }
+);
+
+watch(
+  () => props.materialStyle,
+  (newStyle) => {
+    applyMaterialStyle(newStyle);
   }
 );
 </script>

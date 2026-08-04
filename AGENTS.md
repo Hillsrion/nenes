@@ -21,3 +21,8 @@ Use the Hunyuan3D family for new assets: the Swift/MLX port with the small
 shape weights for fast single-photo iterations, and the official
 Hunyuan3D-2mv pipeline when several synchronized views must contribute to one
 mesh. Stable Fast 3D and TripoSR are fallbacks only.
+
+For breast-volume variants, use the fruit catalog in `config/bust-models.ts`.
+Keep its stable filename and model label aligned with the generated GLB. The
+viewer must continue to fall back to the reference model when a catalog entry
+has no local GLB.

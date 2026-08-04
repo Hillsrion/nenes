@@ -113,6 +113,37 @@ vertical et Z orienté vers l'avant. Toujours contrôler visuellement le
 résultat. Des variantes complètes du modèle ne sont pas nécessaires pour ces
 trois symptômes ; les morph targets et les matériaux suffisent.
 
+## Nommer les variantes de volume par fruit
+
+Le catalogue suivi par Git se trouve dans `config/bust-models.ts`. Les fruits
+sont des repères visuels et non des équivalences médicales ou des tailles de
+soutien-gorge.
+
+| Fruit | Label du modèle | GLB final local |
+| --- | --- | --- |
+| Citron | `Poitrine · Citron` | `public/models/bust-citron.glb` |
+| Orange | `Poitrine · Orange` | `public/models/bust-orange.glb` |
+| Pamplemousse | `Poitrine · Pamplemousse` | `public/models/bust-pamplemousse.glb` |
+| Melon | `Poitrine · Melon` | `public/models/bust-melon.glb` |
+| Pastèque | `Poitrine · Pastèque` | `public/models/bust-pasteque.glb` |
+
+Pour produire par exemple la variante Orange :
+
+    HUNYUAN3D_DIR=/chemin/vers/Hunyuan3D-Swift \
+    pnpm model:photo -- \
+      private-3d-inputs/orange/source.png \
+      public/models/bust-orange-base.glb
+
+    pnpm model:symptoms -- \
+      public/models/bust-orange-base.glb \
+      public/models/bust-orange.glb \
+      "Poitrine · Orange"
+
+Le troisième argument de `model:symptoms` est enregistré dans les métadonnées
+du GLB. Tant que `bust-orange.glb` n'existe pas, le sélecteur affiche
+automatiquement `bust-photo-symptoms.glb`, le modèle de référence. Il n'est
+donc pas nécessaire de créer des fichiers factices pour compléter le catalogue.
+
 ## Tester sans modifier le code
 
 Construire puis servir le site :
@@ -123,6 +154,14 @@ Construire puis servir le site :
 Ouvrir :
 
     http://localhost:4173/?preview3d=photo&model=bust-02-symptoms.glb
+
+Le switcher de matière propose `original`, `glass`, `glow` et `iridescent`.
+Pour ouvrir directement un rendu, ajouter par exemple :
+
+    &material=glass
+
+Ces matières sont appliquées au rendu Three.js et ne créent pas quatre copies
+du GLB. Les matériaux propres aux annotations de symptômes restent préservés.
 
 Vérifier successivement :
 

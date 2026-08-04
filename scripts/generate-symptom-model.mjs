@@ -44,6 +44,7 @@ const outputPath = path.resolve(
   projectDirectory,
   process.argv[3] ?? "public/models/bust-photo-symptoms.glb"
 );
+const modelLabel = process.argv[4] ?? path.basename(outputPath, path.extname(outputPath));
 
 const smoothstep = (edge0, edge1, value) => {
   const normalized = THREE.MathUtils.clamp((value - edge0) / (edge1 - edge0), 0, 1);
@@ -256,6 +257,9 @@ const gltf = await loadGLB(inputPath);
 const primaryMesh = findPrimaryMesh(gltf.scene);
 if (!primaryMesh) throw new Error(`No mesh found in ${inputPath}`);
 
+gltf.scene.name = modelLabel;
+gltf.scene.userData.modelLabel = modelLabel;
+
 const { center, half } = addMorphTargets(primaryMesh);
 addEmbeddedRedness(gltf.scene, primaryMesh, center, half);
 
@@ -264,4 +268,5 @@ if (!(output instanceof ArrayBuffer)) throw new Error("GLB exporter returned a n
 await writeFile(outputPath, Buffer.from(output));
 
 console.log(`Generated ${path.relative(projectDirectory, outputPath)}`);
+console.log(`Model label: ${modelLabel}`);
 console.log("Embedded symptoms: asymmetry morph, dimpling morph, redness layer");

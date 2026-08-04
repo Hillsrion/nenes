@@ -49,12 +49,12 @@
       >
         <div>
           <p class="text-xs font-bold uppercase tracking-[0.2em] text-[#f472b6]">
-            Test local · forme seule
+            Test local · matières 3D
           </p>
           <h1 class="text-lg font-bold md:text-xl">Reconstruction 3D depuis une photo</h1>
         </div>
         <div class="flex items-center gap-4 text-xs font-medium text-secondary md:text-sm">
-          <span>{{ previewModelName }} · aperçu local</span>
+          <span>{{ activeFruitModel.modelLabel }} · aperçu local</span>
           <a
             href="/"
             class="rounded-full border border-primary/15 bg-white px-4 py-2 text-primary transition hover:border-primary/30"
@@ -65,13 +65,86 @@
       </header>
 
       <aside
-        class="absolute left-5 top-24 z-30 w-[min(19rem,calc(100%-2.5rem))] rounded-3xl border border-primary/10 bg-white/92 p-4 shadow-xl backdrop-blur md:left-8 md:top-28"
+        class="absolute left-5 top-24 z-30 max-h-[calc(100vh-8rem)] w-[min(20rem,calc(100%-2.5rem))] overflow-y-auto rounded-3xl border border-primary/10 bg-white/92 p-4 shadow-xl backdrop-blur md:left-8 md:top-28"
       >
         <div class="mb-4 px-1">
           <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-[#f472b6]">
             Prototype pédagogique
           </p>
           <h2 class="mt-1 text-lg font-bold">Illustrer un symptôme</h2>
+        </div>
+
+        <div class="mb-4 rounded-2xl border border-primary/10 bg-[#fff8fa] p-3">
+          <label
+            for="bust-fruit-size"
+            class="block text-[10px] font-bold uppercase tracking-[0.16em] text-secondary"
+          >
+            Repère de volume
+          </label>
+          <select
+            id="bust-fruit-size"
+            v-model="activeFruitId"
+            class="mt-2 w-full rounded-xl border border-primary/15 bg-white px-3 py-2.5 text-sm font-bold text-primary outline-none transition focus:border-[#e95678]/50 focus:ring-2 focus:ring-[#e95678]/10"
+          >
+            <option
+              v-for="fruitModel in bustFruitModels"
+              :key="fruitModel.id"
+              :value="fruitModel.id"
+            >
+              {{ fruitModel.emoji }} {{ fruitModel.fruit }} · {{ fruitModel.sizeLabel }}
+            </option>
+          </select>
+
+          <div class="mt-2 px-0.5 text-[11px] leading-snug" aria-live="polite">
+            <p class="font-bold text-primary">{{ activeFruitModel.modelLabel }}</p>
+            <p v-if="isResolvingPreviewModel" class="mt-0.5 text-secondary">
+              Recherche du modèle local…
+            </p>
+            <p v-else-if="isUsingDefaultPreviewModel" class="mt-0.5 text-[#a35f2d]">
+              Modèle non généré · affichage du modèle de référence
+            </p>
+            <p v-else class="mt-0.5 text-[#27845b]">Modèle 3D disponible</p>
+          </div>
+
+          <p class="mt-2 border-t border-primary/10 pt-2 text-[10px] leading-relaxed text-secondary/75">
+            Comparaison visuelle uniquement, sans équivalence médicale de taille.
+          </p>
+        </div>
+
+        <div class="mb-4 rounded-2xl border border-primary/10 bg-white/80 p-3">
+          <p class="text-[10px] font-bold uppercase tracking-[0.16em] text-secondary">
+            Matière expérimentale
+          </p>
+          <div class="mt-2 grid grid-cols-2 gap-2">
+            <button
+              v-for="material in previewMaterials"
+              :key="material.id"
+              type="button"
+              class="flex items-center gap-2 rounded-xl border px-2.5 py-2 text-left transition"
+              :class="
+                activePreviewMaterial === material.id
+                  ? 'border-[#e95678]/40 bg-[#fff0f5] text-primary shadow-sm'
+                  : 'border-primary/8 bg-white text-secondary hover:border-primary/20'
+              "
+              :aria-pressed="activePreviewMaterial === material.id"
+              @click="activePreviewMaterial = material.id"
+            >
+              <span
+                aria-hidden="true"
+                class="h-7 w-7 shrink-0 rounded-full border border-white/70 shadow-inner"
+                :style="{ background: material.swatch }"
+              />
+              <span class="min-w-0">
+                <span class="block text-xs font-bold leading-tight">{{ material.label }}</span>
+                <span class="mt-0.5 block text-[9px] leading-tight opacity-70">
+                  {{ material.short }}
+                </span>
+              </span>
+            </button>
+          </div>
+          <p class="mt-2 px-0.5 text-[10px] leading-relaxed text-secondary/80">
+            {{ activePreviewMaterialContent.description }}
+          </p>
         </div>
 
         <div class="flex flex-col gap-2">
@@ -101,10 +174,12 @@
 
       <main class="h-full pt-20 md:pt-16">
         <ThreeBustViewer
+          :key="previewModelUrl"
           :model-url="previewModelUrl"
           :auto-rotate="false"
           :enable-zoom="true"
           :symptom-type="activePreviewSymptom"
+          :material-style="activePreviewMaterial"
         />
       </main>
 
@@ -129,6 +204,11 @@ import ResourcesSection from "~/components/sections/ResourcesSection.vue";
 import Logo from "~/components/ui/Logo.vue";
 import CursorImageSpawner from "~/components/ui/CursorImageSpawner.vue";
 import ThreeBustViewer from "~/components/ui/ThreeBustViewer.vue";
+import {
+  bustFruitModels,
+  defaultBustModel,
+  type BustFruitId,
+} from "~/config/bust-models";
 import { useAnimationsStore } from "~/stores";
 import { useContent } from "~/composables/useContent";
 import { useLenis } from "lenis/vue";
@@ -137,19 +217,124 @@ import { useLenis } from "lenis/vue";
 const store = useAnimationsStore();
 const route = useRoute();
 const isThreeDPreview = computed(() => route.query.preview3d === "photo");
-const previewModelName = computed(() => {
+const fallbackPreviewModelName = computed(() => {
   const requestedModel = Array.isArray(route.query.model)
     ? route.query.model[0]
     : route.query.model;
 
   return requestedModel && /^[a-zA-Z0-9][a-zA-Z0-9._-]*\.glb$/.test(requestedModel)
     ? requestedModel
-    : "bust-photo-symptoms.glb";
+    : defaultBustModel.fileName;
 });
+const requestedFruit = Array.isArray(route.query.fruit)
+  ? route.query.fruit[0]
+  : route.query.fruit;
+const activeFruitId = ref<BustFruitId>(
+  bustFruitModels.some((model) => model.id === requestedFruit)
+    ? (requestedFruit as BustFruitId)
+    : "pamplemousse"
+);
+const activeFruitModel = computed(
+  () =>
+    bustFruitModels.find((model) => model.id === activeFruitId.value) ??
+    bustFruitModels[2]
+);
+const previewModelName = ref(fallbackPreviewModelName.value);
+const isResolvingPreviewModel = ref(false);
+const isUsingDefaultPreviewModel = ref(true);
 const previewModelUrl = computed(() => "/models/" + previewModelName.value);
+let previewModelRequestId = 0;
+
+const resolvePreviewModel = async () => {
+  if (!import.meta.client || !isThreeDPreview.value) return;
+
+  const requestId = ++previewModelRequestId;
+  const candidateName = activeFruitModel.value.fileName;
+  isResolvingPreviewModel.value = true;
+
+  try {
+    const response = await fetch("/models/" + candidateName, {
+      method: "HEAD",
+      cache: "no-store",
+    });
+    const contentType = response.headers.get("content-type") ?? "";
+    const candidateExists = response.ok && !contentType.includes("text/html");
+
+    if (requestId !== previewModelRequestId) return;
+    previewModelName.value = candidateExists
+      ? candidateName
+      : fallbackPreviewModelName.value;
+    isUsingDefaultPreviewModel.value = !candidateExists;
+  } catch {
+    if (requestId !== previewModelRequestId) return;
+    previewModelName.value = fallbackPreviewModelName.value;
+    isUsingDefaultPreviewModel.value = true;
+  } finally {
+    if (requestId === previewModelRequestId) {
+      isResolvingPreviewModel.value = false;
+    }
+  }
+};
+
+watch(
+  [activeFruitId, fallbackPreviewModelName, isThreeDPreview],
+  () => void resolvePreviewModel(),
+  { immediate: true }
+);
+type PreviewMaterialStyle = "original" | "glass" | "glow" | "iridescent";
+const previewMaterials: Array<{
+  id: PreviewMaterialStyle;
+  label: string;
+  short: string;
+  description: string;
+  swatch: string;
+}> = [
+  {
+    id: "original",
+    label: "Original",
+    short: "Argile / texture",
+    description: "Conserve la texture du GLB ou applique une argile rose au maillage brut.",
+    swatch: "linear-gradient(135deg, #f7d7e3, #c991aa)",
+  },
+  {
+    id: "glass",
+    label: "Verre",
+    short: "Rose translucide",
+    description: "Transmission, réfraction douce et reflets de studio sur un verre rose.",
+    swatch: "linear-gradient(135deg, #ffffff 8%, #bde9ff 42%, #ffb8dc 78%, #ffffff)",
+  },
+  {
+    id: "glow",
+    label: "Glow",
+    short: "Néon émissif",
+    description: "Émission rose pulsée et halo lumineux sur un fond nocturne.",
+    swatch: "radial-gradient(circle at 35% 30%, #ffffff, #ff2b9b 24%, #6d0b6f 58%, #13031f)",
+  },
+  {
+    id: "iridescent",
+    label: "Nacre",
+    short: "Irisée",
+    description: "Une matière claire dont les reflets varient entre cyan, lilas et rose.",
+    swatch: "linear-gradient(135deg, #9ff7ec, #ddd2ff 46%, #ffcae1 72%, #fff6ce)",
+  },
+];
+const requestedMaterial = Array.isArray(route.query.material)
+  ? route.query.material[0]
+  : route.query.material;
+const activePreviewMaterial = ref<PreviewMaterialStyle>(
+  previewMaterials.some((material) => material.id === requestedMaterial)
+    ? (requestedMaterial as PreviewMaterialStyle)
+    : "original"
+);
+const activePreviewMaterialContent = computed(
+  () =>
+    previewMaterials.find((material) => material.id === activePreviewMaterial.value) ??
+    previewMaterials[0]
+);
+
 type PreviewSymptom = "none" | "asymmetry" | "skin" | "dimpling" | "nipple";
 
-const activePreviewSymptom = ref<PreviewSymptom>("skin");
+const activePreviewSymptom = ref<PreviewSymptom>("none");
 const previewSymptoms: Array<{
   id: PreviewSymptom;
   label: string;
