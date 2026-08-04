@@ -158,9 +158,13 @@ export default defineNuxtConfig({
           process.env.NUXT_PUBLIC_CLOUDFLARE_STREAM_CUSTOMER_CODE || "",
         accountId: process.env.NUXT_PUBLIC_CLOUDFLARE_ACCOUNT_ID || "",
       },
-      // Cloudflare R2 configuration (if using R2 for video hosting)
+      // Cloudflare R2 configuration for public media and derived 3D models.
       r2: {
         publicUrl: process.env.NUXT_PUBLIC_R2_PUBLIC_URL || "",
+        modelsPublicUrl:
+          process.env.NUXT_PUBLIC_3D_MODELS_URL ||
+          process.env.NUXT_PUBLIC_R2_PUBLIC_URL ||
+          "",
       },
       // Matomo configuration
       matomoUrl:

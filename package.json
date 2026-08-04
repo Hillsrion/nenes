@@ -9,6 +9,7 @@
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "upload-to-r2": "tsx scripts/upload-to-r2.ts",
+    "models:upload": "tsx scripts/upload-3d-models-to-r2.ts",
     "images:optimize": "scripts/optimize-images.sh",
     "model:check": "bash scripts/check-photo-to-3d-prereqs.sh",
     "model:photo": "node scripts/photo-to-3d.mjs",

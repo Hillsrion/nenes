@@ -49,12 +49,12 @@
       >
         <div>
           <p class="text-xs font-bold uppercase tracking-[0.2em] text-[#f472b6]">
-            Test local · matières 3D
+            Démo 3D · matières
           </p>
           <h1 class="text-lg font-bold md:text-xl">Reconstruction 3D depuis une photo</h1>
         </div>
         <div class="flex items-center gap-4 text-xs font-medium text-secondary md:text-sm">
-          <span>{{ activeFruitModel.modelLabel }} · aperçu local</span>
+          <span>{{ activeFruitModel.modelLabel }} · aperçu 3D</span>
           <a
             href="/"
             class="rounded-full border border-primary/15 bg-white px-4 py-2 text-primary transition hover:border-primary/30"
@@ -242,7 +242,19 @@ const activeFruitModel = computed(
 const previewModelName = ref(fallbackPreviewModelName.value);
 const isResolvingPreviewModel = ref(false);
 const isUsingDefaultPreviewModel = ref(true);
-const previewModelUrl = computed(() => "/models/" + previewModelName.value);
+const runtimeConfig = useRuntimeConfig();
+const modelsPublicUrl = String(runtimeConfig.public.r2.modelsPublicUrl || "").replace(
+  /\/+$/,
+  ""
+);
+const getPreviewModelUrl = (fileName: string) => {
+  const encodedName = encodeURIComponent(fileName);
+
+  return modelsPublicUrl
+    ? `${modelsPublicUrl}/models/${encodedName}`
+    : `/models/${encodedName}`;
+};
+const previewModelUrl = computed(() => getPreviewModelUrl(previewModelName.value));
 let previewModelRequestId = 0;
 
 const resolvePreviewModel = async () => {
@@ -253,7 +265,7 @@ const resolvePreviewModel = async () => {
   isResolvingPreviewModel.value = true;
 
   try {
-    const response = await fetch("/models/" + candidateName, {
+    const response = await fetch(getPreviewModelUrl(candidateName), {
       method: "HEAD",
       cache: "no-store",
     });
