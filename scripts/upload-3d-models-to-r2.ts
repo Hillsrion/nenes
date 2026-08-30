@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Upload a reviewed, derived GLB model to the existing Cloudflare R2 bucket.
+ * Upload a reviewed, derived GLB model to the dedicated Cloudflare R2 bucket.
  *
  * Usage:
  *   pnpm models:upload -- bust-photo-symptoms.glb
@@ -9,22 +9,19 @@
  *
  * The script deliberately accepts only file names declared in
  * config/bust-models.ts. Source photos and intermediate GLBs cannot be
- * uploaded by accident.
+ * uploaded by accident. Authentication is delegated to Wrangler OAuth.
  */
 
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { bustFruitModels, defaultBustModel } from "../config/bust-models";
 
-const accountId = process.env.CLOUDFLARE_ACCOUNT_ID || "";
-const accessKeyId = process.env.CLOUDFLARE_R2_ACCESS_KEY_ID || "";
-const secretAccessKey = process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY || "";
-const bucketName = process.env.CLOUDFLARE_R2_BUCKET_NAME || "";
+const bucketName =
+  process.env.CLOUDFLARE_R2_3D_BUCKET_NAME || "nenes-3d-models";
 const publicUrl = (
   process.env.NUXT_PUBLIC_3D_MODELS_URL ||
-  process.env.NUXT_PUBLIC_R2_PUBLIC_URL ||
-  ""
+  "https://pub-43370cee5bda403fb0a2206c460fe804.r2.dev"
 ).replace(/\/+$/, "");
 
 const localModelsDirectory = path.join(process.cwd(), "public", "models");
@@ -38,22 +35,9 @@ function fail(message: string): never {
   process.exit(1);
 }
 
-function validateEnvironment() {
-  const required = {
-    CLOUDFLARE_ACCOUNT_ID: accountId,
-    CLOUDFLARE_R2_ACCESS_KEY_ID: accessKeyId,
-    CLOUDFLARE_R2_SECRET_ACCESS_KEY: secretAccessKey,
-    CLOUDFLARE_R2_BUCKET_NAME: bucketName,
-    "NUXT_PUBLIC_3D_MODELS_URL or NUXT_PUBLIC_R2_PUBLIC_URL": publicUrl,
-  };
-
-  for (const [name, value] of Object.entries(required)) {
-    if (!value) fail(`${name} is required.`);
-  }
-}
-
 function getRequestedFiles(): string[] {
-  const args = process.argv.slice(2);
+  const rawArgs = process.argv.slice(2);
+  const args = rawArgs[0] === "--" ? rawArgs.slice(1) : rawArgs;
 
   if (args.length === 1 && args[0] === "--all-configured") {
     return [...configuredFiles];
@@ -75,15 +59,7 @@ function getRequestedFiles(): string[] {
   return [fileName];
 }
 
-function createClient() {
-  return new S3Client({
-    region: "auto",
-    endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
-    credentials: { accessKeyId, secretAccessKey },
-  });
-}
-
-async function uploadModel(client: S3Client, fileName: string) {
+function uploadModel(fileName: string) {
   const localPath = path.join(localModelsDirectory, fileName);
   const remotePath = `models/${fileName}`;
 
@@ -92,43 +68,53 @@ async function uploadModel(client: S3Client, fileName: string) {
     return false;
   }
 
-  const content = fs.readFileSync(localPath);
+  const size = fs.statSync(localPath).size;
   console.log(`\n📤 ${fileName} → ${remotePath}`);
-  console.log(`   ${(content.length / 1024 / 1024).toFixed(2)} MB`);
+  console.log(`   ${(size / 1024 / 1024).toFixed(2)} MB`);
 
-  await client.send(
-    new PutObjectCommand({
-      Bucket: bucketName,
-      Key: remotePath,
-      Body: content,
-      ContentType: "model/gltf-binary",
-      // Current catalogue names are stable. Keep updates visible within an hour.
-      CacheControl: "public, max-age=3600, must-revalidate",
-    })
+  const pnpmCommand = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
+  const upload = spawnSync(
+    pnpmCommand,
+    [
+      "dlx",
+      "wrangler",
+      "r2",
+      "object",
+      "put",
+      `${bucketName}/${remotePath}`,
+      "--file",
+      localPath,
+      "--content-type",
+      "model/gltf-binary",
+      "--cache-control",
+      "public, max-age=3600, must-revalidate",
+      "--remote",
+    ],
+    { stdio: "inherit" }
   );
+
+  if (upload.error) fail(`Wrangler could not start: ${upload.error.message}`);
+  if (upload.status !== 0) {
+    fail("Wrangler upload failed. Run `pnpm dlx wrangler login` and retry.");
+  }
 
   console.log(`✅ ${publicUrl}/${remotePath}`);
   return true;
 }
 
-async function main() {
-  validateEnvironment();
+function main() {
   const files = getRequestedFiles();
-  const client = createClient();
 
   console.log(`🧊 R2 bucket: ${bucketName}`);
   console.log(`📁 Local models: ${localModelsDirectory}`);
 
   let uploaded = 0;
   for (const fileName of files) {
-    if (await uploadModel(client, fileName)) uploaded += 1;
+    if (uploadModel(fileName)) uploaded += 1;
   }
 
   if (uploaded === 0) fail("No model was uploaded.");
   console.log(`\n✨ ${uploaded} modèle(s) publié(s).`);
 }
 
-main().catch((error) => {
-  console.error("\n❌ Upload failed:", error);
-  process.exit(1);
-});
+main();

@@ -1,93 +1,93 @@
 # Publication des modèles 3D avec Cloudflare R2
 
-Les GLB produits depuis des photos sont des fichiers dérivés sensibles : ils ne
-doivent pas être ajoutés au dépôt Git ni au bundle Netlify. Ils sont publiés
-séparément dans le bucket R2 existant, sous le préfixe `models/`.
+Les GLB finaux produits depuis des photos ne sont jamais ajoutés à Git. Ils
+sont publiés séparément dans le bucket dédié `nenes-3d-models`, sous le préfixe
+`models/`. Les photos originales, masques, prompts et historiques de
+conversation restent exclusivement locaux.
 
-## Une fois dans Cloudflare
+## Configuration active
 
-1. Dans le bucket R2 déjà utilisé pour les vidéos, connecter un domaine public
-   dédié, par exemple `models.nenes.fr`. Ne pas utiliser l'URL `r2.dev` en
-   production.
-2. Ajouter la règle CORS suivante, en remplaçant les origines par les domaines
-   réellement utilisés. Ajouter aussi l'URL Netlify de préproduction si elle
-   doit charger les modèles :
+- bucket : `nenes-3d-models` ;
+- région : Europe de l'Ouest ;
+- URL publique : `https://pub-43370cee5bda403fb0a2206c460fe804.r2.dev` ;
+- CORS : `GET` et `HEAD` depuis toutes les origines ;
+- modèle de référence : `models/bust-photo-symptoms.glb` ;
+- type MIME : `model/gltf-binary` ;
+- cache : une heure avec revalidation.
 
-   ```json
-   {
-     "rules": [
-       {
-         "allowed": {
-           "origins": [
-             "https://ton-site.netlify.app",
-             "https://www.ton-domaine.fr"
-           ],
-           "methods": ["GET", "HEAD"]
-         }
-       }
-     ]
-   }
-   ```
+Netlify définit aussi cette URL dans `NUXT_PUBLIC_3D_MODELS_URL`. Le projet
+utilise la même URL par défaut sur une nouvelle machine, sans secret local.
+Lorsqu'un domaine Cloudflare dédié sera disponible, définir cette variable sur
+le nouveau domaine permettra de remplacer l'URL `r2.dev` sans changer le code.
 
-3. Définir dans les variables Netlify de production :
+## Authentifier Wrangler sur une nouvelle machine
 
-   ```env
-   NUXT_PUBLIC_3D_MODELS_URL=https://models.nenes.fr
-   ```
+Wrangler utilise OAuth : aucune clé S3 ne doit être copiée dans le dépôt.
 
-   `NUXT_PUBLIC_R2_PUBLIC_URL` reste la variable des vidéos. Si la variable
-   dédiée est absente, le viewer utilise cette dernière par compatibilité.
+```bash
+pnpm dlx wrangler login
+pnpm dlx wrangler whoami
+pnpm dlx wrangler r2 bucket info nenes-3d-models
+```
 
-Les clés R2 (`CLOUDFLARE_R2_ACCESS_KEY_ID` et
-`CLOUDFLARE_R2_SECRET_ACCESS_KEY`) restent des secrets locaux ou de CI : ne
-jamais les définir avec le préfixe `NUXT_PUBLIC_`.
+Le compte authentifié doit avoir accès au bucket. Les identifiants OAuth sont
+conservés par Wrangler sur la machine et ne sont pas committés.
 
 ## Publier un GLB validé
 
-Seuls les noms déclarés dans `config/bust-models.ts` sont acceptés. Cette
-restriction évite de téléverser une photo source ou un GLB intermédiaire par
-erreur.
+Le script n'accepte que les noms déclarés dans `config/bust-models.ts`. Cette
+liste blanche empêche l'envoi accidentel d'une photo ou d'un GLB intermédiaire.
 
 ```bash
-# Charge le modèle de référence déjà validé.
+# Charge le modèle final de référence.
 pnpm models:upload -- bust-photo-symptoms.glb
 
-# Charge seulement les modèles qui existent localement parmi ceux du catalogue.
+# Charge les modèles du catalogue qui existent localement.
 pnpm models:upload -- --all-configured
 ```
 
-Le fichier local doit rester dans `public/models/`, qui est ignoré par Git. Le
-script l'envoie vers `models/<nom-du-fichier>.glb` avec le type MIME
-`model/gltf-binary` et un cache d'une heure : les noms actuels peuvent donc
-être remplacés sans laisser une version obsolète pendant un an.
+Le fichier local doit rester dans `public/models/`, dossier ignoré par Git. Le
+script appelle Wrangler et publie vers `models/<nom-du-fichier>.glb`.
 
-Après l'upload, vérifier l'URL avec une requête `HEAD` et ouvrir la démo :
+## Récupérer le modèle sur une nouvelle machine
 
 ```bash
-curl -I https://models.nenes.fr/models/bust-photo-symptoms.glb
-# Puis, après le déploiement Netlify :
-# https://www.ton-domaine.fr/?preview3d=photo
+mkdir -p public/models
+curl --fail \
+  --output public/models/bust-photo-symptoms.glb \
+  https://pub-43370cee5bda403fb0a2206c460fe804.r2.dev/models/bust-photo-symptoms.glb
 ```
 
-Attendre `200`, `Content-Type: model/gltf-binary` et les en-têtes CORS pour
-une requête venant du domaine du site. Après un changement de règle CORS sur
-un domaine déjà servi, purger le cache Cloudflare de ce domaine.
+Le fichier téléchargé reste ignoré par Git. Son SHA-256 de référence est :
 
-## Ordre de publication
+```text
+e0f9918b45ecd463411e7c81252e3789bfc9e6f9fc301aa82d61f60b2ca7a14f
+```
 
-1. Générer et inspecter le GLB localement.
-2. Le téléverser avec `models:upload`.
-3. Déployer ou fusionner le code/catalogue vers `main`.
-4. Contrôler l'URL de production et le fallback des fruits non encore produits.
+## Vérifier la publication
 
-Pour une évolution ultérieure qui ne doit jamais réutiliser un cache, déclarer
-un nouveau nom versionné (`bust-photo-symptoms-v2.glb`) dans le catalogue,
-téléverser ce fichier, puis déployer la modification de catalogue.
+```bash
+curl -I \
+  -H 'Origin: http://localhost:3000' \
+  https://pub-43370cee5bda403fb0a2206c460fe804.r2.dev/models/bust-photo-symptoms.glb
+```
 
-## Données autorisées
+La réponse doit être `200`, avec `Content-Type: model/gltf-binary` et
+`Access-Control-Allow-Origin: *`.
 
-Le bucket public doit contenir uniquement les GLB destinés à la démonstration.
-Il ne doit contenir ni photo originale, ni masque, ni prompt, ni historique de
-conversation. Avant publication, vérifier qu'une éventuelle texture embarquée
-ne rend pas la personne identifiable et que sa diffusion publique est
-autorisée.
+La démo de production se trouve à :
+
+```text
+https://main--nenes.netlify.app/?preview3d=photo&model=bust-photo-symptoms.glb
+```
+
+## Ajouter un nouveau modèle
+
+1. Générer et inspecter le GLB localement selon `PHOTO_TO_3D_WORKFLOW.md`.
+2. Déclarer son nom final et son label dans `config/bust-models.ts`.
+3. Le téléverser avec `pnpm models:upload -- <nom>.glb`.
+4. Vérifier son URL publique.
+5. Déployer ensuite le catalogue vers `main`.
+
+Pour éviter toute ambiguïté de cache lors d'une refonte importante, utiliser
+un nouveau nom versionné, par exemple `bust-photo-symptoms-v2.glb`.

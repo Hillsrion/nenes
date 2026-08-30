@@ -163,8 +163,7 @@ export default defineNuxtConfig({
         publicUrl: process.env.NUXT_PUBLIC_R2_PUBLIC_URL || "",
         modelsPublicUrl:
           process.env.NUXT_PUBLIC_3D_MODELS_URL ||
-          process.env.NUXT_PUBLIC_R2_PUBLIC_URL ||
-          "",
+          "https://pub-43370cee5bda403fb0a2206c460fe804.r2.dev",
       },
       // Matomo configuration
       matomoUrl:
