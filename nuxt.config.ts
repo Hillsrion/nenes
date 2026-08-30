@@ -144,7 +144,8 @@ export default defineNuxtConfig({
     r2Inputs: {
       accountId: process.env.CLOUDFLARE_ACCOUNT_ID || "",
       bucketName: process.env.CLOUDFLARE_R2_INPUTS_BUCKET_NAME || "nenes-3d-inputs",
-      apiToken: process.env.CLOUDFLARE_R2_INPUTS_API_TOKEN || "",
+      accessKeyId: process.env.CLOUDFLARE_R2_INPUTS_ACCESS_KEY_ID || "",
+      secretAccessKey: process.env.CLOUDFLARE_R2_INPUTS_SECRET_ACCESS_KEY || "",
       uploadAccessCode: process.env.NUXT_3D_UPLOAD_ACCESS_CODE || "",
     },
     public: {
