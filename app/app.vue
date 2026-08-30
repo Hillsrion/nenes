@@ -487,7 +487,7 @@ watch(
 );
 
 onMounted(async () => {
-  if (isThreeDPreview.value) return;
+  if (isThreeDPreview.value || isThreeDStudio.value) return;
 
   scrollTo(0, 0);
   lenis.value.stop();
