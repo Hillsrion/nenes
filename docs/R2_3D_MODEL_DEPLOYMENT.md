@@ -91,3 +91,32 @@ https://main--nenes.netlify.app/?preview3d=photo&model=bust-photo-symptoms.glb
 
 Pour éviter toute ambiguïté de cache lors d'une refonte importante, utiliser
 un nouveau nom versionné, par exemple `bust-photo-symptoms-v2.glb`.
+
+## Dépôt privé des photos
+
+Le formulaire `https://main--nenes.netlify.app/studio-3d` envoie les photos
+vers le bucket privé `nenes-3d-inputs`. Ce bucket n'a pas d'URL publique et ne
+doit jamais recevoir les GLB de démonstration.
+
+Pour activer l'envoi sur Netlify, créer dans Cloudflare un jeton d'API R2 avec
+lecture/écriture limitée exclusivement à `nenes-3d-inputs`, puis définir ces
+variables **secrètes** dans Netlify :
+
+```env
+CLOUDFLARE_ACCOUNT_ID=<compte-cloudflare>
+CLOUDFLARE_R2_INPUTS_BUCKET_NAME=nenes-3d-inputs
+CLOUDFLARE_R2_INPUTS_ACCESS_KEY_ID=<clé-r2-limitée>
+CLOUDFLARE_R2_INPUTS_SECRET_ACCESS_KEY=<secret-r2-limité>
+NUXT_3D_UPLOAD_ACCESS_CODE=<code-équipe-long-et-aléatoire>
+```
+
+Ne jamais préfixer ces variables par `NUXT_PUBLIC_`. Le formulaire demande le
+code d'équipe avant tout dépôt ; ce n'est pas un remplacement pour une vraie
+authentification utilisateur et une protection anti-abus avant une ouverture
+au public.
+
+Le endpoint serveur n'accepte que 1 à 4 fichiers JPEG, PNG ou WebP de 12 Mo au
+maximum. Il les enregistre sous une clé anonyme de soumission et retourne une
+référence, jamais une URL de photo. Mettre ensuite en place une règle de cycle
+de vie R2 pour supprimer automatiquement les entrées après la génération et
+la validation du GLB.

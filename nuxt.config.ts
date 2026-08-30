@@ -140,6 +140,14 @@ export default defineNuxtConfig({
 
   // Runtime configuration for asset optimization and Cloudflare Stream
   runtimeConfig: {
+    // Private R2 credentials used only by the server upload endpoint.
+    r2Inputs: {
+      accountId: process.env.CLOUDFLARE_ACCOUNT_ID || "",
+      bucketName: process.env.CLOUDFLARE_R2_INPUTS_BUCKET_NAME || "nenes-3d-inputs",
+      accessKeyId: process.env.CLOUDFLARE_R2_INPUTS_ACCESS_KEY_ID || "",
+      secretAccessKey: process.env.CLOUDFLARE_R2_INPUTS_SECRET_ACCESS_KEY || "",
+      uploadAccessCode: process.env.NUXT_3D_UPLOAD_ACCESS_CODE || "",
+    },
     public: {
       // Critical assets that should be preloaded
       criticalAssets: [

@@ -1,4 +1,7 @@
 <template>
+  <ThreeDStudio v-if="isThreeDStudio" />
+
+  <template v-else>
   <div ref="globalContainer">
     <VueLenis root />
 
@@ -190,6 +193,7 @@
       </div>
     </div>
   </ClientOnly>
+  </template>
 </template>
 
 <script setup lang="ts">
@@ -204,6 +208,7 @@ import ResourcesSection from "~/components/sections/ResourcesSection.vue";
 import Logo from "~/components/ui/Logo.vue";
 import CursorImageSpawner from "~/components/ui/CursorImageSpawner.vue";
 import ThreeBustViewer from "~/components/ui/ThreeBustViewer.vue";
+import ThreeDStudio from "~/components/ui/ThreeDStudio.vue";
 import {
   bustFruitModels,
   defaultBustModel,
@@ -216,6 +221,9 @@ import { useLenis } from "lenis/vue";
 // Store
 const store = useAnimationsStore();
 const route = useRoute();
+const isThreeDStudio = computed(
+  () => route.path === "/studio-3d" || route.query.studio3d === "upload"
+);
 const isThreeDPreview = computed(() => route.query.preview3d === "photo");
 const fallbackPreviewModelName = computed(() => {
   const requestedModel = Array.isArray(route.query.model)
