@@ -1,4 +1,3 @@
-import { timingSafeEqual } from "node:crypto";
 import { readMultipartFormData } from "h3";
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 
@@ -10,16 +9,6 @@ const acceptedTypes = new Map([
 const maxFileSize = 12 * 1024 * 1024;
 const maxPhotoCount = 4;
 
-function hasMatchingAccessCode(received: string, expected: string) {
-  const receivedBuffer = Buffer.from(received);
-  const expectedBuffer = Buffer.from(expected);
-
-  return (
-    receivedBuffer.length === expectedBuffer.length &&
-    timingSafeEqual(receivedBuffer, expectedBuffer)
-  );
-}
-
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig(event);
   const r2Inputs = config.r2Inputs;
@@ -27,13 +16,12 @@ export default defineEventHandler(async (event) => {
   if (
     !r2Inputs.accountId ||
     !r2Inputs.accessKeyId ||
-    !r2Inputs.secretAccessKey ||
-    !r2Inputs.uploadAccessCode
+    !r2Inputs.secretAccessKey
   ) {
     throw createError({
       statusCode: 503,
       statusMessage:
-        "Le dépôt photo privé n’est pas encore configuré sur ce déploiement.",
+        "Le service d’envoi n’est pas encore configuré sur ce déploiement.",
     });
   }
 
@@ -45,17 +33,10 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  const accessCode = String(
-    formData.find((part) => part.name === "accessCode")?.data.toString() || ""
-  );
   const consent = formData.find((part) => part.name === "consent")?.data.toString();
   const photos = formData.filter(
     (part) => part.name === "photos" && Boolean(part.filename) && Boolean(part.type)
   );
-
-  if (!hasMatchingAccessCode(accessCode, r2Inputs.uploadAccessCode)) {
-    throw createError({ statusCode: 401, statusMessage: "Code d’accès invalide." });
-  }
 
   if (consent !== "true") {
     throw createError({
@@ -115,7 +96,7 @@ export default defineEventHandler(async (event) => {
       } catch {
         throw createError({
           statusCode: 502,
-          statusMessage: "Le dépôt privé a refusé l’une des photos.",
+          statusMessage: "Le service d’envoi a refusé l’une des photos.",
         });
       }
     })

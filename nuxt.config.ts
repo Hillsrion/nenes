@@ -146,7 +146,6 @@ export default defineNuxtConfig({
       bucketName: process.env.CLOUDFLARE_R2_INPUTS_BUCKET_NAME || "nenes-3d-inputs",
       accessKeyId: process.env.CLOUDFLARE_R2_INPUTS_ACCESS_KEY_ID || "",
       secretAccessKey: process.env.CLOUDFLARE_R2_INPUTS_SECRET_ACCESS_KEY || "",
-      uploadAccessCode: process.env.NUXT_3D_UPLOAD_ACCESS_CODE || "",
     },
     public: {
       // Critical assets that should be preloaded
