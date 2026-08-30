@@ -1,4 +1,5 @@
 import { timingSafeEqual } from "node:crypto";
+import { readMultipartFormData } from "h3";
 
 const acceptedTypes = new Map([
   ["image/jpeg", "jpg"],
@@ -43,12 +44,21 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  const formData = await event.request.formData();
-  const accessCode = String(formData.get("accessCode") || "");
-  const consent = formData.get("consent");
-  const photos = formData
-    .getAll("photos")
-    .filter((value): value is File => value instanceof File);
+  const formData = await readMultipartFormData(event);
+  if (!formData) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: "Le formulaire multipart est requis.",
+    });
+  }
+
+  const accessCode = String(
+    formData.find((part) => part.name === "accessCode")?.data.toString() || ""
+  );
+  const consent = formData.find((part) => part.name === "consent")?.data.toString();
+  const photos = formData.filter(
+    (part) => part.name === "photos" && Boolean(part.filename) && Boolean(part.type)
+  );
 
   if (!hasMatchingAccessCode(accessCode, r2Inputs.uploadAccessCode)) {
     throw createError({ statusCode: 401, statusMessage: "Code d’accès invalide." });
@@ -69,14 +79,14 @@ export default defineEventHandler(async (event) => {
   }
 
   for (const photo of photos) {
-    if (!acceptedTypes.has(photo.type)) {
+    if (!acceptedTypes.has(photo.type || "")) {
       throw createError({
         statusCode: 415,
         statusMessage: "Les formats acceptés sont JPEG, PNG et WebP.",
       });
     }
 
-    if (photo.size === 0 || photo.size > maxFileSize) {
+    if (photo.data.byteLength === 0 || photo.data.byteLength > maxFileSize) {
       throw createError({
         statusCode: 413,
         statusMessage: "Chaque photo doit faire au maximum 12 Mo.",
@@ -88,16 +98,17 @@ export default defineEventHandler(async (event) => {
 
   await Promise.all(
     photos.map(async (photo, index) => {
-      const extension = acceptedTypes.get(photo.type) || "bin";
+      const contentType = photo.type || "application/octet-stream";
+      const extension = acceptedTypes.get(contentType) || "bin";
       const key = `submissions/${submissionId}/input-${String(index + 1).padStart(2, "0")}.${extension}`;
       const response = await fetch(objectUrl(r2Inputs.accountId, r2Inputs.bucketName, key), {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${r2Inputs.apiToken}`,
-          "Content-Type": photo.type,
+          "Content-Type": contentType,
           "Cache-Control": "private, no-store",
         },
-        body: Buffer.from(await photo.arrayBuffer()),
+        body: photo.data,
       });
 
       if (!response.ok) {
