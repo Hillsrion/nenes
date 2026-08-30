@@ -38,7 +38,7 @@
             </div>
             <span class="rounded-full bg-[#f7dce6] px-3 py-1 text-xs font-semibold text-[#7e1f3d]">Même cadrage · même lumière</span>
           </div>
-          <div class="mt-5 grid grid-cols-2 gap-3">
+          <div class="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <article v-for="view in photoViews" :key="view.step" class="rounded-2xl border border-[#efd1dc] bg-white p-4">
               <div class="flex items-center justify-between">
                 <span class="text-xs font-bold tracking-[0.18em] text-[#9d2146]">{{ view.step }}</span>
