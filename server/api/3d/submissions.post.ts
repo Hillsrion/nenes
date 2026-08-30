@@ -1,5 +1,4 @@
 import { timingSafeEqual } from "node:crypto";
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 
 const acceptedTypes = new Map([
   ["image/jpeg", "jpg"],
@@ -8,6 +7,15 @@ const acceptedTypes = new Map([
 ]);
 const maxFileSize = 12 * 1024 * 1024;
 const maxPhotoCount = 4;
+
+function objectUrl(accountId: string, bucketName: string, key: string) {
+  const encodedKey = key
+    .split("/")
+    .map((segment) => encodeURIComponent(segment))
+    .join("/");
+
+  return `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/r2/buckets/${encodeURIComponent(bucketName)}/objects/${encodedKey}`;
+}
 
 function hasMatchingAccessCode(received: string, expected: string) {
   const receivedBuffer = Buffer.from(received);
@@ -25,8 +33,7 @@ export default defineEventHandler(async (event) => {
 
   if (
     !r2Inputs.accountId ||
-    !r2Inputs.accessKeyId ||
-    !r2Inputs.secretAccessKey ||
+    !r2Inputs.apiToken ||
     !r2Inputs.uploadAccessCode
   ) {
     throw createError({
@@ -78,35 +85,27 @@ export default defineEventHandler(async (event) => {
   }
 
   const submissionId = crypto.randomUUID();
-  const submittedAt = new Date().toISOString();
-  const client = new S3Client({
-    region: "auto",
-    endpoint: `https://${r2Inputs.accountId}.r2.cloudflarestorage.com`,
-    credentials: {
-      accessKeyId: r2Inputs.accessKeyId,
-      secretAccessKey: r2Inputs.secretAccessKey,
-    },
-  });
 
   await Promise.all(
     photos.map(async (photo, index) => {
       const extension = acceptedTypes.get(photo.type) || "bin";
       const key = `submissions/${submissionId}/input-${String(index + 1).padStart(2, "0")}.${extension}`;
+      const response = await fetch(objectUrl(r2Inputs.accountId, r2Inputs.bucketName, key), {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${r2Inputs.apiToken}`,
+          "Content-Type": photo.type,
+          "Cache-Control": "private, no-store",
+        },
+        body: Buffer.from(await photo.arrayBuffer()),
+      });
 
-      await client.send(
-        new PutObjectCommand({
-          Bucket: r2Inputs.bucketName,
-          Key: key,
-          Body: Buffer.from(await photo.arrayBuffer()),
-          ContentType: photo.type,
-          CacheControl: "private, no-store",
-          Metadata: {
-            submission: submissionId,
-            received_at: submittedAt,
-            pipeline: "photo-to-3d",
-          },
-        })
-      );
+      if (!response.ok) {
+        throw createError({
+          statusCode: 502,
+          statusMessage: "Le dépôt privé a refusé l’une des photos.",
+        });
+      }
     })
   );
 
