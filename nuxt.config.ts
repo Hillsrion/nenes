@@ -171,6 +171,7 @@ export default defineNuxtConfig({
       // Cloudflare R2 configuration for public media and derived 3D models.
       r2: {
         publicUrl: process.env.NUXT_PUBLIC_R2_PUBLIC_URL || "",
+        inputsBucketName: process.env.NUXT_PUBLIC_R2_INPUTS_BUCKET_NAME || "",
         modelsPublicUrl:
           process.env.NUXT_PUBLIC_3D_MODELS_URL ||
           "https://pub-43370cee5bda403fb0a2206c460fe804.r2.dev",

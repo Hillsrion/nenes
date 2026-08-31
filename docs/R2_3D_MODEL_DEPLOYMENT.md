@@ -104,17 +104,21 @@ variables **secrètes** dans Netlify :
 
 ```env
 CLOUDFLARE_ACCOUNT_ID=<compte-cloudflare>
-CLOUDFLARE_R2_INPUTS_BUCKET_NAME=nenes-3d-inputs
 CLOUDFLARE_R2_INPUTS_ACCESS_KEY_ID=<clé-r2-limitée>
 CLOUDFLARE_R2_INPUTS_SECRET_ACCESS_KEY=<secret-r2-limité>
 ```
 
-Ne jamais préfixer ces variables par `NUXT_PUBLIC_`. L’API vérifie la
-configuration R2 côté serveur et limite les envois à quatre images (JPG, PNG ou
-WebP), de 12 Mo maximum chacune. Après avoir ajouté ou modifié ces variables,
-redéployer le site Netlify pour que la fonction serveur les prenne en compte.
-Les valeurs R2 sont lues uniquement par la fonction au runtime et ne doivent
-pas être injectées dans le build client.
+Le nom du bucket n’est pas un secret et peut être défini publiquement :
+
+```env
+NUXT_PUBLIC_R2_INPUTS_BUCKET_NAME=nenes-3d-inputs
+```
+
+Ne jamais préfixer les identifiants et clés privées par `NUXT_PUBLIC_`. L’API
+vérifie la configuration R2 côté serveur et limite les envois à quatre images
+(JPG, PNG ou WebP), de 12 Mo maximum chacune. Après avoir ajouté ou modifié
+ces variables, supprimer l’ancienne variable secrète
+du bucket, puis redéployer le site Netlify.
 Avant d’ouvrir ce formulaire à un public large, ajoutez une protection anti-abus
 adaptée (par exemple Turnstile et une limite de débit) pour éviter les dépôts
 automatisés.

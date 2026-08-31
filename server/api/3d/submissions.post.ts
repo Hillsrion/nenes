@@ -20,8 +20,7 @@ export default defineEventHandler(async (event) => {
         ""
     ),
     bucketName: String(
-      process.env.NUXT_R2_INPUTS_BUCKET_NAME ||
-        process.env.CLOUDFLARE_R2_INPUTS_BUCKET_NAME ||
+      process.env.NUXT_PUBLIC_R2_INPUTS_BUCKET_NAME ||
         configuredR2Inputs.bucketName ||
         ""
     ),
