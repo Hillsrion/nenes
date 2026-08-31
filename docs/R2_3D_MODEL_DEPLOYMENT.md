@@ -95,11 +95,11 @@ un nouveau nom versionné, par exemple `bust-photo-symptoms-v2.glb`.
 ## Ingestion des photos
 
 Le formulaire `https://main--nenes.netlify.app/studio-3d` envoie les photos
-vers le bucket `nenes-3d-inputs`. Il ne doit jamais recevoir les GLB de
+vers le bucket configuré pour les entrées. Il ne doit jamais recevoir les GLB de
 démonstration.
 
 Pour activer l'envoi sur Netlify, créer dans Cloudflare un jeton d'API R2 avec
-lecture/écriture limitée exclusivement à `nenes-3d-inputs`, puis définir ces
+lecture/écriture limitée exclusivement à ce bucket, puis définir ces
 variables **secrètes** dans Netlify :
 
 ```env
@@ -111,7 +111,7 @@ CLOUDFLARE_R2_INPUTS_SECRET_ACCESS_KEY=<secret-r2-limité>
 Le nom du bucket n’est pas un secret et peut être défini publiquement :
 
 ```env
-NUXT_PUBLIC_R2_INPUTS_BUCKET_NAME=nenes-3d-inputs
+NUXT_PUBLIC_R2_INPUTS_BUCKET_NAME=<nom-du-bucket>
 ```
 
 Ne jamais préfixer les identifiants et clés privées par `NUXT_PUBLIC_`. L’API
