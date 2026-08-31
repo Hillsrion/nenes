@@ -14,27 +14,27 @@ export default defineEventHandler(async (event) => {
   const configuredR2Inputs = config.r2Inputs || {};
   const r2Inputs = {
     accountId: String(
-      configuredR2Inputs.accountId ||
-        process.env.NUXT_R2_INPUTS_ACCOUNT_ID ||
+      process.env.NUXT_R2_INPUTS_ACCOUNT_ID ||
         process.env.CLOUDFLARE_ACCOUNT_ID ||
+        configuredR2Inputs.accountId ||
         ""
     ),
     bucketName: String(
-      configuredR2Inputs.bucketName ||
-        process.env.NUXT_R2_INPUTS_BUCKET_NAME ||
+      process.env.NUXT_R2_INPUTS_BUCKET_NAME ||
         process.env.CLOUDFLARE_R2_INPUTS_BUCKET_NAME ||
-        "nenes-3d-inputs"
+        configuredR2Inputs.bucketName ||
+        ""
     ),
     accessKeyId: String(
-      configuredR2Inputs.accessKeyId ||
-        process.env.NUXT_R2_INPUTS_ACCESS_KEY_ID ||
+      process.env.NUXT_R2_INPUTS_ACCESS_KEY_ID ||
         process.env.CLOUDFLARE_R2_INPUTS_ACCESS_KEY_ID ||
+        configuredR2Inputs.accessKeyId ||
         ""
     ),
     secretAccessKey: String(
-      configuredR2Inputs.secretAccessKey ||
-        process.env.NUXT_R2_INPUTS_SECRET_ACCESS_KEY ||
+      process.env.NUXT_R2_INPUTS_SECRET_ACCESS_KEY ||
         process.env.CLOUDFLARE_R2_INPUTS_SECRET_ACCESS_KEY ||
+        configuredR2Inputs.secretAccessKey ||
         ""
     ),
   };

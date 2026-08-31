@@ -142,20 +142,13 @@ export default defineNuxtConfig({
   runtimeConfig: {
     // Private R2 credentials used only by the server upload endpoint.
     r2Inputs: {
-      accountId:
-        process.env.NUXT_R2_INPUTS_ACCOUNT_ID || process.env.CLOUDFLARE_ACCOUNT_ID || "",
-      bucketName:
-        process.env.NUXT_R2_INPUTS_BUCKET_NAME ||
-        process.env.CLOUDFLARE_R2_INPUTS_BUCKET_NAME ||
-        "nenes-3d-inputs",
-      accessKeyId:
-        process.env.NUXT_R2_INPUTS_ACCESS_KEY_ID ||
-        process.env.CLOUDFLARE_R2_INPUTS_ACCESS_KEY_ID ||
-        "",
-      secretAccessKey:
-        process.env.NUXT_R2_INPUTS_SECRET_ACCESS_KEY ||
-        process.env.CLOUDFLARE_R2_INPUTS_SECRET_ACCESS_KEY ||
-        "",
+      // Resolve these values only inside the server function at request time.
+      // Keeping them empty during the build prevents Netlify secret scanning
+      // from finding private deployment values in generated artifacts.
+      accountId: "",
+      bucketName: "",
+      accessKeyId: "",
+      secretAccessKey: "",
     },
     public: {
       // Critical assets that should be preloaded
