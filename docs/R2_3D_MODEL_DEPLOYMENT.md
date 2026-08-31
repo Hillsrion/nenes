@@ -110,10 +110,12 @@ CLOUDFLARE_R2_INPUTS_SECRET_ACCESS_KEY=<secret-r2-limité>
 ```
 
 Ne jamais préfixer ces variables par `NUXT_PUBLIC_`. L’API vérifie le
-consentement et limite les envois à quatre images (JPG, PNG ou WebP), de 12 Mo
-maximum chacune. Avant d’ouvrir ce formulaire à un public large, ajoutez une
-protection anti-abus adaptée (par exemple Turnstile et une limite de débit)
-pour éviter les dépôts automatisés.
+configuration R2 côté serveur et limite les envois à quatre images (JPG, PNG ou
+WebP), de 12 Mo maximum chacune. Après avoir ajouté ou modifié ces variables,
+redéployer le site Netlify pour que la fonction serveur les prenne en compte.
+Avant d’ouvrir ce formulaire à un public large, ajoutez une protection anti-abus
+adaptée (par exemple Turnstile et une limite de débit) pour éviter les dépôts
+automatisés.
 
 Le endpoint serveur n'accepte que 1 à 4 fichiers JPEG, PNG ou WebP de 12 Mo au
 maximum. Il les enregistre sous une clé anonyme de soumission et retourne une

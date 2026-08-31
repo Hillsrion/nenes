@@ -1,5 +1,9 @@
 <template>
-  <div ref="containerRef" class="relative w-full h-full min-h-[350px] md:min-h-[500px]">
+  <div
+    ref="containerRef"
+    class="relative h-full w-full"
+    :class="compact ? 'min-h-0' : 'min-h-[350px] md:min-h-[500px]'"
+  >
     <div
       aria-hidden="true"
       class="absolute inset-0 transition-all duration-700"
@@ -18,7 +22,11 @@
     </div>
 
     <!-- WebGL Canvas -->
-    <canvas ref="canvasRef" class="relative z-10 block h-full w-full touch-none" />
+    <canvas
+      ref="canvasRef"
+      class="relative z-10 block h-full w-full touch-none"
+      :class="{ 'pointer-events-none': !interactive }"
+    />
   </div>
 </template>
 
@@ -38,6 +46,9 @@ interface Props {
   scrollProgress?: number; // 0 to 100
   autoRotate?: boolean;
   enableZoom?: boolean;
+  interactive?: boolean;
+  compact?: boolean;
+  initialRotationY?: number;
   symptomType?: SymptomType;
   materialStyle?: MaterialStyle;
   shapeType?: "round" | "asymmetric" | "ptose" | "mastectomy";
@@ -48,6 +59,9 @@ const props = withDefaults(defineProps<Props>(), {
   scrollProgress: 0,
   autoRotate: true,
   enableZoom: false,
+  interactive: true,
+  compact: false,
+  initialRotationY: 0,
   symptomType: "none",
   materialStyle: "original",
   shapeType: "round",
@@ -427,6 +441,7 @@ const initThree = async () => {
   controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
   controls.dampingFactor = 0.05;
+  controls.enableRotate = props.interactive;
   controls.enableZoom = props.enableZoom;
   controls.enablePan = false;
   controls.minPolarAngle = Math.PI / 3; // Keep rotation bounded vertically
@@ -529,6 +544,7 @@ const initThree = async () => {
           loadedModel.position.y += 0.2; // Adjust vertical center
 
           modelGroup.add(loadedModel);
+          modelGroup.rotation.y = props.initialRotationY;
           symptomEffects.build(loadedModel, props.symptomType);
           isLoading.value = false;
         },
@@ -558,6 +574,7 @@ const loadMockBust = () => {
   mockBust = createStylizedMockBust();
   registerModelMaterials(mockBust, true);
   modelGroup.add(mockBust);
+  modelGroup.rotation.y = props.initialRotationY;
   
   // Set initial shape immediately without animation
   animateToShape(props.shapeType, true);

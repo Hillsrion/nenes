@@ -427,12 +427,16 @@ const isLoadingComplete = computed(
 useHead({
   htmlAttrs: {
     class: computed(() =>
-      !isThreeDPreview.value && !isLoadingComplete.value ? "overflow-hidden h-screen" : ""
+      !isThreeDPreview.value && !isThreeDStudio.value && !isLoadingComplete.value
+        ? "overflow-hidden h-screen"
+        : ""
     ),
   },
   bodyAttrs: {
     class: computed(() =>
-      !isThreeDPreview.value && !isLoadingComplete.value ? "overflow-hidden" : ""
+      !isThreeDPreview.value && !isThreeDStudio.value && !isLoadingComplete.value
+        ? "overflow-hidden"
+        : ""
     ),
   },
   link: [

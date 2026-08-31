@@ -11,7 +11,33 @@ const maxPhotoCount = 4;
 
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig(event);
-  const r2Inputs = config.r2Inputs;
+  const configuredR2Inputs = config.r2Inputs || {};
+  const r2Inputs = {
+    accountId: String(
+      configuredR2Inputs.accountId ||
+        process.env.NUXT_R2_INPUTS_ACCOUNT_ID ||
+        process.env.CLOUDFLARE_ACCOUNT_ID ||
+        ""
+    ),
+    bucketName: String(
+      configuredR2Inputs.bucketName ||
+        process.env.NUXT_R2_INPUTS_BUCKET_NAME ||
+        process.env.CLOUDFLARE_R2_INPUTS_BUCKET_NAME ||
+        "nenes-3d-inputs"
+    ),
+    accessKeyId: String(
+      configuredR2Inputs.accessKeyId ||
+        process.env.NUXT_R2_INPUTS_ACCESS_KEY_ID ||
+        process.env.CLOUDFLARE_R2_INPUTS_ACCESS_KEY_ID ||
+        ""
+    ),
+    secretAccessKey: String(
+      configuredR2Inputs.secretAccessKey ||
+        process.env.NUXT_R2_INPUTS_SECRET_ACCESS_KEY ||
+        process.env.CLOUDFLARE_R2_INPUTS_SECRET_ACCESS_KEY ||
+        ""
+    ),
+  };
 
   if (
     !r2Inputs.accountId ||
@@ -33,17 +59,9 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  const consent = formData.find((part) => part.name === "consent")?.data.toString();
   const photos = formData.filter(
     (part) => part.name === "photos" && Boolean(part.filename) && Boolean(part.type)
   );
-
-  if (consent !== "true") {
-    throw createError({
-      statusCode: 400,
-      statusMessage: "Le consentement explicite est requis.",
-    });
-  }
 
   if (photos.length === 0 || photos.length > maxPhotoCount) {
     throw createError({

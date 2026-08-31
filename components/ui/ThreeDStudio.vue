@@ -17,7 +17,7 @@
       </div>
     </header>
 
-    <div class="mx-auto grid max-w-6xl gap-7 px-5 py-8 md:px-10 lg:grid-cols-2 lg:py-12">
+    <div class="mx-auto grid max-w-6xl gap-7 px-5 py-8 md:px-10 2xl:grid-cols-2 lg:py-12">
       <section class="rounded-[2rem] border border-[#8f2b4b]/15 bg-white p-5 shadow-[0_20px_70px_rgba(179,70,112,0.1)] md:p-7">
         <div>
           <div>
@@ -36,7 +36,6 @@
               <p class="text-xs font-bold uppercase tracking-[0.18em] text-[#9d2146]">Repères de prise de vues</p>
               <h3 class="mt-1 text-lg font-bold text-[#4c1830]">Quatre angles réguliers donnent le meilleur volume</h3>
             </div>
-            <span class="rounded-full bg-[#f7dce6] px-3 py-1 text-xs font-semibold text-[#7e1f3d]">Même cadrage · même lumière</span>
           </div>
           <div class="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <article v-for="view in photoViews" :key="view.step" class="rounded-2xl border border-[#efd1dc] bg-white p-4">
@@ -44,11 +43,16 @@
                 <span class="text-xs font-bold tracking-[0.18em] text-[#9d2146]">{{ view.step }}</span>
                 <span class="rounded-full bg-[#fff0f5] px-2 py-1 text-xs font-semibold text-[#7e1f3d]">{{ view.angle }}</span>
               </div>
-              <div class="relative mt-3 flex h-20 items-center justify-center overflow-hidden rounded-xl bg-[radial-gradient(circle_at_50%_35%,#ffe8f0,transparent_60%),linear-gradient(135deg,#f8d4df,#fff5f8)] [perspective:14rem]">
-                <div class="absolute bottom-2 h-12 w-14 rounded-[50%_50%_32%_32%] border border-[#b94e73] bg-[#f0a8be] shadow-[0_5px_10px_rgba(137,38,76,0.18)]" :style="{ transform: view.transform }">
-                  <span class="absolute left-1/2 top-2 h-3 w-3 -translate-x-1/2 rounded-full border border-[#b94e73] bg-[#ffe3eb]" />
-                </div>
-                <div class="absolute bottom-1 h-px w-24 bg-[#c66b88]/60" />
+              <div class="relative mt-3 h-40 overflow-hidden rounded-xl bg-[radial-gradient(circle_at_50%_35%,#ffe8f0,transparent_60%),linear-gradient(135deg,#f8d4df,#fff5f8)]">
+                <ThreeBustViewer
+                  :model-url="modelUrl"
+                  :auto-rotate="false"
+                  :enable-zoom="false"
+                  :interactive="false"
+                  compact
+                  material-style="original"
+                  :initial-rotation-y="view.rotationY"
+                />
               </div>
               <h4 class="mt-3 text-sm font-bold text-[#4c1830]">{{ view.title }}</h4>
               <p class="mt-1 text-xs leading-5 text-[#6a2944]">{{ view.description }}</p>
@@ -82,19 +86,22 @@
           </label>
 
           <div v-if="photos.length" class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <article v-for="photo in photos" :key="photo.id" class="overflow-hidden rounded-2xl border border-[#8f2b4b]/15 bg-[#fff9fb]">
+            <article v-for="photo in photos" :key="photo.id" class="relative overflow-hidden rounded-2xl border border-[#8f2b4b]/15 bg-[#fff9fb]">
               <img :src="photo.previewUrl" :alt="photo.name" class="aspect-square w-full object-cover" />
+              <button
+                type="button"
+                class="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-white/95 text-lg leading-none text-[#7e1f3d] shadow-md transition hover:bg-[#fff0f4]"
+                :aria-label="`Supprimer ${photo.name}`"
+                @click="removePhoto(photo.id)"
+              >
+                ×
+              </button>
               <div class="p-2">
                 <p class="truncate text-[10px] font-bold">{{ photo.name }}</p>
                 <p class="mt-0.5 text-[10px] text-[#6a2944]">{{ photo.sizeLabel }}</p>
               </div>
             </article>
           </div>
-
-          <label class="flex cursor-pointer items-start gap-3 rounded-2xl bg-[#fff9fb] p-4 text-xs leading-relaxed text-[#65213b]">
-            <input v-model="hasConsent" type="checkbox" class="mt-0.5 h-4 w-4 accent-[#9d2146]" />
-            <span>Je confirme disposer du consentement explicite pour déposer ces photos et lancer leur traitement en modèle 3D.</span>
-          </label>
 
           <p v-if="message" class="rounded-2xl px-4 py-3 text-sm" :class="messageTone">
             {{ message }}
@@ -103,7 +110,7 @@
           <button
             type="submit"
             class="w-full rounded-2xl bg-primary px-5 py-4 text-sm font-bold text-white shadow-lg shadow-primary/20 transition hover:bg-[#a9365f] disabled:cursor-not-allowed disabled:opacity-45"
-            :disabled="isSubmitting || photos.length === 0 || !hasConsent"
+            :disabled="isSubmitting || photos.length === 0"
           >
             {{ isSubmitting ? "Envoi en cours…" : "Envoyer les photos" }}
           </button>
@@ -115,16 +122,7 @@
           <div>
             <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-[#9d2146]">Bibliothèque publiée</p>
             <h2 class="mt-2 text-2xl font-bold">{{ defaultBustModel.label }}</h2>
-            <p class="mt-1 text-xs text-[#6a2944]">{{ defaultBustModel.fileName }}</p>
           </div>
-          <a
-            :href="modelUrl"
-            target="_blank"
-            rel="noreferrer"
-            class="rounded-full border border-[#8f2b4b]/25 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide text-[#5e2540] transition hover:border-[#8f2b4b]/50"
-          >
-            GLB
-          </a>
         </div>
 
         <div class="h-[30rem] border-y border-[#8f2b4b]/10 bg-[radial-gradient(circle_at_58%_38%,#fff_0%,#ffe9f1_52%,#f8d6e2_100%)]">
@@ -133,7 +131,7 @@
 
         <div class="px-5 py-5 md:px-7">
           <p class="text-sm leading-relaxed text-[#6a2944]">
-            Seuls les GLB finalisés et explicitement publiés apparaissent ici. Les brouillons de travail n’apparaissent pas dans la démo.
+            Seuls les modèles finalisés et explicitement publiés apparaissent ici. Les brouillons de travail n’apparaissent pas dans la démo.
           </p>
           <a
             :href="previewHref"
@@ -177,31 +175,30 @@ const photoViews = [
     angle: "0°",
     title: "Face",
     description: "Regard droit ; l’axe du téléphone est perpendiculaire au buste.",
-    transform: "rotateY(0deg)",
+    rotationY: 0,
   },
   {
     step: "02",
     angle: "45° gauche",
     title: "Trois-quarts gauche",
     description: "Tournez lentement le buste vers la droite, sans avancer une épaule.",
-    transform: "rotateY(42deg)",
+    rotationY: Math.PI / 4,
   },
   {
     step: "03",
     angle: "45° droite",
     title: "Trois-quarts droit",
     description: "Reproduisez exactement le même angle de l’autre côté.",
-    transform: "rotateY(-42deg)",
+    rotationY: -Math.PI / 4,
   },
   {
     step: "04",
     angle: "90°",
     title: "Profil",
     description: "Gardez le menton neutre et les épaules détendues pour lire la projection.",
-    transform: "rotateY(72deg)",
+    rotationY: Math.PI / 2,
   },
 ];
-const hasConsent = ref(false);
 const isSubmitting = ref(false);
 const message = ref("");
 const isError = ref(false);
@@ -216,16 +213,24 @@ function clearPhotos() {
   photos.value = [];
 }
 
+function removePhoto(photoId: string) {
+  const photoIndex = photos.value.findIndex((photo) => photo.id === photoId);
+  if (photoIndex === -1) return;
+
+  const [photo] = photos.value.splice(photoIndex, 1);
+  if (photo) URL.revokeObjectURL(photo.previewUrl);
+  message.value = "";
+}
+
 function selectPhotos(event: Event) {
   const input = event.target as HTMLInputElement;
   const files = Array.from(input.files || []);
-  clearPhotos();
   message.value = "";
 
   if (files.length === 0) return;
-  if (files.length > maxPhotoCount) {
+  if (photos.value.length + files.length > maxPhotoCount) {
     isError.value = true;
-    message.value = "Sélectionne au maximum quatre photos.";
+    message.value = `Tu peux ajouter au maximum ${maxPhotoCount} photos au total.`;
     input.value = "";
     return;
   }
@@ -240,13 +245,16 @@ function selectPhotos(event: Event) {
     return;
   }
 
-  photos.value = files.map((file) => ({
-    file,
-    id: crypto.randomUUID(),
-    name: file.name,
-    previewUrl: URL.createObjectURL(file),
-    sizeLabel: `${(file.size / 1024 / 1024).toFixed(1)} Mo`,
-  }));
+  photos.value = [
+    ...photos.value,
+    ...files.map((file) => ({
+      file,
+      id: crypto.randomUUID(),
+      name: file.name,
+      previewUrl: URL.createObjectURL(file),
+      sizeLabel: `${(file.size / 1024 / 1024).toFixed(1)} Mo`,
+    })),
+  ];
   input.value = "";
 }
 
@@ -255,7 +263,6 @@ async function submitPhotos() {
 
   const body = new FormData();
   photos.value.forEach((photo) => body.append("photos", photo.file));
-  body.set("consent", String(hasConsent.value));
   isSubmitting.value = true;
   message.value = "";
 
@@ -267,7 +274,6 @@ async function submitPhotos() {
     isError.value = false;
     message.value = `${result.photoCount} photo(s) reçue(s). Référence : ${result.submissionId}.`;
     clearPhotos();
-    hasConsent.value = false;
   } catch (error: any) {
     isError.value = true;
     message.value = error?.data?.statusMessage || "L’envoi a échoué. Vérifiez les fichiers puis réessayez.";

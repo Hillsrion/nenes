@@ -142,10 +142,20 @@ export default defineNuxtConfig({
   runtimeConfig: {
     // Private R2 credentials used only by the server upload endpoint.
     r2Inputs: {
-      accountId: process.env.CLOUDFLARE_ACCOUNT_ID || "",
-      bucketName: process.env.CLOUDFLARE_R2_INPUTS_BUCKET_NAME || "nenes-3d-inputs",
-      accessKeyId: process.env.CLOUDFLARE_R2_INPUTS_ACCESS_KEY_ID || "",
-      secretAccessKey: process.env.CLOUDFLARE_R2_INPUTS_SECRET_ACCESS_KEY || "",
+      accountId:
+        process.env.NUXT_R2_INPUTS_ACCOUNT_ID || process.env.CLOUDFLARE_ACCOUNT_ID || "",
+      bucketName:
+        process.env.NUXT_R2_INPUTS_BUCKET_NAME ||
+        process.env.CLOUDFLARE_R2_INPUTS_BUCKET_NAME ||
+        "nenes-3d-inputs",
+      accessKeyId:
+        process.env.NUXT_R2_INPUTS_ACCESS_KEY_ID ||
+        process.env.CLOUDFLARE_R2_INPUTS_ACCESS_KEY_ID ||
+        "",
+      secretAccessKey:
+        process.env.NUXT_R2_INPUTS_SECRET_ACCESS_KEY ||
+        process.env.CLOUDFLARE_R2_INPUTS_SECRET_ACCESS_KEY ||
+        "",
     },
     public: {
       // Critical assets that should be preloaded
