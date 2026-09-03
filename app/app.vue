@@ -1,5 +1,6 @@
 <template>
-  <ThreeDStudio v-if="isThreeDStudio" />
+  <FruitTestPage v-if="isFruitTest" />
+  <ThreeDStudio v-else-if="isThreeDStudio" />
 
   <template v-else>
   <div ref="globalContainer">
@@ -209,6 +210,7 @@ import Logo from "~/components/ui/Logo.vue";
 import CursorImageSpawner from "~/components/ui/CursorImageSpawner.vue";
 import ThreeBustViewer from "~/components/ui/ThreeBustViewer.vue";
 import ThreeDStudio from "~/components/ui/ThreeDStudio.vue";
+import FruitTestPage from "~/components/ui/FruitTestPage.vue";
 import {
   bustFruitModels,
   defaultBustModel,
@@ -221,6 +223,7 @@ import { useLenis } from "lenis/vue";
 // Store
 const store = useAnimationsStore();
 const route = useRoute();
+const isFruitTest = computed(() => route.path === "/fruits");
 const isThreeDStudio = computed(
   () => route.path === "/studio-3d" || route.query.studio3d === "upload"
 );
@@ -427,14 +430,20 @@ const isLoadingComplete = computed(
 useHead({
   htmlAttrs: {
     class: computed(() =>
-      !isThreeDPreview.value && !isThreeDStudio.value && !isLoadingComplete.value
+      !isFruitTest.value &&
+      !isThreeDPreview.value &&
+      !isThreeDStudio.value &&
+      !isLoadingComplete.value
         ? "overflow-hidden h-screen"
         : ""
     ),
   },
   bodyAttrs: {
     class: computed(() =>
-      !isThreeDPreview.value && !isThreeDStudio.value && !isLoadingComplete.value
+      !isFruitTest.value &&
+      !isThreeDPreview.value &&
+      !isThreeDStudio.value &&
+      !isLoadingComplete.value
         ? "overflow-hidden"
         : ""
     ),
@@ -491,7 +500,7 @@ watch(
 );
 
 onMounted(async () => {
-  if (isThreeDPreview.value || isThreeDStudio.value) return;
+  if (isFruitTest.value || isThreeDPreview.value || isThreeDStudio.value) return;
 
   scrollTo(0, 0);
   lenis.value.stop();
