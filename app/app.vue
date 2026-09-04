@@ -1,6 +1,7 @@
 <template>
   <FruitTestPage v-if="isFruitTest" />
   <ThreeDFruitLoadingPage v-else-if="isThreeDFruitLoading" />
+  <LinksPage v-else-if="isLinksPage" />
   <ThreeDModelCatalogPage v-else-if="isThreeDModelCatalog" />
   <ThreeDStudio v-else-if="isThreeDStudio" />
 
@@ -280,6 +281,7 @@ import ThreeDStudio from "~/components/ui/ThreeDStudio.vue";
 import ThreeDModelCatalogPage from "~/components/ui/ThreeDModelCatalogPage.vue";
 import ThreeDFruitLoadingPage from "~/components/ui/ThreeDFruitLoadingPage.vue";
 import FruitTestPage from "~/components/ui/FruitTestPage.vue";
+import LinksPage from "~/components/ui/LinksPage.vue";
 import {
   bustModelCatalog,
   bustFruitModels,
@@ -294,6 +296,7 @@ const store = useAnimationsStore();
 const route = useRoute();
 const isFruitTest = computed(() => route.path === "/fruits");
 const isThreeDFruitLoading = computed(() => route.path === "/loading-3d");
+const isLinksPage = computed(() => route.path === "/links");
 const isThreeDModelCatalog = computed(() => route.path === "/models-3d");
 const isThreeDStudio = computed(
   () => route.path === "/studio-3d" || route.query.studio3d === "upload"
@@ -559,6 +562,7 @@ useHead({
     class: computed(() =>
       !isFruitTest.value &&
       !isThreeDFruitLoading.value &&
+      !isLinksPage.value &&
       !isThreeDModelCatalog.value &&
       !isThreeDPreview.value &&
       !isThreeDStudio.value &&
@@ -571,6 +575,7 @@ useHead({
     class: computed(() =>
       !isFruitTest.value &&
       !isThreeDFruitLoading.value &&
+      !isLinksPage.value &&
       !isThreeDModelCatalog.value &&
       !isThreeDPreview.value &&
       !isThreeDStudio.value &&
@@ -634,6 +639,7 @@ onMounted(async () => {
   if (
     isFruitTest.value ||
     isThreeDFruitLoading.value ||
+    isLinksPage.value ||
     isThreeDModelCatalog.value ||
     isThreeDPreview.value ||
     isThreeDStudio.value
