@@ -1,5 +1,6 @@
 <template>
   <FruitTestPage v-if="isFruitTest" />
+  <ThreeDFruitLoadingPage v-else-if="isThreeDFruitLoading" />
   <ThreeDModelCatalogPage v-else-if="isThreeDModelCatalog" />
   <ThreeDStudio v-else-if="isThreeDStudio" />
 
@@ -32,8 +33,6 @@
           :title="screeningMainTitle"
         />
         <SymptomsSection :title="symptomsMainTitle" :cards="symptomsCards" />
-
-        <BustSection />
 
         <SelfExaminationSection :steps="selfExaminationSteps" />
 
@@ -273,13 +272,13 @@ import EntrySection from "~/components/sections/EntrySection.vue";
 import ScreeningSection from "~/components/sections/ScreeningSection.vue";
 import SelfExaminationSection from "~/components/sections/SelfExaminationSection.vue";
 import SymptomsSection from "~/components/sections/SymptomsSection.vue";
-import BustSection from "~/components/sections/BustSection.vue";
 import ResourcesSection from "~/components/sections/ResourcesSection.vue";
 import Logo from "~/components/ui/Logo.vue";
 import CursorImageSpawner from "~/components/ui/CursorImageSpawner.vue";
 import ThreeBustViewer from "~/components/ui/ThreeBustViewer.vue";
 import ThreeDStudio from "~/components/ui/ThreeDStudio.vue";
 import ThreeDModelCatalogPage from "~/components/ui/ThreeDModelCatalogPage.vue";
+import ThreeDFruitLoadingPage from "~/components/ui/ThreeDFruitLoadingPage.vue";
 import FruitTestPage from "~/components/ui/FruitTestPage.vue";
 import {
   bustModelCatalog,
@@ -294,6 +293,7 @@ import { useLenis } from "lenis/vue";
 const store = useAnimationsStore();
 const route = useRoute();
 const isFruitTest = computed(() => route.path === "/fruits");
+const isThreeDFruitLoading = computed(() => route.path === "/loading-3d");
 const isThreeDModelCatalog = computed(() => route.path === "/models-3d");
 const isThreeDStudio = computed(
   () => route.path === "/studio-3d" || route.query.studio3d === "upload"
@@ -558,6 +558,7 @@ useHead({
   htmlAttrs: {
     class: computed(() =>
       !isFruitTest.value &&
+      !isThreeDFruitLoading.value &&
       !isThreeDModelCatalog.value &&
       !isThreeDPreview.value &&
       !isThreeDStudio.value &&
@@ -569,6 +570,7 @@ useHead({
   bodyAttrs: {
     class: computed(() =>
       !isFruitTest.value &&
+      !isThreeDFruitLoading.value &&
       !isThreeDModelCatalog.value &&
       !isThreeDPreview.value &&
       !isThreeDStudio.value &&
@@ -631,6 +633,7 @@ watch(
 onMounted(async () => {
   if (
     isFruitTest.value ||
+    isThreeDFruitLoading.value ||
     isThreeDModelCatalog.value ||
     isThreeDPreview.value ||
     isThreeDStudio.value
