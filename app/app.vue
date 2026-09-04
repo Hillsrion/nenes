@@ -144,6 +144,22 @@
               </span>
             </span>
           </label>
+          <label
+            v-if="sourceComparison && sourceComparison.views.length > 1"
+            class="mt-3 block border-t border-primary/10 pt-3"
+          >
+            <span class="block text-[10px] font-bold uppercase tracking-[0.14em] text-secondary">
+              Vue à comparer
+            </span>
+            <select
+              v-model="selectedSourceViewId"
+              class="mt-1.5 w-full rounded-xl border border-primary/10 bg-white px-3 py-2 text-xs font-semibold text-primary outline-none transition focus:border-[#e95678]/50"
+            >
+              <option v-for="view in sourceComparison.views" :key="view.id" :value="view.id">
+                {{ view.label }}
+              </option>
+            </select>
+          </label>
         </div>
 
         <div class="mb-4 rounded-2xl border border-primary/10 bg-white/80 p-3">
@@ -209,21 +225,45 @@
 
       <main
         class="h-full pt-20 md:pt-16"
-        :class="showSourceComparison && sourceComparison ? 'md:pl-[23rem]' : ''"
+        :class="showSourceComparison && activeSourceComparisonView ? 'md:pl-[23rem]' : ''"
       >
         <div
-          v-if="showSourceComparison && sourceComparison"
+          v-if="showSourceComparison && activeSourceComparisonView"
           class="grid h-full min-h-0 grid-rows-2 bg-[#fff5f8] md:grid-cols-2 md:grid-rows-1"
         >
           <figure class="relative min-h-0 overflow-hidden border-b border-primary/10 bg-[#f7edf1] md:border-b-0 md:border-r">
+            <div
+              v-if="!sourceImageLoaded"
+              class="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-[#f7edf1] text-primary"
+              role="status"
+              aria-live="polite"
+            >
+              <span
+                class="h-8 w-8 animate-spin rounded-full border-2 border-primary/15 border-t-[#e95678]"
+                aria-hidden="true"
+              />
+              <span class="text-[10px] font-bold uppercase tracking-[0.14em]">
+                Chargement de la photo…
+              </span>
+            </div>
             <img
-              :src="sourceComparison.imageUrl"
-              :alt="sourceComparison.label"
-              class="h-full w-full object-contain"
+              :src="activeSourceComparisonView.imageUrl"
+              :alt="activeSourceComparisonView.label"
+              class="h-full w-full object-contain transition-opacity duration-200"
+              :class="sourceImageLoaded ? 'opacity-100' : 'opacity-0'"
               draggable="false"
+              @load="sourceImageLoaded = true"
+              @error="sourceImageError = true; sourceImageLoaded = true"
             />
+            <div
+              v-if="sourceImageError"
+              class="absolute inset-0 z-20 flex items-center justify-center bg-[#f7edf1]/95 px-6 text-center text-xs font-semibold text-primary"
+              role="alert"
+            >
+              La photo source n’a pas pu être chargée.
+            </div>
             <figcaption class="absolute bottom-4 left-4 rounded-full bg-white/90 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-primary shadow-sm backdrop-blur">
-              {{ sourceComparison.label }} · privée
+              {{ activeSourceComparisonView.label }} · privée
             </figcaption>
           </figure>
           <section class="relative min-h-0">
@@ -232,7 +272,7 @@
               :model-url="previewModelUrl"
               :auto-rotate="false"
               :enable-zoom="true"
-              :initial-rotation-y="sourceComparison.initialRotationY"
+              :initial-rotation-y="activeSourceComparisonView.initialRotationY"
               :symptom-type="activePreviewSymptom"
               :material-style="activePreviewMaterial"
             />
@@ -351,13 +391,35 @@ interface SourceComparison {
   imageUrl: string;
   initialRotationY: number;
   label: string;
+  selectedViewId: string;
+  views: SourceComparisonView[];
+}
+interface SourceComparisonView {
+  id: string;
+  imageIndex: number;
+  imageUrl: string;
+  initialRotationY: number;
+  label: string;
 }
 const sourceComparison = ref<SourceComparison | null>(null);
 const isResolvingSourceComparison = ref(false);
 const showSourceComparison = ref(false);
+const selectedSourceViewId = ref("");
+const sourceImageLoaded = ref(false);
+const sourceImageError = ref(false);
+const activeSourceComparisonView = computed<SourceComparisonView | null>(() => {
+  const comparison = sourceComparison.value;
+  if (!comparison) return null;
+
+  return (
+    comparison.views.find((view) => view.id === selectedSourceViewId.value) ??
+    comparison.views[0] ??
+    null
+  );
+});
 const comparisonResetKey = ref(0);
 const comparisonViewerKey = computed(
-  () => `${previewModelUrl.value}:${comparisonResetKey.value}`
+  () => `${previewModelUrl.value}:${selectedSourceViewId.value}:${comparisonResetKey.value}`
 );
 let previewModelRequestId = 0;
 let sourceComparisonRequestId = 0;
@@ -402,6 +464,7 @@ watch(
 const resolveSourceComparison = async () => {
   const requestId = ++sourceComparisonRequestId;
   sourceComparison.value = null;
+  selectedSourceViewId.value = "";
   showSourceComparison.value = false;
 
   if (!import.meta.client || !sourceComparisonEnabled || !isThreeDPreview.value) return;
@@ -415,7 +478,10 @@ const resolveSourceComparison = async () => {
     if (!response.ok) return;
 
     const payload = (await response.json()) as SourceComparison;
-    if (requestId === sourceComparisonRequestId) sourceComparison.value = payload;
+    if (requestId === sourceComparisonRequestId) {
+      sourceComparison.value = payload;
+      selectedSourceViewId.value = payload.selectedViewId;
+    }
   } catch {
     // The private review helper is optional and remains hidden when unavailable.
   } finally {
@@ -433,6 +499,11 @@ watch(
 
 watch(showSourceComparison, (isVisible) => {
   if (isVisible) comparisonResetKey.value += 1;
+});
+
+watch(selectedSourceViewId, () => {
+  sourceImageLoaded.value = false;
+  sourceImageError.value = false;
 });
 type PreviewMaterialStyle = "original" | "glass" | "glow" | "iridescent";
 const previewMaterials: Array<{

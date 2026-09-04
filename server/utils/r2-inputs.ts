@@ -64,7 +64,7 @@ export const getR2InputsConnection = (event: H3Event): R2InputsConnection => {
       process.env.CLOUDFLARE_R2_INPUTS_BUCKET_NAME ||
       process.env.NUXT_R2_INPUTS_BUCKET_NAME ||
       configuredR2Inputs.bucketName ||
-      ""
+      "nenes-3d-inputs"
   );
   const accessKeyId = String(
     process.env.NUXT_R2_INPUTS_ACCESS_KEY_ID ||

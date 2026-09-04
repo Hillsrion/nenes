@@ -146,7 +146,7 @@ export default defineNuxtConfig({
       // Keeping them empty during the build prevents Netlify secret scanning
       // from finding private deployment values in generated artifacts.
       accountId: "",
-      bucketName: "",
+      bucketName: "nenes-3d-inputs",
       accessKeyId: "",
       secretAccessKey: "",
     },

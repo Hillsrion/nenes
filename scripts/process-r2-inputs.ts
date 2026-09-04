@@ -83,7 +83,7 @@ Options:
 
 Variables R2 inputs:
   CLOUDFLARE_ACCOUNT_ID ou NUXT_R2_INPUTS_ACCOUNT_ID
-  NUXT_PUBLIC_R2_INPUTS_BUCKET_NAME
+  NUXT_PUBLIC_R2_INPUTS_BUCKET_NAME (défaut: nenes-3d-inputs)
   CLOUDFLARE_R2_INPUTS_ACCESS_KEY_ID ou NUXT_R2_INPUTS_ACCESS_KEY_ID
   CLOUDFLARE_R2_INPUTS_SECRET_ACCESS_KEY ou NUXT_R2_INPUTS_SECRET_ACCESS_KEY
 
@@ -357,7 +357,10 @@ async function uploadModel(client: S3Client, bucketName: string, localPath: stri
 async function main() {
   const options = readOptions();
   const inputAccountId = requiredEnvironment("CLOUDFLARE_ACCOUNT_ID", "NUXT_R2_INPUTS_ACCOUNT_ID");
-  const inputBucketName = requiredEnvironment("NUXT_PUBLIC_R2_INPUTS_BUCKET_NAME");
+  const inputBucketName =
+    process.env.NUXT_PUBLIC_R2_INPUTS_BUCKET_NAME ||
+    process.env.CLOUDFLARE_R2_INPUTS_BUCKET_NAME ||
+    "nenes-3d-inputs";
   const inputAccessKeyId = requiredEnvironment("CLOUDFLARE_R2_INPUTS_ACCESS_KEY_ID", "NUXT_R2_INPUTS_ACCESS_KEY_ID");
   const inputSecretAccessKey = requiredEnvironment("CLOUDFLARE_R2_INPUTS_SECRET_ACCESS_KEY", "NUXT_R2_INPUTS_SECRET_ACCESS_KEY");
   const outputAccountId = process.env.CLOUDFLARE_R2_3D_ACCOUNT_ID || inputAccountId;

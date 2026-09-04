@@ -10,7 +10,13 @@ export default defineEventHandler(async (event) => {
 
   const query = getQuery(event);
   const model = Array.isArray(query.model) ? query.model[0] : query.model;
-  const source = await resolveThreeDSourceImage(event, String(model || ""));
+  const view = Array.isArray(query.view) ? query.view[0] : query.view;
+  const requestedImageIndex = view === undefined ? undefined : Number(view);
+  const source = await resolveThreeDSourceImage(
+    event,
+    String(model || ""),
+    requestedImageIndex
+  );
 
   setResponseHeaders(event, {
     "content-type": source.contentType,

@@ -64,7 +64,10 @@ function requiredEnvironment(name: string, fallbackName?: string): string {
 
 function createClient(): { client: S3Client; bucket: string } {
   const accountId = requiredEnvironment("CLOUDFLARE_ACCOUNT_ID", "NUXT_R2_INPUTS_ACCOUNT_ID");
-  const bucket = requiredEnvironment("NUXT_PUBLIC_R2_INPUTS_BUCKET_NAME");
+  const bucket =
+    process.env.NUXT_PUBLIC_R2_INPUTS_BUCKET_NAME ||
+    process.env.CLOUDFLARE_R2_INPUTS_BUCKET_NAME ||
+    "nenes-3d-inputs";
   const accessKeyId = requiredEnvironment("CLOUDFLARE_R2_INPUTS_ACCESS_KEY_ID", "NUXT_R2_INPUTS_ACCESS_KEY_ID");
   const secretAccessKey = requiredEnvironment("CLOUDFLARE_R2_INPUTS_SECRET_ACCESS_KEY", "NUXT_R2_INPUTS_SECRET_ACCESS_KEY");
   return {
@@ -156,10 +159,10 @@ async function main() {
   if (directories.length === 0) fail("Aucun sous-dossier de photos à importer.");
 
   const connection = options.dryRun || options.auth === "oauth" ? undefined : createClient();
-  const oauthBucket = requiredEnvironment(
-    "NUXT_PUBLIC_R2_INPUTS_BUCKET_NAME",
-    "CLOUDFLARE_R2_INPUTS_BUCKET_NAME"
-  );
+  const oauthBucket =
+    process.env.NUXT_PUBLIC_R2_INPUTS_BUCKET_NAME ||
+    process.env.CLOUDFLARE_R2_INPUTS_BUCKET_NAME ||
+    "nenes-3d-inputs";
   let uploaded = 0;
   let skipped = 0;
 

@@ -38,7 +38,7 @@ function resolveInputsConfig(config: ReturnType<typeof useRuntimeConfig>) {
         process.env.NUXT_PUBLIC_R2_INPUTS_BUCKET_NAME ||
         process.env.CLOUDFLARE_R2_INPUTS_BUCKET_NAME ||
         configuredR2Inputs.bucketName ||
-        ""
+        "nenes-3d-inputs"
     ).trim(),
     accessKeyId: String(
       process.env.NUXT_R2_INPUTS_ACCESS_KEY_ID ||

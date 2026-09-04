@@ -35,6 +35,20 @@ interface SourceCollectionManifest {
   files: Array<{ key: string; contentType?: string }>;
 }
 
+export interface ThreeDSourceView {
+  id: string;
+  imageIndex: number;
+  rotationY: number;
+  label: string;
+}
+
+const sourceViewDefaults = [
+  { rotationY: 0, label: "Vue de face" },
+  { rotationY: Math.PI / 2, label: "Profil gauche" },
+  { rotationY: Math.PI, label: "Vue de dos" },
+  { rotationY: -Math.PI / 2, label: "Profil droit" },
+] as const;
+
 const modelFilePattern = /^[a-zA-Z0-9][a-zA-Z0-9._-]*\.glb$/;
 const supportedContentTypes = new Map([
   [".jpg", "image/jpeg"],
@@ -72,25 +86,55 @@ export const getThreeDModelManifestEntry = async (
   return manifest.models[modelFileName] || null;
 };
 
+const readThreeDSourceCollection = async (
+  event: H3Event,
+  entry: ThreeDModelManifestEntry
+) => {
+  const collection = await readR2InputsJson<SourceCollectionManifest>(
+    event,
+    entry.source.manifestKey
+  );
+
+  return collection.files || [];
+};
+
+export const getThreeDSourceViews = async (
+  event: H3Event,
+  entry: ThreeDModelManifestEntry
+): Promise<ThreeDSourceView[]> => {
+  const files = await readThreeDSourceCollection(event, entry);
+
+  return files.slice(0, sourceViewDefaults.length).map((_, index) => {
+    const imageIndex = index + 1;
+    const fallback = sourceViewDefaults[index];
+    const isManifestDefault = imageIndex === entry.source.imageIndex;
+
+    return {
+      id: String(imageIndex),
+      imageIndex,
+      rotationY: isManifestDefault ? entry.source.rotationY : fallback.rotationY,
+      label: isManifestDefault ? entry.source.label : fallback.label,
+    };
+  });
+};
+
 export const resolveThreeDSourceImage = async (
   event: H3Event,
-  modelFileName: string
+  modelFileName: string,
+  requestedImageIndex?: number
 ) => {
   const entry = await getThreeDModelManifestEntry(event, modelFileName);
   if (!entry) {
     throw createError({ statusCode: 404, statusMessage: "Modèle absent du catalogue R2." });
   }
 
-  const collection = await readR2InputsJson<SourceCollectionManifest>(
-    event,
-    entry.source.manifestKey
-  );
-  const imageIndex = entry.source.imageIndex;
+  const collectionFiles = await readThreeDSourceCollection(event, entry);
+  const imageIndex = requestedImageIndex ?? entry.source.imageIndex;
   if (!Number.isInteger(imageIndex) || imageIndex < 1) {
     throw createError({ statusCode: 500, statusMessage: "Index d’image source invalide." });
   }
 
-  const image = collection.files?.[imageIndex - 1];
+  const image = collectionFiles[imageIndex - 1];
   if (!image?.key) {
     throw createError({ statusCode: 404, statusMessage: "Image absente du manifeste source." });
   }
