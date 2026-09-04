@@ -10,9 +10,14 @@
     "postinstall": "nuxt prepare",
     "upload-to-r2": "tsx scripts/upload-to-r2.ts",
     "models:upload": "tsx scripts/upload-3d-models-to-r2.ts",
+    "models:process-r2": "tsx scripts/process-r2-inputs.ts",
+    "inputs:upload-manual": "tsx scripts/upload-manual-3d-inputs.ts",
     "images:optimize": "scripts/optimize-images.sh",
     "model:check": "bash scripts/check-photo-to-3d-prereqs.sh",
+    "model:build": "bash scripts/build-photo-to-3d-runtime.sh",
+    "model:bust": "bash scripts/multiview-to-3d.sh",
     "model:photo": "node scripts/photo-to-3d.mjs",
+    "model:view:mask": "bash scripts/remove-photo-background.sh",
     "model:symptoms": "node scripts/generate-symptom-model.mjs",
     "prebuild": "pnpm run images:optimize"
   },
@@ -39,6 +44,7 @@
     "fast-glob": "^3.3.3",
     "form-data": "^4.0.1",
     "sharp": "^0.34.4",
-    "tsx": "^4.19.2"
+    "tsx": "^4.19.2",
+    "wrangler": "4.129.0"
   }
 }

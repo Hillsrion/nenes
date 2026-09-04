@@ -4,7 +4,7 @@
  * Upload a reviewed, derived GLB model to the dedicated Cloudflare R2 bucket.
  *
  * Usage:
- *   pnpm models:upload -- bust-photo-symptoms.glb
+ *   pnpm models:upload -- bust-multiview-v2-symptoms.glb
  *   pnpm models:upload -- --all-configured
  *
  * The script deliberately accepts only file names declared in
@@ -45,7 +45,7 @@ function getRequestedFiles(): string[] {
 
   if (args.length !== 1) {
     fail(
-      "Choose exactly one reviewed model, for example: pnpm models:upload -- bust-photo-symptoms.glb"
+      "Choose exactly one reviewed model, for example: pnpm models:upload -- bust-multiview-v2-symptoms.glb"
     );
   }
 

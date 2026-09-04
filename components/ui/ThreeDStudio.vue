@@ -27,7 +27,7 @@
         </div>
 
         <p class="mt-4 max-w-xl text-sm leading-relaxed text-[#6a2944]">
-          Ajoutez une à quatre vues cohérentes. Le modèle 3D utilisera leurs points de vue pour reconstruire le volume.
+          Ajoutez une à quatre vues cohérentes, dans l’ordre indiqué ci-dessous. Le modèle 3D utilisera leurs points de vue pour reconstruire le volume.
         </p>
 
         <section class="mt-6 rounded-3xl border border-[#e4bdcb] bg-[#fffafd] p-5 shadow-[0_12px_35px_rgba(111,35,65,0.07)]">
@@ -100,6 +100,7 @@
                 ×
               </button>
               <div class="p-2">
+                <p class="truncate text-[10px] font-bold uppercase tracking-[0.12em] text-[#9d2146]">{{ photoViews[index]?.title }}</p>
                 <p class="truncate text-[10px] font-bold">{{ photo.name }}</p>
                 <p class="mt-0.5 text-[10px] text-[#6a2944]">{{ photo.sizeLabel }}</p>
               </div>
@@ -182,24 +183,24 @@ const photoViews = [
   },
   {
     step: "02",
-    angle: "45° gauche",
-    title: "Trois-quarts gauche",
-    description: "Tournez lentement le buste vers la droite, sans avancer une épaule.",
-    rotationY: Math.PI / 4,
+    angle: "90° gauche",
+    title: "Profil gauche",
+    description: "Tournez le buste d’un quart de tour, sans avancer une épaule.",
+    rotationY: Math.PI / 2,
   },
   {
     step: "03",
-    angle: "45° droite",
-    title: "Trois-quarts droit",
-    description: "Reproduisez exactement le même angle de l’autre côté.",
-    rotationY: -Math.PI / 4,
+    angle: "180°",
+    title: "Dos",
+    description: "Gardez la même distance et la même hauteur de téléphone.",
+    rotationY: Math.PI,
   },
   {
     step: "04",
-    angle: "90°",
-    title: "Profil",
-    description: "Gardez le menton neutre et les épaules détendues pour lire la projection.",
-    rotationY: Math.PI / 2,
+    angle: "90° droite",
+    title: "Profil droit",
+    description: "Reproduisez le profil opposé avec les épaules détendues.",
+    rotationY: -Math.PI / 2,
   },
 ];
 const isSubmitting = ref(false);

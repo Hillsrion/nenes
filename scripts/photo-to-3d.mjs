@@ -11,8 +11,11 @@ const usage = [
   "",
   "Optional:",
   "  HUNYUAN3D_CLI=/absolute/path/to/hy3d",
+  "  HUNYUAN3D_BUILD_DIR=/absolute/path/to/Xcode/DerivedData",
+  "  HUNYUAN3D_FRAMEWORK_PATH=/absolute/path/to/Xcode/Release/products",
   "  HUNYUAN3D_SHAPE_WEIGHTS=/absolute/path/to/shape-weights",
   "  HUNYUAN3D_PAINT_WEIGHTS=/absolute/path/to/paint-weights",
+  "  HUNYUAN3D_QUANTIZE=4 HUNYUAN3D_STEPS=20 HUNYUAN3D_OCTREE=192 HUNYUAN3D_SEED=7",
   "",
   "Without HUNYUAN3D_PAINT_WEIGHTS, the fast shape-only pipeline is used.",
 ].join("\n");
@@ -24,7 +27,9 @@ const fail = (message) => {
   process.exit(1);
 };
 
-const [sourceArgument, outputArgument] = process.argv.slice(2);
+const cliArguments = process.argv.slice(2);
+if (cliArguments[0] === "--") cliArguments.shift();
+const [sourceArgument, outputArgument] = cliArguments;
 if (!sourceArgument || !outputArgument) fail("A source photo and an output GLB are required.");
 
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
@@ -53,9 +58,21 @@ const hunyuanDirectoryValue = process.env.HUNYUAN3D_DIR;
 if (!hunyuanDirectoryValue) fail("HUNYUAN3D_DIR is not set.");
 
 const hunyuanDirectory = path.resolve(hunyuanDirectoryValue);
+const hunyuanBuildDirectory = process.env.HUNYUAN3D_BUILD_DIR
+  ? path.resolve(process.env.HUNYUAN3D_BUILD_DIR)
+  : path.join(hunyuanDirectory, ".xcode-build");
+const xcodeProductDirectory = path.join(
+  hunyuanBuildDirectory,
+  "Build",
+  "Products",
+  "Release"
+);
 const hunyuanCli = process.env.HUNYUAN3D_CLI
   ? path.resolve(process.env.HUNYUAN3D_CLI)
-  : path.join(hunyuanDirectory, ".build", "release", "hy3d");
+  : path.join(xcodeProductDirectory, "hy3d");
+const frameworkDirectory = process.env.HUNYUAN3D_FRAMEWORK_PATH
+  ? path.resolve(process.env.HUNYUAN3D_FRAMEWORK_PATH)
+  : path.dirname(hunyuanCli);
 const shapeWeights = process.env.HUNYUAN3D_SHAPE_WEIGHTS
   ? path.resolve(process.env.HUNYUAN3D_SHAPE_WEIGHTS)
   : path.join(hunyuanDirectory, "weights", "shape-small");
@@ -91,9 +108,15 @@ const generatedMesh = path.join(temporaryDirectory, "mesh.glb");
 
 const run = (command, args) =>
   new Promise((resolve, reject) => {
+    const inheritedFrameworkPath = process.env.DYLD_FRAMEWORK_PATH;
     const child = spawn(command, args, {
       cwd: hunyuanDirectory,
-      env: process.env,
+      env: {
+        ...process.env,
+        DYLD_FRAMEWORK_PATH: inheritedFrameworkPath
+          ? `${frameworkDirectory}:${inheritedFrameworkPath}`
+          : frameworkDirectory,
+      },
       stdio: "inherit",
     });
 
@@ -105,6 +128,16 @@ const run = (command, args) =>
   });
 
 try {
+  const shapeArguments = [
+    "--quantize",
+    process.env.HUNYUAN3D_QUANTIZE || "4",
+    "--steps",
+    process.env.HUNYUAN3D_STEPS || "20",
+    "--octree",
+    process.env.HUNYUAN3D_OCTREE || "192",
+    "--seed",
+    process.env.HUNYUAN3D_SEED || "7",
+  ];
   const args = paintWeights
     ? [
         "generate",
@@ -116,7 +149,15 @@ try {
         "--paint-weights",
         paintWeights,
       ]
-    : ["shape", sourcePath, "-o", generatedMesh, "--weights", shapeWeights];
+    : [
+        "shape",
+        sourcePath,
+        "-o",
+        generatedMesh,
+        "--weights",
+        shapeWeights,
+        ...shapeArguments,
+      ];
 
   await run(hunyuanCli, args);
 

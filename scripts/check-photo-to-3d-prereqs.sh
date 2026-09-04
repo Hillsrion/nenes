@@ -90,13 +90,14 @@ if test -n "$HUNYUAN3D_DIR"; then
 
   hunyuan_cli="$HUNYUAN3D_CLI"
   if test -z "$hunyuan_cli"; then
-    hunyuan_cli="$HUNYUAN3D_DIR/.build/release/hy3d"
+    hunyuan_build_directory="${HUNYUAN3D_BUILD_DIR:-$HUNYUAN3D_DIR/.xcode-build}"
+    hunyuan_cli="$hunyuan_build_directory/Build/Products/Release/hy3d"
   fi
 
   if test -x "$hunyuan_cli"; then
     ok "Hunyuan3D CLI: $hunyuan_cli"
   else
-    todo "Build the Hunyuan3D CLI with swift build -c release."
+    todo "Build the Hunyuan3D CLI with pnpm model:build (Xcode is required for MLX Metal resources)."
   fi
 
   shape_weights="$HUNYUAN3D_SHAPE_WEIGHTS"
