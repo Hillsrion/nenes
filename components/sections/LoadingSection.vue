@@ -33,7 +33,7 @@
             ref="imageContainerRef"
             class="relative lg:size-36 md:size-30 sm:size-28 size-36 opacity-0"
           >
-            <ThreeFruitLoadingAnimator :progress="progress" @ready="startLoadingSequence" />
+            <ImageSequenceAnimator :progress="progress" />
           </div>
         </div>
 
@@ -62,7 +62,8 @@
 import { gsap } from "gsap";
 import Logo from "~/components/ui/Logo.vue";
 import { useAnimationsStore } from "~/stores";
-import ThreeFruitLoadingAnimator from "~/components/ui/ThreeFruitLoadingAnimator.vue";
+import { useAssetPreloader } from "~/composables/useAssetPreloader";
+import ImageSequenceAnimator from "~/components/ui/ImageSequenceAnimator.vue";
 
 const progress = ref(0);
 const isComplete = ref(false);
@@ -82,8 +83,6 @@ const imageContainerRef = ref(null);
 let masterTimeline = null;
 
 const startLoadingSequence = () => {
-  if (masterTimeline) return;
-
   // Create master timeline for the entire loading sequence
   masterTimeline = gsap.timeline();
 
@@ -99,7 +98,7 @@ const startLoadingSequence = () => {
   masterTimeline.add(startProgressCounter());
 };
 
-onMounted(() => {
+onMounted(async () => {
   // Initial setup
   gsap.set(
     [chargementTextRef.value, percentageTextRef.value, imageContainerRef.value],
@@ -108,6 +107,28 @@ onMounted(() => {
     }
   );
 
+  try {
+    // Preload all critical assets before starting the loading sequence
+    const { preloadAllAssets } = useAssetPreloader({
+      onError: (error) => {
+        console.warn("Asset preloading failed:", error);
+        // Continue with loading sequence even if preloading fails
+      },
+    });
+
+    // Wait for assets to be preloaded
+    await preloadAllAssets();
+
+    // Start the coordinated loading sequence after preloading is complete
+    startLoadingSequence();
+  } catch (error) {
+    console.warn(
+      "Asset preloading encountered issues, continuing with loading sequence:",
+      error
+    );
+    // Start loading sequence even if preloading fails
+    startLoadingSequence();
+  }
 });
 
 const startProgressCounter = () => {
