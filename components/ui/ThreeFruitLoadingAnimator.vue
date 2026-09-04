@@ -25,9 +25,14 @@ import { createFruitModel, preloadFruitModels } from "~/utils/loading-fruit-mode
 interface Props {
   progress: number;
   fruitIndex?: number;
+  pair?: boolean;
+  randomize?: boolean;
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+  pair: false,
+  randomize: true,
+});
 const emit = defineEmits<{ ready: [] }>();
 const loaderFruitCount = Math.min(6, loadingFruitSequence.length);
 
@@ -51,6 +56,7 @@ let resizeObserver: ResizeObserver | null = null;
 let lastTransitionIndex = -1;
 let transitionRequestId = 0;
 let hasEmittedReady = false;
+let reducedMotion = false;
 
 const notifyReady = () => {
   if (hasEmittedReady) return;
@@ -122,14 +128,24 @@ const transitionToFruit = async (index: number, immediate = false) => {
     }
 
     const presentationGroup = new THREE.Group();
-    presentationGroup.add(model);
-    presentationGroup.scale.setScalar(immediate ? 1 : 0.82);
+    if (props.pair) {
+      const secondModel = model.clone(true);
+      const fruitPair = new THREE.Group();
+      model.position.x = -0.62;
+      secondModel.position.x = 0.62;
+      fruitPair.add(model, secondModel);
+      fruitPair.scale.setScalar(0.78);
+      presentationGroup.add(fruitPair);
+    } else {
+      presentationGroup.add(model);
+    }
+    presentationGroup.scale.setScalar(immediate || reducedMotion ? 1 : 0.82);
     fruitGroup.add(presentationGroup);
     fruitGroup.userData.current = presentationGroup;
     isUnavailable.value = false;
     notifyReady();
 
-    if (!immediate) {
+    if (!immediate && !reducedMotion) {
       gsap.to(presentationGroup.scale, {
         x: 1,
         y: 1,
@@ -160,7 +176,7 @@ const tick = () => {
   const elapsed = performance.now() / 1000;
   const activeFruit = fruitGroup.userData.current as THREE.Group | undefined;
 
-  if (activeFruit) {
+  if (activeFruit && !reducedMotion) {
     activeFruit.rotation.y = Math.sin(elapsed * 0.72) * 0.28;
     activeFruit.rotation.z = Math.sin(elapsed * 1.45) * 0.018;
     activeFruit.position.y = Math.sin(elapsed * 2) * 0.035;
@@ -227,7 +243,12 @@ watch(
 );
 
 onMounted(() => {
-  if (props.fruitIndex === undefined) loaderIndexes.value = createRandomLoaderIndexes();
+  reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (props.fruitIndex === undefined) {
+    loaderIndexes.value = props.randomize
+      ? createRandomLoaderIndexes()
+      : Array.from({ length: loaderFruitCount }, (_, index) => index);
+  }
   const indexes =
     props.fruitIndex === undefined ? loaderIndexes.value : [getFruitIndex(props.progress)];
   const modelUrls = indexes.map((index) => loadingFruitSequence[index].modelUrl);
