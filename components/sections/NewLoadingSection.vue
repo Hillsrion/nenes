@@ -11,7 +11,7 @@
         ref="loadingRowRef"
         class="grid w-full max-w-[38rem] grid-cols-[1fr_clamp(6rem,10vw,8.5rem)_1fr] items-center gap-5 opacity-0 sm:gap-10"
       >
-        <p class="text-right text-[11px] font-medium uppercase tracking-[0.22em] sm:text-xs">
+        <p class="text-right text-xl font-medium uppercase tracking-[3.84px] lg:text-2xl">
           Chargement
         </p>
 
@@ -23,7 +23,7 @@
           />
         </div>
 
-        <p class="min-w-[4.5rem] text-left text-[11px] font-medium tabular-nums tracking-[0.22em] sm:text-xs">
+        <p class="min-w-[5rem] text-left text-xl font-medium tabular-nums tracking-[3.84px] lg:text-2xl">
           {{ displayProgress }}%
         </p>
       </div>

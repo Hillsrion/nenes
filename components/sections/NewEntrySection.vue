@@ -6,7 +6,7 @@
     >
       <div
         ref="revealStageRef"
-        class="sticky top-0 h-[100svh] w-full overflow-hidden bg-white"
+        class="sticky top-0 h-[100svh] w-full overflow-hidden rounded-t-4xl bg-white"
       >
         <picture class="absolute inset-0 z-0 block h-full w-full">
           <source
