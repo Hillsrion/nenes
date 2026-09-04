@@ -164,6 +164,25 @@ Les écritures réussies sont également visibles dans Cloudflare R2 sous
 `submissions/` et `observability/3d-uploads/` afin que ces données privées
 soient purgées après le délai opérationnel choisi.
 
+### Envoi direct vers R2
+
+Pour éviter la limite de taille des fonctions Netlify, le navigateur demande
+d'abord une session très légère à `/api/3d/upload-session`, puis envoie chaque
+photo directement vers R2 avec une URL signée valable quinze minutes. Une
+dernière requête valide les tailles et les types MIME avant d'écrire le
+manifest. Les photos ne traversent donc jamais Netlify.
+
+Appliquer une seule fois la règle CORS versionnée dans ce dépôt, en étant
+connecté à Cloudflare :
+
+```sh
+pnpm exec wrangler r2 bucket cors set nenes-3d-inputs --file config/r2-inputs-cors.json
+```
+
+La règle autorise uniquement les domaines de production listés dans
+`config/r2-inputs-cors.json`, avec `PUT` pour l'envoi signé. Ajouter un domaine
+d'aperçu explicitement à ce fichier avant de l'utiliser.
+
 ### Photos reçues hors formulaire
 
 Les photos reçues directement restent dans `breast-images/<dossier-prive>/`,

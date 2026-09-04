@@ -1,0 +1,13 @@
+[
+  {
+    "AllowedOrigins": [
+      "https://nenes.ismaelsebbane.com",
+      "https://nenes.netlify.app",
+      "https://main--nenes.netlify.app"
+    ],
+    "AllowedMethods": ["GET", "HEAD", "PUT"],
+    "AllowedHeaders": ["content-type"],
+    "ExposeHeaders": ["etag"],
+    "MaxAgeSeconds": 3600
+  }
+]

@@ -265,16 +265,31 @@ function selectPhotos(event: Event) {
 async function submitPhotos() {
   if (isSubmitting.value) return;
 
-  const body = new FormData();
-  photos.value.forEach((photo) => body.append("photos", photo.file));
   isSubmitting.value = true;
   message.value = "";
 
   try {
-    const result = await $fetch<{ submissionId: string; photoCount: number; requestId?: string }>("/api/3d/submissions", {
+    const session = await $fetch<{
+      submissionId: string;
+      uploads: Array<{ key: string; url: string }>;
+    }>("/api/3d/upload-session", {
       method: "POST",
-      body,
+      body: {
+        photos: photos.value.map((photo) => ({ contentType: photo.file.type, bytes: photo.file.size })),
+      },
     });
+    await Promise.all(session.uploads.map(async (upload, index) => {
+      const response = await fetch(upload.url, {
+        method: "PUT",
+        headers: { "content-type": photos.value[index].file.type },
+        body: photos.value[index].file,
+      });
+      if (!response.ok) throw new Error(`R2_UPLOAD_${response.status}`);
+    }));
+    const result = await $fetch<{ submissionId: string; photoCount: number; requestId?: string }>(
+      `/api/3d/submissions/${session.submissionId}/complete`,
+      { method: "POST", body: {} }
+    );
     isError.value = false;
     message.value = `${result.photoCount} photo(s) reçue(s). Référence : ${result.submissionId}.`;
     clearPhotos();
