@@ -1,6 +1,6 @@
 export const defaultBustModel = {
-  label: "Modèle de référence",
-  fileName: "bust-photo-symptoms.glb",
+  label: "Modèle de référence multivue",
+  fileName: "bust-multiview-v2-symptoms.glb",
 } as const;
 
 export const bustFruitModels = [
@@ -47,3 +47,32 @@ export const bustFruitModels = [
 ] as const;
 
 export type BustFruitId = (typeof bustFruitModels)[number]["id"];
+
+export const bustModelCatalog = [
+  {
+    id: "reference-multiview-v2",
+    label: defaultBustModel.label,
+    shortLabel: "Référence multivue",
+    description: "Reconstruction de référence produite à partir de plusieurs angles cohérents.",
+    fileName: defaultBustModel.fileName,
+    badge: "Référence",
+  },
+  {
+    id: "single-photo-v1",
+    label: "Buste mono-image · version historique",
+    shortLabel: "Photo unique · historique",
+    description: "Version historique générée depuis une seule image avec le préréglage validé.",
+    fileName: "bust-photo-symptoms.glb",
+    badge: "Mono-image",
+  },
+  ...bustFruitModels.map((model) => ({
+    id: `volume-${model.id}`,
+    label: model.modelLabel,
+    shortLabel: `${model.emoji} ${model.fruit}`,
+    description: `Repère visuel de volume ${model.sizeLabel.toLowerCase()}.`,
+    fileName: model.fileName,
+    badge: model.sizeLabel,
+  })),
+] as const;
+
+export type BustModelCatalogEntry = (typeof bustModelCatalog)[number];

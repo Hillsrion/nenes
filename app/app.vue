@@ -1,5 +1,6 @@
 <template>
   <FruitTestPage v-if="isFruitTest" />
+  <ThreeDModelCatalogPage v-else-if="isThreeDModelCatalog" />
   <ThreeDStudio v-else-if="isThreeDStudio" />
 
   <template v-else>
@@ -58,7 +59,13 @@
           <h1 class="text-lg font-bold md:text-xl">Reconstruction 3D depuis une photo</h1>
         </div>
         <div class="flex items-center gap-4 text-xs font-medium text-secondary md:text-sm">
-          <span>{{ activeFruitModel.modelLabel }} · aperçu 3D</span>
+          <span>{{ activeCatalogModel.label }} · aperçu 3D</span>
+          <a
+            href="/models-3d"
+            class="rounded-full border border-primary/15 bg-white px-4 py-2 text-primary transition hover:border-primary/30"
+          >
+            Tous les modèles
+          </a>
           <a
             href="/"
             class="rounded-full border border-primary/15 bg-white px-4 py-2 text-primary transition hover:border-primary/30"
@@ -87,20 +94,20 @@
           </label>
           <select
             id="bust-fruit-size"
-            v-model="activeFruitId"
+            v-model="activeCatalogModelId"
             class="mt-2 w-full rounded-xl border border-primary/15 bg-white px-3 py-2.5 text-sm font-bold text-primary outline-none transition focus:border-[#e95678]/50 focus:ring-2 focus:ring-[#e95678]/10"
           >
             <option
-              v-for="fruitModel in bustFruitModels"
-              :key="fruitModel.id"
-              :value="fruitModel.id"
+              v-for="catalogModel in bustModelCatalog"
+              :key="catalogModel.id"
+              :value="catalogModel.id"
             >
-              {{ fruitModel.emoji }} {{ fruitModel.fruit }} · {{ fruitModel.sizeLabel }}
+              {{ catalogModel.shortLabel }} · {{ catalogModel.badge }}
             </option>
           </select>
 
           <div class="mt-2 px-0.5 text-[11px] leading-snug" aria-live="polite">
-            <p class="font-bold text-primary">{{ activeFruitModel.modelLabel }}</p>
+            <p class="font-bold text-primary">{{ activeCatalogModel.label }}</p>
             <p v-if="isResolvingPreviewModel" class="mt-0.5 text-secondary">
               Recherche du modèle local…
             </p>
@@ -113,6 +120,30 @@
           <p class="mt-2 border-t border-primary/10 pt-2 text-[10px] leading-relaxed text-secondary/75">
             Comparaison visuelle uniquement, sans équivalence médicale de taille.
           </p>
+        </div>
+
+        <div
+          v-if="sourceComparisonEnabled && (isResolvingSourceComparison || sourceComparison)"
+          class="mb-4 rounded-2xl border border-primary/10 bg-white/80 p-3"
+        >
+          <label class="flex cursor-pointer items-start gap-3">
+            <input
+              v-model="showSourceComparison"
+              type="checkbox"
+              :disabled="!sourceComparison"
+              class="mt-0.5 h-4 w-4 rounded border-primary/20 accent-[#e95678]"
+            />
+            <span>
+              <span class="block text-xs font-bold text-primary">Comparer à la photo source</span>
+              <span class="mt-0.5 block text-[10px] leading-relaxed text-secondary/80">
+                {{
+                  isResolvingSourceComparison
+                    ? "Recherche de la photo privée…"
+                    : "Affiche la vue d’origine à côté du modèle, avec le même angle de départ."
+                }}
+              </span>
+            </span>
+          </label>
         </div>
 
         <div class="mb-4 rounded-2xl border border-primary/10 bg-white/80 p-3">
@@ -176,8 +207,46 @@
         </p>
       </aside>
 
-      <main class="h-full pt-20 md:pt-16">
+      <main
+        class="h-full pt-20 md:pt-16"
+        :class="showSourceComparison && sourceComparison ? 'md:pl-[23rem]' : ''"
+      >
+        <div
+          v-if="showSourceComparison && sourceComparison"
+          class="grid h-full min-h-0 grid-rows-2 bg-[#fff5f8] md:grid-cols-2 md:grid-rows-1"
+        >
+          <figure class="relative min-h-0 overflow-hidden border-b border-primary/10 bg-[#f7edf1] md:border-b-0 md:border-r">
+            <img
+              :src="sourceComparison.imageUrl"
+              :alt="sourceComparison.label"
+              class="h-full w-full object-contain"
+              draggable="false"
+            />
+            <figcaption class="absolute bottom-4 left-4 rounded-full bg-white/90 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-primary shadow-sm backdrop-blur">
+              {{ sourceComparison.label }} · privée
+            </figcaption>
+          </figure>
+          <section class="relative min-h-0">
+            <ThreeBustViewer
+              :key="comparisonViewerKey"
+              :model-url="previewModelUrl"
+              :auto-rotate="false"
+              :enable-zoom="true"
+              :initial-rotation-y="sourceComparison.initialRotationY"
+              :symptom-type="activePreviewSymptom"
+              :material-style="activePreviewMaterial"
+            />
+            <button
+              type="button"
+              class="absolute right-4 top-4 z-20 rounded-full border border-primary/10 bg-white/90 px-3 py-1.5 text-[10px] font-bold text-primary shadow-sm backdrop-blur transition hover:border-primary/30"
+              @click="comparisonResetKey += 1"
+            >
+              Recaler l’angle
+            </button>
+          </section>
+        </div>
         <ThreeBustViewer
+          v-else
           :key="previewModelUrl"
           :model-url="previewModelUrl"
           :auto-rotate="false"
@@ -210,11 +279,12 @@ import Logo from "~/components/ui/Logo.vue";
 import CursorImageSpawner from "~/components/ui/CursorImageSpawner.vue";
 import ThreeBustViewer from "~/components/ui/ThreeBustViewer.vue";
 import ThreeDStudio from "~/components/ui/ThreeDStudio.vue";
+import ThreeDModelCatalogPage from "~/components/ui/ThreeDModelCatalogPage.vue";
 import FruitTestPage from "~/components/ui/FruitTestPage.vue";
 import {
+  bustModelCatalog,
   bustFruitModels,
   defaultBustModel,
-  type BustFruitId,
 } from "~/config/bust-models";
 import { useAnimationsStore } from "~/stores";
 import { useContent } from "~/composables/useContent";
@@ -224,6 +294,7 @@ import { useLenis } from "lenis/vue";
 const store = useAnimationsStore();
 const route = useRoute();
 const isFruitTest = computed(() => route.path === "/fruits");
+const isThreeDModelCatalog = computed(() => route.path === "/models-3d");
 const isThreeDStudio = computed(
   () => route.path === "/studio-3d" || route.query.studio3d === "upload"
 );
@@ -240,20 +311,27 @@ const fallbackPreviewModelName = computed(() => {
 const requestedFruit = Array.isArray(route.query.fruit)
   ? route.query.fruit[0]
   : route.query.fruit;
-const activeFruitId = ref<BustFruitId>(
-  bustFruitModels.some((model) => model.id === requestedFruit)
-    ? (requestedFruit as BustFruitId)
-    : "pamplemousse"
+const requestedCatalogModel = bustModelCatalog.find(
+  (model) => model.fileName === fallbackPreviewModelName.value
 );
-const activeFruitModel = computed(
+const requestedFruitModel = bustFruitModels.find((model) => model.id === requestedFruit);
+const activeCatalogModelId = ref(
+  requestedFruitModel
+    ? `volume-${requestedFruitModel.id}`
+    : requestedCatalogModel?.id ?? bustModelCatalog[0].id
+);
+const activeCatalogModel = computed(
   () =>
-    bustFruitModels.find((model) => model.id === activeFruitId.value) ??
-    bustFruitModels[2]
+    bustModelCatalog.find((model) => model.id === activeCatalogModelId.value) ??
+    bustModelCatalog[0]
 );
 const previewModelName = ref(fallbackPreviewModelName.value);
 const isResolvingPreviewModel = ref(false);
 const isUsingDefaultPreviewModel = ref(true);
 const runtimeConfig = useRuntimeConfig();
+const sourceComparisonEnabled = Boolean(
+  runtimeConfig.public.modelReview?.sourceComparisonEnabled
+);
 const modelsPublicUrl = String(runtimeConfig.public.r2.modelsPublicUrl || "").replace(
   /\/+$/,
   ""
@@ -266,13 +344,26 @@ const getPreviewModelUrl = (fileName: string) => {
     : `/models/${encodedName}`;
 };
 const previewModelUrl = computed(() => getPreviewModelUrl(previewModelName.value));
+interface SourceComparison {
+  imageUrl: string;
+  initialRotationY: number;
+  label: string;
+}
+const sourceComparison = ref<SourceComparison | null>(null);
+const isResolvingSourceComparison = ref(false);
+const showSourceComparison = ref(false);
+const comparisonResetKey = ref(0);
+const comparisonViewerKey = computed(
+  () => `${previewModelUrl.value}:${comparisonResetKey.value}`
+);
 let previewModelRequestId = 0;
+let sourceComparisonRequestId = 0;
 
 const resolvePreviewModel = async () => {
   if (!import.meta.client || !isThreeDPreview.value) return;
 
   const requestId = ++previewModelRequestId;
-  const candidateName = activeFruitModel.value.fileName;
+  const candidateName = activeCatalogModel.value.fileName;
   isResolvingPreviewModel.value = true;
 
   try {
@@ -300,10 +391,46 @@ const resolvePreviewModel = async () => {
 };
 
 watch(
-  [activeFruitId, fallbackPreviewModelName, isThreeDPreview],
+  [activeCatalogModelId, fallbackPreviewModelName, isThreeDPreview],
   () => void resolvePreviewModel(),
   { immediate: true }
 );
+
+const resolveSourceComparison = async () => {
+  const requestId = ++sourceComparisonRequestId;
+  sourceComparison.value = null;
+  showSourceComparison.value = false;
+
+  if (!import.meta.client || !sourceComparisonEnabled || !isThreeDPreview.value) return;
+
+  isResolvingSourceComparison.value = true;
+  try {
+    const response = await fetch(
+      `/api/3d/source-comparison?model=${encodeURIComponent(previewModelName.value)}`,
+      { cache: "no-store" }
+    );
+    if (!response.ok) return;
+
+    const payload = (await response.json()) as SourceComparison;
+    if (requestId === sourceComparisonRequestId) sourceComparison.value = payload;
+  } catch {
+    // The private review helper is optional and remains hidden when unavailable.
+  } finally {
+    if (requestId === sourceComparisonRequestId) {
+      isResolvingSourceComparison.value = false;
+    }
+  }
+};
+
+watch(
+  [previewModelName, isThreeDPreview],
+  () => void resolveSourceComparison(),
+  { immediate: true }
+);
+
+watch(showSourceComparison, (isVisible) => {
+  if (isVisible) comparisonResetKey.value += 1;
+});
 type PreviewMaterialStyle = "original" | "glass" | "glow" | "iridescent";
 const previewMaterials: Array<{
   id: PreviewMaterialStyle;
@@ -431,6 +558,7 @@ useHead({
   htmlAttrs: {
     class: computed(() =>
       !isFruitTest.value &&
+      !isThreeDModelCatalog.value &&
       !isThreeDPreview.value &&
       !isThreeDStudio.value &&
       !isLoadingComplete.value
@@ -441,6 +569,7 @@ useHead({
   bodyAttrs: {
     class: computed(() =>
       !isFruitTest.value &&
+      !isThreeDModelCatalog.value &&
       !isThreeDPreview.value &&
       !isThreeDStudio.value &&
       !isLoadingComplete.value
@@ -500,7 +629,12 @@ watch(
 );
 
 onMounted(async () => {
-  if (isFruitTest.value || isThreeDPreview.value || isThreeDStudio.value) return;
+  if (
+    isFruitTest.value ||
+    isThreeDModelCatalog.value ||
+    isThreeDPreview.value ||
+    isThreeDStudio.value
+  ) return;
 
   scrollTo(0, 0);
   lenis.value.stop();

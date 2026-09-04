@@ -14,12 +14,20 @@
         </p>
       </div>
 
-      <a
-        href="/"
-        class="rounded-full border border-primary/20 bg-white px-5 py-2.5 text-sm font-bold transition hover:border-primary/50 hover:bg-primary hover:text-white"
-      >
-        Retour au site
-      </a>
+      <div class="flex flex-wrap gap-3">
+        <a
+          href="/models-3d"
+          class="rounded-full border border-primary/20 bg-white px-5 py-2.5 text-sm font-bold transition hover:border-primary/50"
+        >
+          Voir les bustes
+        </a>
+        <a
+          href="/"
+          class="rounded-full border border-primary/20 bg-white px-5 py-2.5 text-sm font-bold transition hover:border-primary/50 hover:bg-primary hover:text-white"
+        >
+          Retour au site
+        </a>
+      </div>
     </header>
 
     <section class="mx-auto mt-10 grid max-w-7xl grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">

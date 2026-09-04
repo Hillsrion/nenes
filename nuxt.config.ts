@@ -176,6 +176,10 @@ export default defineNuxtConfig({
           process.env.NUXT_PUBLIC_3D_MODELS_URL ||
           "https://pub-43370cee5bda403fb0a2206c460fe804.r2.dev",
       },
+      modelReview: {
+        sourceComparisonEnabled:
+          process.env.NUXT_PUBLIC_ENABLE_3D_SOURCE_COMPARISON === "true",
+      },
       // Matomo configuration
       matomoUrl:
         process.env.NUXT_PUBLIC_MATOMO_URL ||
