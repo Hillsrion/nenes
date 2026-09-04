@@ -210,7 +210,7 @@ fichier : son GLB doit toujours être envoyé séparément vers R2.
 
 Cette fonction est désactivée par défaut et n'apparaît jamais en production
 publique. Le mapping ne vit plus dans une variable locale : sa source de vérité
-est le manifeste privé `catalog/models.json` dans `nenes-3d-inputs`. Chaque
+est le manifeste privé `catalog/models.json` dans le bucket d’inputs configuré. Chaque
 entrée de modèle référence le `manifest.json` de sa collection et l'index de la
 photo à afficher. Le serveur résout ensuite la clé de l'image depuis ce second
 manifeste.
@@ -221,7 +221,7 @@ lancer :
     pnpm dlx wrangler login
 
     NUXT_PUBLIC_ENABLE_3D_SOURCE_COMPARISON=true \
-    NUXT_PUBLIC_R2_INPUTS_BUCKET_NAME=nenes-3d-inputs \
+    NUXT_PUBLIC_R2_INPUTS_BUCKET_NAME=<nom-du-bucket-prive> \
     pnpm dev
 
 En développement, le serveur utilise automatiquement le CLI Wrangler et sa

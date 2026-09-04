@@ -21,9 +21,8 @@ type UploadEvent = {
 };
 
 /**
- * Keep the intake operational when the optional public bucket-name variable is
- * absent from a Netlify environment. The bucket name is not a secret; the
- * credentials below still limit access to this bucket.
+ * Resolve the bucket name at runtime so it never gets embedded in the public
+ * client configuration. The credentials below still limit access to this bucket.
  */
 function resolveInputsConfig(config: ReturnType<typeof useRuntimeConfig>) {
   const configuredR2Inputs = config.r2Inputs || {};
@@ -39,7 +38,7 @@ function resolveInputsConfig(config: ReturnType<typeof useRuntimeConfig>) {
         process.env.NUXT_PUBLIC_R2_INPUTS_BUCKET_NAME ||
         process.env.CLOUDFLARE_R2_INPUTS_BUCKET_NAME ||
         configuredR2Inputs.bucketName ||
-        "nenes-3d-inputs"
+        ""
     ).trim(),
     accessKeyId: String(
       process.env.NUXT_R2_INPUTS_ACCESS_KEY_ID ||

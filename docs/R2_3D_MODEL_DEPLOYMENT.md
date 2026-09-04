@@ -86,7 +86,7 @@ sources reste exclue de ce déploiement ; sa configuration locale et sa variante
 pour une branche Netlify protégée sont décrites dans
 `PHOTO_TO_3D_WORKFLOW.md`.
 
-Le bucket privé `nenes-3d-inputs` contient aussi `catalog/models.json`. Ce
+Le bucket privé configuré pour les inputs contient aussi `catalog/models.json`. Ce
 manifeste relie chaque GLB au manifeste de ses images et conserve sa catégorie
 fruit. Il ne doit jamais être déplacé dans le bucket public des modèles.
 
@@ -117,13 +117,15 @@ CLOUDFLARE_R2_INPUTS_ACCESS_KEY_ID=<clé-r2-limitée>
 CLOUDFLARE_R2_INPUTS_SECRET_ACCESS_KEY=<secret-r2-limité>
 ```
 
-Le nom du bucket n’est pas un secret et peut être défini publiquement :
+Le nom du bucket doit être disponible côté serveur. Dans Netlify, le définir
+comme variable d’environnement privée (sa valeur ne doit pas être publiée) :
 
 ```env
-NUXT_PUBLIC_R2_INPUTS_BUCKET_NAME=<nom-du-bucket>
+CLOUDFLARE_R2_INPUTS_BUCKET_NAME=<nom-du-bucket>
 ```
 
-Ne jamais préfixer les identifiants et clés privées par `NUXT_PUBLIC_`. L’API
+Ne jamais préfixer les identifiants, clés privées ou le nom du bucket de
+production par `NUXT_PUBLIC_`. L’API
 vérifie la configuration R2 côté serveur et limite les envois à quatre images
 (JPG, PNG ou WebP), de 12 Mo maximum chacune. Après avoir ajouté ou modifié
 ces variables, supprimer l’ancienne variable secrète
@@ -140,10 +142,9 @@ préfixe qui indique l'origine. Mettre ensuite en place une règle de cycle de
 vie R2 pour supprimer automatiquement les entrées après la génération et la
 validation du GLB.
 
-Le nom du bucket est facultatif dans l'environnement Netlify : l'endpoint
-utilise `nenes-3d-inputs` par défaut. Les trois variables sensibles restent
-obligatoires. Ainsi, une variable publique manquante ne transforme plus un
-envoi valide en erreur générique.
+Le nom du bucket est lu au runtime depuis l’environnement serveur. Les trois
+variables sensibles restent obligatoires. Ainsi, aucune valeur de bucket privée
+ne se retrouve dans le bundle public.
 
 ### Diagnostic et observabilité
 
@@ -182,7 +183,7 @@ ni publiques ni traitées automatiquement par `models:process-r2`, qui est
 réservé aux soumissions du formulaire.
 
 Par défaut, l'import utilise la connexion OAuth de Wrangler et cible
-explicitement `nenes-3d-inputs`. Vérifier ou créer cette connexion avec
+explicitement le bucket d’inputs configuré. Vérifier ou créer cette connexion avec
 `pnpm dlx wrangler login`. Une authentification par clé S3 est disponible en
 secours avec `pnpm inputs:upload-manual -- --auth s3` et les variables R2
 d'entrées décrites plus haut.

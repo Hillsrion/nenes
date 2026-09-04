@@ -156,7 +156,10 @@ async function main() {
   if (directories.length === 0) fail("Aucun sous-dossier de photos à importer.");
 
   const connection = options.dryRun || options.auth === "oauth" ? undefined : createClient();
-  const oauthBucket = "nenes-3d-inputs";
+  const oauthBucket = requiredEnvironment(
+    "NUXT_PUBLIC_R2_INPUTS_BUCKET_NAME",
+    "CLOUDFLARE_R2_INPUTS_BUCKET_NAME"
+  );
   let uploaded = 0;
   let skipped = 0;
 
