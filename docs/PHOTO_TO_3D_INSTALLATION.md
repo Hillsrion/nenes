@@ -12,18 +12,18 @@ on ne change pas de famille de modèles à chaque essai.
 
 | Besoin | Modèle ou traitement | Usage dans le projet |
 | --- | --- | --- |
-| Essai rapide avec une photo sur Apple Silicon | Hunyuan3D-2mini, port Swift/MLX | Pipeline par défaut de `pnpm model:photo` |
+| Essai rapide avec une photo sur Apple Silicon | Hunyuan3D-2mini, port Swift/MLX | Boucle rapide avec `pnpm model:photo` |
 | Géométrie plus détaillée avec une photo | Hunyuan3D v2.0 Turbo, port Swift/MLX | Remplacer les poids `shape-small` par `shape-large` |
 | Texture PBR | Hunyuan3D-Paint 2.1, port Swift/MLX | Activer avec `HUNYUAN3D_PAINT_WEIGHTS` |
-| Une forme issue de 2 à 4 vues | `tencent/Hunyuan3D-2mv` | Pipeline officiel multivue, séparé du wrapper Swift actuel |
+| Buste final issu de 2 à 4 vues | `tencent/Hunyuan3D-2mv` | Pipeline par défaut avec `pnpm model:bust` |
 | Asymétrie, rougeur et fossettes | `scripts/generate-symptom-model.mjs` | Post-traitement procédural ; ce n'est pas un LLM |
 | Secours seulement | Stable Fast 3D ou TripoSR | À utiliser si Hunyuan3D est bloqué sur une machine donnée |
 
-Le premier GLB du projet a été généré avec Hunyuan3D depuis une seule photo.
-La variante et les paramètres exacts n'ont pas été enregistrés lors de cet
-essai : il ne faut donc pas les déduire de la topologie du GLB. Pour chaque
-nouvelle génération, conserver un petit `RUN.md` dans le dossier privé de la
-photo avec la variante, les poids et la commande utilisés.
+Le premier GLB exploitable du projet a été généré depuis une seule photo avec
+le port Swift/MLX, les poids `shape-small`, une quantification 4 bits, 20 étapes,
+un octree de 192 et la seed 7. Ces paramètres ont été retrouvés dans l'historique
+d'exécution d'origine et sont maintenant les valeurs par défaut de
+`pnpm model:photo`.
 
 Références :
 
@@ -38,12 +38,12 @@ conservent leurs licences propres.
 
 ## Configuration vérifiée sur la machine actuelle
 
-État constaté le 4 août 2026 :
+État vérifié le 4 septembre 2026 :
 
 - macOS 15.6.1 sur Apple Silicon arm64 ;
 - Xcode 26.0.1, build 17A400 ;
 - Apple Clang 17.0.0 et compilateur Metal disponibles ;
-- Homebrew 5.1.1 ;
+- Homebrew 6.0.20 ;
 - Node 22.18.0 et pnpm 10.14.0.
 
 Le pipeline Swift/MLX n'a pas besoin de l'environnement Python, de CUDA, de
@@ -102,8 +102,17 @@ Cloner le runtime hors du dépôt `nenes` :
 
     git clone https://github.com/ZimengXiong/Hunyuan3D-Swift.git
     cd Hunyuan3D-Swift
-    swift build -c release
-    .build/release/hy3d --help
+
+Puis, depuis le dépôt `nenes`, compiler avec Xcode :
+
+    HUNYUAN3D_DIR=/chemin/absolu/vers/Hunyuan3D-Swift \
+      pnpm model:build
+
+Ne pas remplacer cette commande par `swift build -c release`. SwiftPM produit
+alors un exécutable, mais il peut omettre les ressources Metal nécessaires à
+MLX et échouer au premier calcul avec `Failed to load the default metallib`.
+La compilation Xcode place le binaire, les frameworks et la bibliothèque Metal
+dans le même dossier de produits.
 
 Le port contient une commande `hy3d` native et utilise MLX/Metal sur Apple
 Silicon. Il est vérifié par comparaison avec le port Python MLX, lui-même
@@ -127,13 +136,38 @@ Pour utiliser les autres emplacements de poids supportés par le port, suivre
 son README. Ne jamais écrire un token Hugging Face dans le dépôt ou dans cette
 documentation.
 
+### Runtime multivue officiel
+
+Installer une seule copie du runtime Python, hors du dépôt `nenes` :
+
+    git clone https://github.com/Tencent-Hunyuan/Hunyuan3D-2.git
+    cd Hunyuan3D-2
+    python3.12 -m venv .venv
+    .venv/bin/pip install torch torchvision
+    .venv/bin/pip install -r requirements.txt
+    .venv/bin/pip install -e .
+
+Télécharger uniquement la variante `safetensors`. Le fichier CKPT de 4,6 Go
+contient les mêmes poids et n'est pas utilisé par la commande du projet :
+
+    mkdir -p weights/hunyuan3d-2mv
+    hf download tencent/Hunyuan3D-2mv \
+      hunyuan3d-dit-v2-mv/config.yaml \
+      hunyuan3d-dit-v2-mv/model.fp16.safetensors \
+      --local-dir weights/hunyuan3d-2mv
+
+Les extensions de rendu nécessaires à la texture ne sont pas requises pour la
+géométrie de `pnpm model:bust`.
+
 ## 5. Installer et vérifier le projet web
 
 Depuis la racine de `nenes` :
 
     corepack enable
     pnpm install
-    HUNYUAN3D_DIR=/chemin/absolu/vers/Hunyuan3D-Swift pnpm model:check
+    HUNYUAN3D_DIR=/chemin/absolu/vers/Hunyuan3D-Swift \
+    HUNYUAN3D_BUILD_DIR=/chemin/absolu/vers/le-dossier-de-build \
+      pnpm model:check
 
 Le diagnostic est en lecture seule. Il vérifie Apple Silicon, Xcode, Swift,
 clang, Metal, le SDK macOS, le CLI Hugging Face, Node, pnpm, le binaire `hy3d`
@@ -143,8 +177,14 @@ et les poids locaux.
 
 Géométrie rapide :
 
-    .build/release/hy3d shape photo.png -o mesh.glb \
-      --weights weights/shape-small
+    HUNYUAN3D_DIR=/chemin/absolu/vers/Hunyuan3D-Swift \
+    HUNYUAN3D_BUILD_DIR=/chemin/absolu/vers/le-dossier-de-build \
+      pnpm model:photo -- photo.png public/models/mesh.glb
+
+Cette commande reproduit le préréglage validé : `shape-small`, quantification
+4 bits, 20 étapes, octree 192 et seed 7. Les quatre paramètres peuvent être
+surchargés avec `HUNYUAN3D_QUANTIZE`, `HUNYUAN3D_STEPS`,
+`HUNYUAN3D_OCTREE` et `HUNYUAN3D_SEED`.
 
 Géométrie et peinture PBR :
 
@@ -161,21 +201,23 @@ Le modèle officiel `tencent/Hunyuan3D-2mv` accepte 1 à 4 vues et génère une
 seule forme conditionnée par ces vues. C'est différent de lancer quatre fois
 un modèle mono-image.
 
-Le wrapper `pnpm model:photo` reste volontairement mono-image et optimisé pour
-le port Swift/MLX. Pour le multivue, utiliser l'implémentation officielle
-Hunyuan3D-2 dans un environnement compatible avec ses dépendances PyTorch,
-puis sélectionner :
+Le wrapper `pnpm model:photo` reste mono-image. Les bustes finaux passent par
+la commande officielle multivue :
 
-    python3 gradio_app.py \
-      --model_path tencent/Hunyuan3D-2mv \
-      --subfolder hunyuan3d-dit-v2-mv \
-      --texgen_model_path tencent/Hunyuan3D-2 \
-      --low_vram_mode
+    HUNYUAN3D_MV_DIR=/chemin/vers/Hunyuan3D-2 \
+      pnpm model:bust -- \
+      --front private-3d-inputs/bust-02/front.png \
+      --left private-3d-inputs/bust-02/left.png \
+      --output public/models/bust-02-base.glb
 
-L'implémentation officielle documente macOS, Windows et Linux, mais ses
-extensions de texture et ses besoins mémoire sont plus exigeants que le port
-Swift/MLX. Sur le Mac, tester d'abord la génération de forme ; utiliser une
-machine CUDA séparée si l'étape texture n'est pas fiable ou trop lente.
+Les entrées doivent être des PNG détourés. La commande demande au moins deux
+vues, force les poids `safetensors`, utilise MPS par défaut, refuse d'écraser un
+GLB existant et reproduit le préréglage validé : 30 étapes, octree 320, chunks
+12000 et seed 12345.
+
+Les noms de vues sont des positions de caméra strictes : `front`, puis
+`left` à 90° dans le sens horaire, `back` à 180°, et `right` à 270°. Ne pas
+étiqueter une photo à 45° comme `left` ou `right`.
 
 ## Erreurs fréquentes
 
@@ -189,12 +231,20 @@ machine CUDA séparée si l'étape texture n'est pas fiable ou trop lente.
 Xcode complet n'est pas installé ou n'est pas sélectionné. Vérifier
 `xcode-select -p`, puis relancer les commandes de la section 1.
 
-### Le binaire `.build/release/hy3d` est absent
+### Le binaire Xcode `hy3d` est absent
 
-    cd /chemin/vers/Hunyuan3D-Swift
-    swift build -c release
+    HUNYUAN3D_DIR=/chemin/vers/Hunyuan3D-Swift \
+      pnpm model:build
 
-Ne pas lancer `pnpm model:photo` tant que cette compilation n'est pas terminée.
+Ne pas lancer `pnpm model:photo` tant que cette compilation Xcode n'est pas
+terminée.
+
+### `Failed to load the default metallib`
+
+Le runtime a été compilé avec `swift build` ou lancé sans son dossier de
+produits Xcode. Relancer `pnpm model:build`, puis fournir le même
+`HUNYUAN3D_BUILD_DIR` à `pnpm model:photo`. Ne pas compiler manuellement les
+kernels NAX : leur disponibilité dépend de la version du SDK Metal.
 
 ### Les poids ne sont pas trouvés
 
@@ -209,3 +259,10 @@ Relancer `hf download` ou fournir un chemin explicite :
 Ne pas définir `HUNYUAN3D_PAINT_WEIGHTS` afin de lancer uniquement
 `hy3d shape`. Valider d'abord la géométrie, puis effectuer la peinture sur la
 machine la plus puissante disponible.
+
+### Le multivue produit une dalle ou un sujet couché
+
+Les causes observées étaient une rotation EXIF ignorée et un fond encore
+opaque. Recadrer d'abord, puis produire chaque PNG transparent avec
+`pnpm model:view:mask`. Vérifier visuellement les PNG avant de relancer
+`pnpm model:bust`.

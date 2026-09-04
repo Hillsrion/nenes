@@ -11,7 +11,7 @@ conversation restent exclusivement locaux.
 - région : Europe de l'Ouest ;
 - URL publique : `https://pub-43370cee5bda403fb0a2206c460fe804.r2.dev` ;
 - CORS : `GET` et `HEAD` depuis toutes les origines ;
-- modèle de référence : `models/bust-photo-symptoms.glb` ;
+- modèle de référence : `models/bust-multiview-v2-symptoms.glb` ;
 - type MIME : `model/gltf-binary` ;
 - cache : une heure avec revalidation.
 
@@ -40,7 +40,7 @@ liste blanche empêche l'envoi accidentel d'une photo ou d'un GLB intermédiaire
 
 ```bash
 # Charge le modèle final de référence.
-pnpm models:upload -- bust-photo-symptoms.glb
+pnpm models:upload -- bust-multiview-v2-symptoms.glb
 
 # Charge les modèles du catalogue qui existent localement.
 pnpm models:upload -- --all-configured
@@ -54,14 +54,14 @@ script appelle Wrangler et publie vers `models/<nom-du-fichier>.glb`.
 ```bash
 mkdir -p public/models
 curl --fail \
-  --output public/models/bust-photo-symptoms.glb \
-  https://pub-43370cee5bda403fb0a2206c460fe804.r2.dev/models/bust-photo-symptoms.glb
+  --output public/models/bust-multiview-v2-symptoms.glb \
+  https://pub-43370cee5bda403fb0a2206c460fe804.r2.dev/models/bust-multiview-v2-symptoms.glb
 ```
 
 Le fichier téléchargé reste ignoré par Git. Son SHA-256 de référence est :
 
 ```text
-e0f9918b45ecd463411e7c81252e3789bfc9e6f9fc301aa82d61f60b2ca7a14f
+06779dfcbde22a07d27395d205106afcdf8e6f048c0c8885248328ba391a5ba9
 ```
 
 ## Vérifier la publication
@@ -69,7 +69,7 @@ e0f9918b45ecd463411e7c81252e3789bfc9e6f9fc301aa82d61f60b2ca7a14f
 ```bash
 curl -I \
   -H 'Origin: http://localhost:3000' \
-  https://pub-43370cee5bda403fb0a2206c460fe804.r2.dev/models/bust-photo-symptoms.glb
+  https://pub-43370cee5bda403fb0a2206c460fe804.r2.dev/models/bust-multiview-v2-symptoms.glb
 ```
 
 La réponse doit être `200`, avec `Content-Type: model/gltf-binary` et
@@ -78,8 +78,17 @@ La réponse doit être `200`, avec `Content-Type: model/gltf-binary` et
 La démo de production se trouve à :
 
 ```text
-https://main--nenes.netlify.app/?preview3d=photo&model=bust-photo-symptoms.glb
+https://main--nenes.netlify.app/?preview3d=photo&model=bust-multiview-v2-symptoms.glb
 ```
+
+Le catalogue public se trouve sur `/models-3d`. La comparaison avec les photos
+sources reste exclue de ce déploiement ; sa configuration locale et sa variante
+pour une branche Netlify protégée sont décrites dans
+`PHOTO_TO_3D_WORKFLOW.md`.
+
+Le bucket privé `nenes-3d-inputs` contient aussi `catalog/models.json`. Ce
+manifeste relie chaque GLB au manifeste de ses images et conserve sa catégorie
+fruit. Il ne doit jamais être déplacé dans le bucket public des modèles.
 
 ## Ajouter un nouveau modèle
 
@@ -90,7 +99,7 @@ https://main--nenes.netlify.app/?preview3d=photo&model=bust-photo-symptoms.glb
 5. Déployer ensuite le catalogue vers `main`.
 
 Pour éviter toute ambiguïté de cache lors d'une refonte importante, utiliser
-un nouveau nom versionné, par exemple `bust-photo-symptoms-v2.glb`.
+un nouveau nom versionné, par exemple `bust-multiview-v3-symptoms.glb`.
 
 ## Ingestion des photos
 
@@ -124,7 +133,100 @@ adaptée (par exemple Turnstile et une limite de débit) pour éviter les dépô
 automatisés.
 
 Le endpoint serveur n'accepte que 1 à 4 fichiers JPEG, PNG ou WebP de 12 Mo au
-maximum. Il les enregistre sous une clé anonyme de soumission et retourne une
-référence, jamais une URL de photo. Mettre ensuite en place une règle de cycle
-de vie R2 pour supprimer automatiquement les entrées après la génération et
-la validation du GLB.
+maximum. Il les enregistre sous `submissions/<uuid>/images/input-001…` avec un
+`manifest.json` anonyme, puis retourne une référence, jamais une URL de photo.
+Cette structure est identique à celle des archives manuelles, à l'exception du
+préfixe qui indique l'origine. Mettre ensuite en place une règle de cycle de
+vie R2 pour supprimer automatiquement les entrées après la génération et la
+validation du GLB.
+
+Le nom du bucket est facultatif dans l'environnement Netlify : l'endpoint
+utilise `nenes-3d-inputs` par défaut. Les trois variables sensibles restent
+obligatoires. Ainsi, une variable publique manquante ne transforme plus un
+envoi valide en erreur générique.
+
+### Diagnostic et observabilité
+
+Chaque tentative produit une ligne structurée dans les logs de fonction
+Netlify, préfixée par `[3d-upload]`, et — dès que R2 est joignable — un audit
+JSON dans Cloudflare R2 sous `observability/3d-uploads/YYYY-MM-DD/`. Ces traces
+contiennent un identifiant de requête, un identifiant anonyme de soumission,
+l'étape, le nombre de photos et leur taille totale. Les noms de fichiers, URL,
+contenu et empreintes des photos ne sont jamais consignés. En cas d'échec qui
+atteint la fonction, l'interface affiche la référence de requête ; rechercher
+cette référence dans Netlify ou R2 pour connaître l'étape en cause
+(`configuration_unavailable`, `multipart_unreadable`,
+`r2_photo_write_failed`, etc.).
+
+Les écritures réussies sont également visibles dans Cloudflare R2 sous
+`submissions/<uuid>/manifest.json`. Configurer une règle de cycle de vie sur
+`submissions/` et `observability/3d-uploads/` afin que ces données privées
+soient purgées après le délai opérationnel choisi.
+
+### Photos reçues hors formulaire
+
+Les photos reçues directement restent dans `breast-images/<dossier-prive>/`,
+qui est ignoré par Git. Pour les archiver dans le même bucket d'entrées privé,
+sans les limites du formulaire, exécuter :
+
+```sh
+pnpm inputs:upload-manual
+```
+
+Le script importe chaque sous-dossier sous `manual/<uuid>/images/`. Le nom du
+dossier local n'est jamais envoyé à R2 : le mapping local vers l'UUID est
+conservé dans `breast-images/.r2-manual-uploads.json`, lui aussi ignoré par
+Git. Chaque collection R2 contient un `manifest.json` anonyme, afin qu'un
+workflow IA privé puisse inventorier toutes les images. Ces archives ne sont
+ni publiques ni traitées automatiquement par `models:process-r2`, qui est
+réservé aux soumissions du formulaire.
+
+Par défaut, l'import utilise la connexion OAuth de Wrangler et cible
+explicitement `nenes-3d-inputs`. Vérifier ou créer cette connexion avec
+`pnpm dlx wrangler login`. Une authentification par clé S3 est disponible en
+secours avec `pnpm inputs:upload-manual -- --auth s3` et les variables R2
+d'entrées décrites plus haut.
+
+## Traiter les inputs R2 par hash
+
+La commande batch suivante parcourt `submissions/`, calcule un SHA-256 du
+contenu et de l'ordre des photos, puis publie les modèles finis sous
+`models/generated/<sha256>.glb`. Une soumission identique est donc ignorée si
+son GLB existe déjà, même si elle possède un autre UUID R2 :
+
+```sh
+HUNYUAN3D_DIR=/chemin/vers/Hunyuan3D-Swift \
+HUNYUAN3D_MV_DIR=/chemin/vers/Hunyuan3D-2 \
+pnpm models:process-r2
+```
+
+Variables requises : `CLOUDFLARE_ACCOUNT_ID`,
+`NUXT_PUBLIC_R2_INPUTS_BUCKET_NAME`,
+`CLOUDFLARE_R2_INPUTS_ACCESS_KEY_ID` et
+`CLOUDFLARE_R2_INPUTS_SECRET_ACCESS_KEY`. Le bucket de sortie est
+`CLOUDFLARE_R2_3D_BUCKET_NAME` ou `nenes-3d-models`; les credentials inputs
+sont réutilisés par défaut, sauf si les variables `CLOUDFLARE_R2_3D_*` sont
+définies.
+
+Pour inspecter sans lancer Hunyuan3D :
+
+```sh
+pnpm models:process-r2 -- --dry-run
+```
+
+Pour reprendre une génération précise :
+
+```sh
+pnpm models:process-r2 -- --hash <sha256-ou-prefixe>
+```
+
+Une photo utilise le pipeline rapide Swift/MLX. Les soumissions de 2 à 4
+photos passent automatiquement par Hunyuan3D-2mv après détourage local. Leur
+ordre est significatif et doit être : face, profil gauche, dos, profil droit.
+Ne fournir que les premières vues réellement disponibles ; le formulaire
+affiche cet ordre au moment de la sélection.
+
+Après publication, le batch ajoute ou actualise automatiquement l'entrée du
+modèle dans `catalog/models.json`, sans effacer une classification fruit déjà
+présente. L'API authentifiée de classification et son format de requête sont
+décrits dans `PHOTO_TO_3D_WORKFLOW.md`.
