@@ -61,8 +61,11 @@
           <ul class="mt-5 grid gap-x-6 gap-y-2 text-sm leading-6 text-[#5e2540] md:grid-cols-2">
             <li><span class="font-semibold text-[#7e1f3d]">Distance :</span> téléphone à hauteur de poitrine, à environ 1,5 m, sans zoom ni grand-angle.</li>
             <li><span class="font-semibold text-[#7e1f3d]">Cadrage :</span> de la base du cou au-dessus du nombril ; gardez les bras hors du buste.</li>
-            <li><span class="font-semibold text-[#7e1f3d]">Lumière :</span> lumière douce et homogène face au sujet, sans flash, contre-jour ni filtre.</li>
-            <li><span class="font-semibold text-[#7e1f3d]">Stabilité :</span> même posture, fond uni et réglages pour les quatre photos.</li>
+            <li><span class="font-semibold text-[#7e1f3d]">Cheveux et bijoux :</span> attachez les cheveux s’ils sont longs et retirez colliers, boucles d’oreilles et autres bijoux.</li>
+            <li><span class="font-semibold text-[#7e1f3d]">Tenue :</span> privilégiez une culotte lisse, sans coutures marquées, petits nœuds ni éléments décoratifs qui modifieraient le volume.</li>
+            <li><span class="font-semibold text-[#7e1f3d]">Fond :</span> placez-vous devant un fond neutre, uni et dégagé.</li>
+            <li><span class="font-semibold text-[#7e1f3d]">Lumière :</span> si possible, choisissez une lumière douce, homogène et face au sujet ; évitez flash, contre-jour et filtres.</li>
+            <li><span class="font-semibold text-[#7e1f3d]">Stabilité :</span> gardez la même posture, le même fond et les mêmes réglages pour les quatre photos.</li>
           </ul>
         </section>
 
@@ -267,7 +270,7 @@ async function submitPhotos() {
   message.value = "";
 
   try {
-    const result = await $fetch<{ submissionId: string; photoCount: number }>("/api/3d/submissions", {
+    const result = await $fetch<{ submissionId: string; photoCount: number; requestId?: string }>("/api/3d/submissions", {
       method: "POST",
       body,
     });
@@ -276,7 +279,9 @@ async function submitPhotos() {
     clearPhotos();
   } catch (error: any) {
     isError.value = true;
-    message.value = error?.data?.statusMessage || "L’envoi a échoué. Vérifiez les fichiers puis réessayez.";
+    const requestId = error?.response?.headers?.get?.("x-3d-upload-request-id");
+    const detail = error?.data?.statusMessage || "L’envoi a échoué avant d’atteindre le stockage sécurisé.";
+    message.value = requestId ? `${detail} Référence : ${requestId}.` : detail;
   } finally {
     isSubmitting.value = false;
   }
