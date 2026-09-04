@@ -3,6 +3,15 @@ export const defaultBustModel = {
   fileName: "bust-multiview-v2-symptoms.glb",
 } as const;
 
+export interface BustModelCatalogEntry {
+  id: string;
+  label: string;
+  shortLabel: string;
+  description: string;
+  fileName: string;
+  badge: string;
+}
+
 export const bustFruitModels = [
   {
     id: "citron",
@@ -48,7 +57,7 @@ export const bustFruitModels = [
 
 export type BustFruitId = (typeof bustFruitModels)[number]["id"];
 
-export const bustModelCatalog = [
+export const referenceBustModels = [
   {
     id: "reference-multiview-v2",
     label: defaultBustModel.label,
@@ -58,21 +67,16 @@ export const bustModelCatalog = [
     badge: "Référence",
   },
   {
-    id: "single-photo-v1",
-    label: "Buste mono-image · version historique",
-    shortLabel: "Photo unique · historique",
-    description: "Version historique générée depuis une seule image avec le préréglage validé.",
-    fileName: "bust-photo-symptoms.glb",
-    badge: "Mono-image",
+    id: "reference-front-single-v1",
+    label: "Référence · mono-image",
+    shortLabel: "Référence · mono-image",
+    description:
+      "Même vue de face que la référence multivue, générée avec Hunyuan3D mono-image.",
+    fileName: "bust-reference-front-single-symptoms.glb",
+    badge: "Comparaison",
   },
-  ...bustFruitModels.map((model) => ({
-    id: `volume-${model.id}`,
-    label: model.modelLabel,
-    shortLabel: `${model.emoji} ${model.fruit}`,
-    description: `Repère visuel de volume ${model.sizeLabel.toLowerCase()}.`,
-    fileName: model.fileName,
-    badge: model.sizeLabel,
-  })),
-] as const;
+] satisfies readonly BustModelCatalogEntry[];
 
-export type BustModelCatalogEntry = (typeof bustModelCatalog)[number];
+// This legacy GLB remains in R2 for backwards compatibility, but should no
+// longer be offered in the catalogue.
+export const hiddenBustModelFiles = new Set(["bust-photo-symptoms.glb"]);

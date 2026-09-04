@@ -12,6 +12,8 @@ build_directory="${HUNYUAN3D_BUILD_DIR:-$hunyuan_directory/.xcode-build}"
 product_directory="$build_directory/Build/Products/Release"
 hunyuan_cli="$product_directory/hy3d"
 
+cd "$hunyuan_directory"
+
 xcodebuild build \
   -scheme hy3d \
   -destination 'platform=macOS' \

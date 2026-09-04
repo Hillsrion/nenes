@@ -38,7 +38,6 @@
       >
         <div class="relative h-64 bg-[radial-gradient(circle_at_55%_35%,#fff_0%,#ffe9f1_52%,#f8d6e2_100%)]">
           <ThreeBustViewer
-            v-if="availability[model.fileName] === 'available'"
             :model-url="getModelUrl(model.fileName)"
             :auto-rotate="true"
             :enable-zoom="false"
@@ -46,18 +45,6 @@
             compact
             material-style="glass"
           />
-          <div
-            v-else
-            class="flex h-full flex-col items-center justify-center gap-3 px-8 text-center"
-          >
-            <span
-              class="h-14 w-14 animate-pulse rounded-full bg-white/70 shadow-inner"
-              aria-hidden="true"
-            />
-            <p class="text-xs font-bold uppercase tracking-[0.15em] text-primary/50">
-              {{ availability[model.fileName] === 'missing' ? 'Modèle non publié' : 'Vérification…' }}
-            </p>
-          </div>
           <span class="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-primary shadow-sm">
             {{ model.badge }}
           </span>
@@ -66,22 +53,12 @@
         <div class="p-5">
           <h2 class="text-lg font-bold">{{ model.shortLabel }}</h2>
           <p class="mt-1 min-h-10 text-sm leading-5 text-primary/65">{{ model.description }}</p>
-          <span
-            v-if="availability[model.fileName] === 'available'"
-            class="mt-5 inline-flex rounded-full bg-primary px-4 py-2 text-xs font-bold text-white transition group-hover:bg-primary/85"
-          >
+          <span class="mt-5 inline-flex rounded-full bg-primary px-4 py-2 text-xs font-bold text-white transition group-hover:bg-primary/85">
             Ouvrir dans le viewer
-          </span>
-          <span
-            v-else
-            class="mt-5 inline-flex rounded-full bg-primary/5 px-4 py-2 text-xs font-bold text-primary/40"
-          >
-            Indisponible
           </span>
         </div>
 
         <a
-          v-if="availability[model.fileName] === 'available'"
           :href="getViewerUrl(model.fileName)"
           class="absolute inset-0 z-20 rounded-3xl"
           :aria-label="`Ouvrir ${model.label} dans le viewer`"
@@ -93,41 +70,19 @@
 
 <script setup lang="ts">
 import ThreeBustViewer from "~/components/ui/ThreeBustViewer.vue";
-import { bustModelCatalog } from "~/config/bust-models";
-
-type Availability = "checking" | "available" | "missing";
+import { useBustModelCatalog } from "~/composables/useBustModelCatalog";
 
 const runtimeConfig = useRuntimeConfig();
 const modelsPublicUrl = String(runtimeConfig.public.r2.modelsPublicUrl || "").replace(/\/+$/, "");
-const availability = reactive<Record<string, Availability>>(
-  Object.fromEntries(bustModelCatalog.map((model) => [model.fileName, "checking"]))
-);
+const bustModelCatalog = useBustModelCatalog();
 
 const getModelUrl = (fileName: string) => {
-  const encodedName = encodeURIComponent(fileName);
+  const encodedName = fileName.split("/").map(encodeURIComponent).join("/");
   return modelsPublicUrl ? `${modelsPublicUrl}/models/${encodedName}` : `/models/${encodedName}`;
 };
 
 const getViewerUrl = (fileName: string) =>
   `/?preview3d=photo&model=${encodeURIComponent(fileName)}&material=glass`;
-
-onMounted(async () => {
-  await Promise.all(
-    bustModelCatalog.map(async (model) => {
-      try {
-        const response = await fetch(getModelUrl(model.fileName), {
-          method: "HEAD",
-          cache: "no-store",
-        });
-        const contentType = response.headers.get("content-type") ?? "";
-        availability[model.fileName] =
-          response.ok && !contentType.includes("text/html") ? "available" : "missing";
-      } catch {
-        availability[model.fileName] = "missing";
-      }
-    })
-  );
-});
 
 useHead({ title: "Catalogue 3D · Nénés" });
 </script>

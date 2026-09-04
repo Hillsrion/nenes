@@ -200,11 +200,10 @@ Le catalogue public des bustes est disponible à l'adresse :
 
     http://localhost:3000/models-3d
 
-Il est alimenté par `bustModelCatalog` dans `config/bust-models.ts`. Il contient
-les versions de travail publiées, dont la version mono-image historique, ainsi
-que les futurs repères de volume. Chaque carte disponible ouvre le modèle
-correspondant dans le viewer. Ajouter un modèle à ce catalogue ne publie aucun
-fichier : son GLB doit toujours être envoyé séparément vers R2.
+Il garde uniquement les références fixes dans `referenceBustModels` de
+`config/bust-models.ts`. Les autres cartes sont découvertes automatiquement
+dans `models/` du bucket R2 : un fruit n’est donc proposé que lorsque son GLB
+a été publié. Chaque carte ouvre le modèle correspondant dans le viewer.
 
 ## Comparer un modèle à sa photo source
 

@@ -5,17 +5,17 @@
  *
  * Usage:
  *   pnpm models:upload -- bust-multiview-v2-symptoms.glb
- *   pnpm models:upload -- --all-configured
+ *   pnpm models:upload -- --all-local
  *
- * The script deliberately accepts only file names declared in
- * config/bust-models.ts. Source photos and intermediate GLBs cannot be
- * uploaded by accident. Authentication is delegated to Wrangler OAuth.
+ * The script accepts only final GLB names in public/models. Source photos and
+ * intermediate `-base.glb` files cannot be uploaded by accident.
+ * Authentication is delegated to Wrangler OAuth.
  */
 
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { bustFruitModels, defaultBustModel } from "../config/bust-models";
+import { hiddenBustModelFiles } from "../config/bust-models";
 
 const bucketName =
   process.env.CLOUDFLARE_R2_3D_BUCKET_NAME || "nenes-3d-models";
@@ -25,10 +25,7 @@ const publicUrl = (
 ).replace(/\/+$/, "");
 
 const localModelsDirectory = path.join(process.cwd(), "public", "models");
-const configuredFiles = new Set([
-  defaultBustModel.fileName,
-  ...bustFruitModels.map((model) => model.fileName),
-]);
+const finalModelName = /^bust-[a-z0-9][a-z0-9-]*\.glb$/i;
 
 function fail(message: string): never {
   console.error(`\n❌ ${message}`);
@@ -39,8 +36,15 @@ function getRequestedFiles(): string[] {
   const rawArgs = process.argv.slice(2);
   const args = rawArgs[0] === "--" ? rawArgs.slice(1) : rawArgs;
 
-  if (args.length === 1 && args[0] === "--all-configured") {
-    return [...configuredFiles];
+  if (args.length === 1 && args[0] === "--all-local") {
+    return fs
+      .readdirSync(localModelsDirectory)
+      .filter(
+        (fileName) =>
+          finalModelName.test(fileName) &&
+          !fileName.endsWith("-base.glb") &&
+          !hiddenBustModelFiles.has(fileName)
+      );
   }
 
   if (args.length !== 1) {
@@ -50,9 +54,13 @@ function getRequestedFiles(): string[] {
   }
 
   const [fileName] = args;
-  if (!configuredFiles.has(fileName)) {
+  if (
+    !finalModelName.test(fileName) ||
+    fileName.endsWith("-base.glb") ||
+    hiddenBustModelFiles.has(fileName)
+  ) {
     fail(
-      `\"${fileName}\" is not declared in config/bust-models.ts. Refusing to upload an unreviewed file.`
+      `\"${fileName}\" is not a final bust GLB. Source photos and intermediate files are refused.`
     );
   }
 

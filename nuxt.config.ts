@@ -150,6 +150,14 @@ export default defineNuxtConfig({
       accessKeyId: "",
       secretAccessKey: "",
     },
+    // Private R2 credentials used only to enumerate the public model bucket.
+    // The models themselves are still served from the public R2 URL below.
+    r2Models: {
+      accountId: "",
+      bucketName: "nenes-3d-models",
+      accessKeyId: "",
+      secretAccessKey: "",
+    },
     public: {
       // Critical assets that should be preloaded
       criticalAssets: [

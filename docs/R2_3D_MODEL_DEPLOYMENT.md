@@ -35,15 +35,16 @@ conservés par Wrangler sur la machine et ne sont pas committés.
 
 ## Publier un GLB validé
 
-Le script n'accepte que les noms déclarés dans `config/bust-models.ts`. Cette
-liste blanche empêche l'envoi accidentel d'une photo ou d'un GLB intermédiaire.
+Le script n'accepte que des GLB finaux nommés `bust-… .glb`, présents dans
+`public/models/`. Les photos et les fichiers intermédiaires `-base.glb` sont
+refusés.
 
 ```bash
 # Charge le modèle final de référence.
 pnpm models:upload -- bust-multiview-v2-symptoms.glb
 
-# Charge les modèles du catalogue qui existent localement.
-pnpm models:upload -- --all-configured
+# Charge tous les GLB finaux présents localement.
+pnpm models:upload -- --all-local
 ```
 
 Le fichier local doit rester dans `public/models/`, dossier ignoré par Git. Le
@@ -93,10 +94,23 @@ fruit. Il ne doit jamais être déplacé dans le bucket public des modèles.
 ## Ajouter un nouveau modèle
 
 1. Générer et inspecter le GLB localement selon `PHOTO_TO_3D_WORKFLOW.md`.
-2. Déclarer son nom final et son label dans `config/bust-models.ts`.
-3. Le téléverser avec `pnpm models:upload -- <nom>.glb`.
-4. Vérifier son URL publique.
-5. Déployer ensuite le catalogue vers `main`.
+2. Le téléverser avec `pnpm models:upload -- <nom>.glb`.
+3. Vérifier son URL publique.
+4. Déployer ensuite le catalogue vers `main`.
+
+Les cartes non-référence sont indexées automatiquement depuis le préfixe
+`models/` du bucket : aucune modification de catalogue n’est nécessaire. Les
+références restent déclarées dans `referenceBustModels` de
+`config/bust-models.ts`. Pour activer cet index sur Netlify, définir ces
+variables serveur (jamais préfixées par `NUXT_PUBLIC_`) avec un jeton R2 en
+lecture/listage limité au bucket des modèles :
+
+```env
+CLOUDFLARE_R2_3D_ACCOUNT_ID=<compte-cloudflare>
+CLOUDFLARE_R2_3D_BUCKET_NAME=nenes-3d-models
+CLOUDFLARE_R2_3D_ACCESS_KEY_ID=<clé-r2-limitée>
+CLOUDFLARE_R2_3D_SECRET_ACCESS_KEY=<secret-r2-limité>
+```
 
 Pour éviter toute ambiguïté de cache lors d'une refonte importante, utiliser
 un nouveau nom versionné, par exemple `bust-multiview-v3-symptoms.glb`.

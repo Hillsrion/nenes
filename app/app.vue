@@ -322,11 +322,8 @@ import ThreeDModelCatalogPage from "~/components/ui/ThreeDModelCatalogPage.vue";
 import ThreeDFruitLoadingPage from "~/components/ui/ThreeDFruitLoadingPage.vue";
 import FruitTestPage from "~/components/ui/FruitTestPage.vue";
 import LinksPage from "~/components/ui/LinksPage.vue";
-import {
-  bustModelCatalog,
-  bustFruitModels,
-  defaultBustModel,
-} from "~/config/bust-models";
+import { defaultBustModel } from "~/config/bust-models";
+import { useBustModelCatalog } from "~/composables/useBustModelCatalog";
 import { useAnimationsStore } from "~/stores";
 import { useContent } from "~/composables/useContent";
 import { useLenis } from "lenis/vue";
@@ -347,27 +344,36 @@ const fallbackPreviewModelName = computed(() => {
     ? route.query.model[0]
     : route.query.model;
 
-  return requestedModel && /^[a-zA-Z0-9][a-zA-Z0-9._-]*\.glb$/.test(requestedModel)
+  return requestedModel &&
+    /^[a-zA-Z0-9][a-zA-Z0-9_-]*(?:\/[a-zA-Z0-9][a-zA-Z0-9_-]*)*\.glb$/.test(requestedModel)
     ? requestedModel
     : defaultBustModel.fileName;
 });
 const requestedFruit = Array.isArray(route.query.fruit)
   ? route.query.fruit[0]
   : route.query.fruit;
-const requestedCatalogModel = bustModelCatalog.find(
-  (model) => model.fileName === fallbackPreviewModelName.value
+const bustModelCatalog = useBustModelCatalog();
+const requestedCatalogModel = computed(() =>
+  bustModelCatalog.value.find(
+    (model) =>
+      model.fileName === fallbackPreviewModelName.value ||
+      model.id === `volume-${requestedFruit}`
+  )
 );
-const requestedFruitModel = bustFruitModels.find((model) => model.id === requestedFruit);
-const activeCatalogModelId = ref(
-  requestedFruitModel
-    ? `volume-${requestedFruitModel.id}`
-    : requestedCatalogModel?.id ?? bustModelCatalog[0].id
-);
+const activeCatalogModelId = ref(requestedCatalogModel.value?.id ?? "reference-multiview-v2");
 const activeCatalogModel = computed(
   () =>
-    bustModelCatalog.find((model) => model.id === activeCatalogModelId.value) ??
-    bustModelCatalog[0]
+    bustModelCatalog.value.find((model) => model.id === activeCatalogModelId.value) ??
+    bustModelCatalog.value[0]
 );
+watch(requestedCatalogModel, (model) => {
+  if (model) activeCatalogModelId.value = model.id;
+});
+watch(bustModelCatalog, (models) => {
+  if (!models.some((model) => model.id === activeCatalogModelId.value)) {
+    activeCatalogModelId.value = models[0]?.id ?? "reference-multiview-v2";
+  }
+});
 const previewModelName = ref(fallbackPreviewModelName.value);
 const isResolvingPreviewModel = ref(false);
 const isUsingDefaultPreviewModel = ref(true);
@@ -380,7 +386,7 @@ const modelsPublicUrl = String(runtimeConfig.public.r2.modelsPublicUrl || "").re
   ""
 );
 const getPreviewModelUrl = (fileName: string) => {
-  const encodedName = encodeURIComponent(fileName);
+  const encodedName = fileName.split("/").map(encodeURIComponent).join("/");
 
   return modelsPublicUrl
     ? `${modelsPublicUrl}/models/${encodedName}`

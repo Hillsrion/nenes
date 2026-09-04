@@ -25,6 +25,7 @@ logs
 
 # Local Netlify folder
 .netlify
+/.wrangler/
 
 # Local 3D experiments and sensitive source material
 /breast-images/
