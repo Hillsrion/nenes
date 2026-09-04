@@ -84,12 +84,12 @@
             <span class="flex flex-col items-center text-center">
               <span class="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-2xl shadow-sm">＋</span>
               <span class="mt-3 text-sm font-bold">Déposer les photos ou choisir des fichiers</span>
-              <span class="mt-1 text-xs text-[#6a2944]">JPEG, PNG ou WebP · 12 Mo max. par photo · 4 vues max.</span>
+              <span class="mt-1 text-xs text-[#6a2944]">Ordre : face, profil gauche, dos, profil droit · 12 Mo max. par photo.</span>
             </span>
           </label>
 
           <div v-if="photos.length" class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <article v-for="photo in photos" :key="photo.id" class="relative overflow-hidden rounded-2xl border border-[#8f2b4b]/15 bg-[#fff9fb]">
+            <article v-for="(photo, index) in photos" :key="photo.id" class="relative overflow-hidden rounded-2xl border border-[#8f2b4b]/15 bg-[#fff9fb]">
               <img :src="photo.previewUrl" :alt="photo.name" class="aspect-square w-full object-cover" />
               <button
                 type="button"
