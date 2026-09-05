@@ -43,13 +43,46 @@
           :title="screeningMainTitle"
           :inverted="isNewHome"
         />
-        <SymptomsSection
-          :title="symptomsMainTitle"
-          :cards="symptomsCards"
-          :show-profile-model="isNewHome"
-        />
+        <div class="relative bg-white" ref="symptomsAndExaminationContainerRef">
+          <!-- Shared 3D Bust Model anchored on left across both Symptoms & Palpation sections -->
+          <div
+            v-if="isNewHome"
+            class="pointer-events-none sticky top-0 h-screen w-full z-10 overflow-hidden"
+            aria-hidden="true"
+          >
+            <div
+              ref="sharedProfileModelRef"
+              class="absolute bottom-[-15svh] left-0 z-0 mx-0 h-[115svh] w-[min(78vw,42rem)] opacity-0 max-md:w-[95vw]"
+            >
+              <ThreeBustViewer
+                model-url="/models/bust-multiview-v2-symptoms.glb"
+                :auto-rotate="false"
+                :enable-zoom="false"
+                :interactive="false"
+                :initial-rotation-y="Math.PI / 2"
+                :model-scale="1.18"
+                model-horizontal-alignment="left"
+                :show-backdrop="false"
+                :show-loading-indicator="false"
+                compact
+              />
+            </div>
+          </div>
 
-        <SelfExaminationSection :steps="selfExaminationSteps" />
+          <div :class="{ 'relative z-20 -mt-[100vh]': isNewHome }">
+            <SymptomsSection
+              :title="symptomsMainTitle"
+              :cards="symptomsCards"
+              :show-profile-model="isNewHome"
+              :use-shared-model="isNewHome"
+            />
+
+            <SelfExaminationSection
+              :steps="selfExaminationSteps"
+              :use-shared-model="isNewHome"
+            />
+          </div>
+        </div>
 
         <!-- Resources Section -->
         <ResourcesSection :fruit-avalanche="isNewHome" />
@@ -700,8 +733,38 @@ useHead({
   ],
 });
 
+declare const useNuxtApp: () => { $gsap: any };
+const { $gsap } = useNuxtApp();
+
 const globalContainer = ref(null);
 const mainLayoutRef = ref(null); // Ref to MainLayout component
+const symptomsAndExaminationContainerRef = ref<HTMLElement | null>(null);
+const sharedProfileModelRef = ref<HTMLElement | null>(null);
+
+let sharedModelAnimation: any = null;
+
+const initializeSharedModelAnimation = () => {
+  if (!symptomsAndExaminationContainerRef.value || !sharedProfileModelRef.value) return;
+
+  sharedModelAnimation?.scrollTrigger?.kill();
+  sharedModelAnimation?.kill();
+
+  sharedModelAnimation = $gsap.fromTo(
+    sharedProfileModelRef.value,
+    { yPercent: 118, opacity: 0 },
+    {
+      yPercent: 0,
+      opacity: 1,
+      ease: "none",
+      scrollTrigger: {
+        trigger: symptomsAndExaminationContainerRef.value,
+        start: "top bottom",
+        end: "top top",
+        scrub: 1,
+      },
+    }
+  );
+};
 
 // Computed logo color based on store state
 const logoColor = computed(() => {
@@ -725,15 +788,30 @@ watch(
 watch(
   () => store.sections.loading?.state,
   (newState) => {
-    if (!lenis.value) return;
-
     if (newState === "isComplete") {
-      // Re-enable scrolling after loading is complete
-      lenis.value.start();
+      if (lenis.value) {
+        // Re-enable scrolling after loading is complete
+        lenis.value.start();
+      }
+      if (isNewHome.value) {
+        nextTick(() => {
+          setTimeout(() => {
+            requestAnimationFrame(() => {
+              initializeSharedModelAnimation();
+            });
+          }, 120);
+        });
+      }
     }
   },
   { immediate: true }
 );
+
+onUnmounted(() => {
+  sharedModelAnimation?.scrollTrigger?.kill();
+  sharedModelAnimation?.kill();
+  sharedModelAnimation = null;
+});
 
 onMounted(async () => {
   if (

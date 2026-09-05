@@ -8,7 +8,7 @@
       <!-- Landscape Video Container -->
       <div
         ref="videoContainerRef"
-        class="relative w-full max-w-[480px] lg:max-w-[540px] aspect-video rounded-2xl sm:rounded-3xl overflow-hidden shadow-[0_16px_36px_rgba(36,66,219,0.1)] border border-black/[0.06] bg-[#f0f2f6]"
+        class="relative w-full max-w-[520px] lg:max-w-[580px] aspect-video rounded-2xl sm:rounded-3xl overflow-hidden shadow-[0_18px_40px_rgba(36,66,219,0.12)] border border-black/[0.06] bg-[#f0f2f6]"
       >
         <video
           ref="videoRef"
@@ -95,7 +95,7 @@
 
       <!-- Post-It Cards Deck (Overlapping bottom-left of video) -->
       <div
-        class="relative -mt-14 sm:-mt-18 -ml-2 sm:-ml-6 lg:-ml-8 w-full max-w-[360px] sm:max-w-[420px] min-h-[220px] pointer-events-auto"
+        class="relative -mt-16 sm:-mt-22 lg:-mt-26 -ml-2 sm:-ml-6 lg:-ml-10 w-full max-w-[390px] sm:max-w-[450px] lg:max-w-[480px] min-h-[300px] sm:min-h-[340px] lg:min-h-[370px] pointer-events-auto"
       >
         <div
           v-for="(step, index) in steps"
@@ -206,11 +206,11 @@ const getCardColorScheme = (
 
 // Resting offsets for stacking cards organically
 const restingOffsets = [
-  { x: 0, y: 0, rotate: -1 },
-  { x: -16, y: 16, rotate: 1.8 },
-  { x: 10, y: 32, rotate: -1.5 },
-  { x: -10, y: 48, rotate: 1.2 },
-  { x: 12, y: 64, rotate: -0.8 },
+  { x: 0, y: 0, rotate: -1.2 },
+  { x: -16, y: 18, rotate: 1.8 },
+  { x: 12, y: 36, rotate: -1.5 },
+  { x: -10, y: 54, rotate: 1.4 },
+  { x: 14, y: 72, rotate: -0.9 },
 ];
 
 let scrollTimeline: any = null;
@@ -244,7 +244,7 @@ const initializeAnimations = () => {
       $gsap.set(card, {
         opacity: 0,
         x: o.x,
-        y: o.y + 40,
+        y: o.y + 45,
         rotation: o.rotate + 2.5,
         scale: 0.95,
       });
@@ -254,7 +254,7 @@ const initializeAnimations = () => {
   // Set initial stage state
   $gsap.set(stageRef.value, { opacity: 0, y: 30 });
 
-  // Main scroll-scrubbed timeline
+  // Main scroll-scrubbed timeline calibrated for lengthened scroll
   const tl = $gsap.timeline({
     scrollTrigger: {
       trigger,
@@ -269,17 +269,21 @@ const initializeAnimations = () => {
           return;
         }
 
-        const stepFraction = 0.8 / (totalSteps - 1);
-        const targetStep =
-          progress < 0.18
-            ? 0
-            : Math.min(
-                totalSteps - 1,
-                1 + Math.floor((progress - 0.18) / stepFraction)
-              );
+        // 0 to 0.20 is Step 0 (during paragraph reveal & stage entrance)
+        if (progress < 0.20) {
+          if (currentStepIndex.value !== 0) currentStepIndex.value = 0;
+          return;
+        }
 
-        if (currentStepIndex.value !== targetStep) {
-          currentStepIndex.value = targetStep;
+        // Remaining steps 1..totalSteps-1 distributed over 0.20 to 0.90
+        const stepSpan = 0.70 / (totalSteps - 1);
+        const stepIdx = Math.min(
+          totalSteps - 1,
+          1 + Math.floor((progress - 0.20) / stepSpan)
+        );
+
+        if (currentStepIndex.value !== stepIdx) {
+          currentStepIndex.value = stepIdx;
         }
       },
     },
@@ -291,22 +295,22 @@ const initializeAnimations = () => {
     {
       opacity: 1,
       y: 0,
-      duration: 0.15,
+      duration: 0.12,
       ease: "power2.out",
     },
-    0.05
+    0.08
   );
 
   // 2. Sequential stacking animations for cards 1..N-1
   if (totalSteps > 1) {
-    const stepDuration = 0.8 / (totalSteps - 1);
+    const stepDuration = 0.70 / (totalSteps - 1);
 
     for (let i = 1; i < totalSteps; i++) {
       const card = cardRefs.value[i];
       if (!card) continue;
 
       const o = restingOffsets[i % restingOffsets.length];
-      const startTime = 0.18 + (i - 1) * stepDuration;
+      const startTime = 0.20 + (i - 1) * stepDuration;
 
       tl.to(
         card,

@@ -26,7 +26,7 @@
         {{ title }}
       </div>
       <div
-        v-if="showProfileModel"
+        v-if="showProfileModel && !useSharedModel"
         ref="profileModelRef"
         class="pointer-events-none absolute bottom-[-15svh] left-0 z-0 mx-0 h-[115svh] w-[min(78vw,42rem)] opacity-0 max-md:w-[95vw]"
         aria-hidden="true"
@@ -94,6 +94,10 @@ const props = defineProps({
     required: true,
   },
   showProfileModel: {
+    type: Boolean,
+    default: false,
+  },
+  useSharedModel: {
     type: Boolean,
     default: false,
   },

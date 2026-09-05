@@ -1,7 +1,7 @@
 <template>
   <section
     ref="sectionRef"
-    class="relative z-20 bg-white min-h-[450svh]"
+    class="relative z-20 bg-white min-h-[1000svh]"
   >
     <div v-if="isIOS" class="h-svh"></div>
     <div
@@ -11,8 +11,9 @@
         fixed: isIOS,
       }"
     >
-      <!-- Anchored 3D bust model on left side (same styling and positioning as SymptomsSection) -->
+      <!-- Anchored 3D bust model on left side (rendered only if not shared with parent) -->
       <div
+        v-if="!useSharedModel"
         ref="profileModelRef"
         class="pointer-events-none absolute bottom-[-15svh] left-0 z-10 mx-0 h-[115svh] w-[min(78vw,42rem)] opacity-25 lg:opacity-100 max-md:w-[95vw]"
         aria-hidden="true"
@@ -31,37 +32,37 @@
         />
       </div>
 
-      <!-- Right column content -->
+      <!-- Right column content with widened width -->
       <div
-        class="relative z-20 h-full w-full flex items-center justify-end px-5 sm:px-10 lg:px-16 pointer-events-auto"
+        class="relative z-20 h-full w-full flex items-center justify-end px-4 sm:px-8 lg:px-12 xl:px-16 pointer-events-auto"
       >
         <div
-          class="w-full lg:w-[54%] max-w-[620px] flex flex-col justify-center space-y-4 lg:space-y-6 pt-16 sm:pt-20 lg:pt-0"
+          class="w-full lg:w-[62%] xl:w-[66%] max-w-[780px] xl:max-w-[880px] flex flex-col justify-center pt-8 sm:pt-12 lg:pt-0"
         >
-          <!-- Intro text (formerly in grand title header) -->
-          <div ref="introTextRef" class="w-full">
+          <!-- Intro text with word-by-word reveal -->
+          <div ref="introTextRef" class="relative z-30 w-full max-w-[740px]">
             <h2
-              class="text-2xl sm:text-3xl lg:text-4xl font-medium leading-[1.25] text-primary tracking-tight"
+              class="text-2xl sm:text-3xl lg:text-[2.2rem] xl:text-[2.45rem] font-medium leading-[1.28] text-primary tracking-tight select-none"
             >
-              <span class="text-primary"
-                >L’autopalpation est à réaliser une fois par mois, de préférence
-                quelques
-              </span>
               <span
-                ref="fadeTextRef"
-                class="text-primary/35 transition-colors duration-300"
+                v-for="(word, index) in paragraphWords"
+                :key="`word-${index}`"
+                :ref="(el) => setWordRef(el, index)"
+                class="inline-block mr-[0.26em] text-primary transition-opacity duration-150"
+                style="opacity: 0.2"
               >
-                jours après la fin de vos règles, lorsque vos seins sont moins
-                sensibles
+                {{ word }}
               </span>
             </h2>
           </div>
 
-          <!-- Video (landscape) + stacked post-it cards -->
-          <ExaminationSteps
-            :steps="steps"
-            :parent-section="sectionRef"
-          />
+          <!-- Video & Stacked Post-its with upward overlap onto the text above -->
+          <div class="relative z-20 -mt-6 sm:-mt-10 lg:-mt-14 w-full">
+            <ExaminationSteps
+              :steps="steps"
+              :parent-section="sectionRef"
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -86,9 +87,21 @@ interface Step {
 
 interface Props {
   steps: Step[];
+  useSharedModel?: boolean;
 }
 
-defineProps<Props>();
+withDefaults(defineProps<Props>(), {
+  useSharedModel: false,
+});
+
+const paragraphText =
+  "L’autopalpation est à réaliser une fois par mois, de préférence quelques jours après la fin de vos règles, lorsque vos seins sont moins sensibles";
+const paragraphWords = paragraphText.split(" ");
+const wordRefs = ref<(HTMLElement | null)[]>([]);
+
+const setWordRef = (el: any, index: number) => {
+  if (el) wordRefs.value[index] = el;
+};
 
 const { $gsap } = useNuxtApp();
 const store = useAnimationsStore();
@@ -97,33 +110,32 @@ const { isIOS } = useIsIOS();
 const sectionRef = ref<HTMLElement | null>(null);
 const profileModelRef = ref<HTMLElement | null>(null);
 const introTextRef = ref<HTMLElement | null>(null);
-const fadeTextRef = ref<HTMLElement | null>(null);
 
-let textFadeTween: any = null;
+let textRevealTween: any = null;
 
 const initializeSectionAnimations = () => {
-  if (!sectionRef.value || !fadeTextRef.value) return;
+  if (!sectionRef.value || wordRefs.value.length === 0) return;
 
   // Signal completion of header section state
   store.updateSectionState("self-examination-header", "isComplete");
 
-  textFadeTween?.scrollTrigger?.kill();
-  textFadeTween?.kill();
+  textRevealTween?.scrollTrigger?.kill();
+  textRevealTween?.kill();
 
-  textFadeTween = $gsap.fromTo(
-    fadeTextRef.value,
-    { opacity: 0.35 },
-    {
-      opacity: 1,
-      ease: "power1.out",
-      scrollTrigger: {
-        trigger: sectionRef.value,
-        start: "top top",
-        end: "14% top",
-        scrub: 0.6,
-      },
-    }
-  );
+  const validWordRefs = wordRefs.value.filter(Boolean);
+
+  // Progressive word-by-word reveal scrubbed on initial scroll segment (0% to 15%)
+  textRevealTween = $gsap.to(validWordRefs, {
+    opacity: 1,
+    stagger: 0.04,
+    ease: "none",
+    scrollTrigger: {
+      trigger: sectionRef.value,
+      start: "top top",
+      end: "15% top",
+      scrub: 0.7,
+    },
+  });
 };
 
 onMounted(() => {
@@ -155,8 +167,8 @@ watch(
 );
 
 onUnmounted(() => {
-  textFadeTween?.scrollTrigger?.kill();
-  textFadeTween?.kill();
-  textFadeTween = null;
+  textRevealTween?.scrollTrigger?.kill();
+  textRevealTween?.kill();
+  textRevealTween = null;
 });
 </script>
