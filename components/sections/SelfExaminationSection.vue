@@ -1,15 +1,19 @@
 <template>
   <section
     ref="sectionRef"
-    class="relative z-20 bg-white min-h-[1000svh]"
+    class="relative z-20 min-h-[1000svh]"
+    :class="useSharedModel ? 'bg-transparent' : 'bg-white'"
   >
     <div v-if="isIOS" class="h-svh"></div>
     <div
-      class="h-[100svh] w-full top-0 overflow-hidden bg-white"
-      :class="{
-        sticky: !isIOS,
-        fixed: isIOS,
-      }"
+      class="h-[100svh] w-full top-0 overflow-hidden"
+      :class="[
+        useSharedModel ? 'bg-transparent' : 'bg-white',
+        {
+          sticky: !isIOS,
+          fixed: isIOS,
+        }
+      ]"
     >
       <!-- Anchored 3D bust model on left side (rendered only if not shared with parent) -->
       <div

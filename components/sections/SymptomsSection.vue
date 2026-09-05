@@ -1,14 +1,15 @@
 <template>
   <section
-    class="py-16 h-[450svh] relative z-20 bg-white sm:-mt-[25svh]"
+    class="py-16 h-[450svh] relative z-20 sm:-mt-[25svh]"
     ref="sectionRef"
-    :class="{
-      'opacity-0': !showSymptomsSection,
-    }"
+    :class="[
+      useSharedModel ? 'bg-transparent' : 'bg-white',
+      { 'opacity-0': !showSymptomsSection }
+    ]"
   >
     <div v-if="isIOS" class="h-svh"></div>
     <div
-      class="h-[100svh] w-full px-8 top-0 z-10 mx-auto flex flex-col justify-center overflow-hidden"
+      class="h-[100svh] w-full px-8 top-0 z-10 mx-auto flex flex-col justify-center overflow-hidden bg-transparent"
       :class="{
         sticky: !isIOS,
         fixed: isIOS,

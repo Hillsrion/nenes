@@ -46,13 +46,12 @@
         <div class="relative bg-white" ref="symptomsAndExaminationContainerRef">
           <!-- Shared 3D Bust Model anchored on left across both Symptoms & Palpation sections -->
           <div
-            v-if="isNewHome"
-            class="pointer-events-none sticky top-0 h-screen w-full z-10 overflow-hidden"
+            class="pointer-events-none sticky top-0 h-screen w-full z-15 overflow-hidden"
             aria-hidden="true"
           >
             <div
               ref="sharedProfileModelRef"
-              class="absolute bottom-[-15svh] left-0 z-0 mx-0 h-[115svh] w-[min(78vw,42rem)] opacity-0 max-md:w-[95vw]"
+              class="absolute bottom-[-15svh] left-0 z-10 mx-0 h-[115svh] w-[min(78vw,42rem)] max-md:w-[95vw]"
             >
               <ThreeBustViewer
                 model-url="/models/bust-multiview-v2-symptoms.glb"
@@ -69,17 +68,17 @@
             </div>
           </div>
 
-          <div :class="{ 'relative z-20 -mt-[100vh]': isNewHome }">
+          <div class="relative z-20 -mt-[100vh]">
             <SymptomsSection
               :title="symptomsMainTitle"
               :cards="symptomsCards"
-              :show-profile-model="isNewHome"
-              :use-shared-model="isNewHome"
+              :show-profile-model="true"
+              :use-shared-model="true"
             />
 
             <SelfExaminationSection
               :steps="selfExaminationSteps"
-              :use-shared-model="isNewHome"
+              :use-shared-model="true"
             />
           </div>
         </div>
@@ -793,15 +792,13 @@ watch(
         // Re-enable scrolling after loading is complete
         lenis.value.start();
       }
-      if (isNewHome.value) {
-        nextTick(() => {
-          setTimeout(() => {
-            requestAnimationFrame(() => {
-              initializeSharedModelAnimation();
-            });
-          }, 120);
-        });
-      }
+      nextTick(() => {
+        setTimeout(() => {
+          requestAnimationFrame(() => {
+            initializeSharedModelAnimation();
+          });
+        }, 120);
+      });
     }
   },
   { immediate: true }
@@ -825,6 +822,16 @@ onMounted(async () => {
 
   scrollTo(0, 0);
   lenis.value.stop();
+
+  if (store.sections.loading?.state === "isComplete") {
+    nextTick(() => {
+      setTimeout(() => {
+        requestAnimationFrame(() => {
+          initializeSharedModelAnimation();
+        });
+      }, 150);
+    });
+  }
   // Matomo tracking code
   const config = useRuntimeConfig();
   const matomoUrl = config.public.matomoUrl;
