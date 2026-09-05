@@ -1,7 +1,7 @@
 <template>
   <section
     ref="sectionRef"
-    class="relative z-20 min-h-[1000svh]"
+    class="relative z-20 min-h-[600svh]"
     :class="useSharedModel ? 'bg-transparent' : 'bg-white'"
   >
     <div v-if="isIOS" class="h-svh"></div>
@@ -41,7 +41,7 @@
         class="relative z-20 h-full w-full flex items-center justify-end px-4 sm:px-8 lg:px-12 xl:px-16 pointer-events-auto"
       >
         <div
-          class="w-full lg:w-[62%] xl:w-[66%] max-w-[780px] xl:max-w-[880px] flex flex-col justify-center pt-8 sm:pt-12 lg:pt-0"
+          class="w-full lg:w-[62%] xl:w-[66%] max-w-[780px] xl:max-w-[880px] flex flex-col justify-center pt-8 sm:pt-12 lg:pt-[11vh]"
         >
           <!-- Intro text with word-by-word reveal -->
           <div ref="introTextRef" class="relative z-30 w-full max-w-[740px]">
