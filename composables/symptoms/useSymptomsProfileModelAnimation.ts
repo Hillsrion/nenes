@@ -15,6 +15,7 @@ export const useSymptomsProfileModelAnimation = ({
 }: UseSymptomsProfileModelAnimationOptions) => {
   let modelAnimation: any = null;
   let titleAnimation: any = null;
+  let titleExitAnimation: any = null;
   let titleVisibilityAnimation: any = null;
 
   const initializeModelAnimation = () => {
@@ -24,6 +25,8 @@ export const useSymptomsProfileModelAnimation = ({
     modelAnimation?.kill?.();
     titleAnimation?.scrollTrigger?.kill?.();
     titleAnimation?.kill?.();
+    titleExitAnimation?.scrollTrigger?.kill?.();
+    titleExitAnimation?.kill?.();
     titleVisibilityAnimation?.scrollTrigger?.kill?.();
     titleVisibilityAnimation?.kill?.();
 
@@ -47,26 +50,57 @@ export const useSymptomsProfileModelAnimation = ({
 
     const travel = { progress: 0 };
     let inSection = true;
+    let lastProgress = 0;
     onTitleProgress(0);
-    titleAnimation = $gsap.to(travel, {
+    const emitProgress = () => {
+      const p = inSection ? lastProgress : 0;
+      onTitleProgress(p);
+    };
+    titleAnimation = $gsap.fromTo(
+      travel,
+      { progress: 0 },
+      {
         progress: 1,
         ease: "none",
-        onUpdate: () => onTitleProgress(inSection ? travel.progress : 0),
+        onUpdate: () => {
+          lastProgress = travel.progress;
+          emitProgress();
+        },
         scrollTrigger: {
           trigger: sectionRef.value,
           start: "top top",
           end: "22% top",
           scrub: 1,
         },
-      });
+      }
+    );
+    titleExitAnimation = $gsap.fromTo(
+      travel,
+      { progress: 1 },
+      {
+        progress: 0,
+        ease: "none",
+        onUpdate: () => {
+          lastProgress = travel.progress;
+          emitProgress();
+        },
+        immediateRender: false,
+        scrollTrigger: {
+          trigger: sectionRef.value,
+          start: "bottom bottom",
+          end: "bottom top+=200",
+          scrub: 1,
+        },
+      }
+    );
     titleVisibilityAnimation = $gsap.to({}, {
       scrollTrigger: {
         trigger: sectionRef.value,
-        start: "top bottom",
-        end: "bottom bottom",
+        start: "bottom top+=200",
+        end: "bottom top+=200",
         onToggle: (trigger: { isActive: boolean }) => {
           inSection = trigger.isActive;
-          onTitleProgress(inSection ? travel.progress : 0);
+          emitProgress();
         },
       },
     });
@@ -77,10 +111,13 @@ export const useSymptomsProfileModelAnimation = ({
     modelAnimation?.kill?.();
     titleAnimation?.scrollTrigger?.kill?.();
     titleAnimation?.kill?.();
+    titleExitAnimation?.scrollTrigger?.kill?.();
+    titleExitAnimation?.kill?.();
     titleVisibilityAnimation?.scrollTrigger?.kill?.();
     titleVisibilityAnimation?.kill?.();
     modelAnimation = null;
     titleAnimation = null;
+    titleExitAnimation = null;
     titleVisibilityAnimation = null;
   };
 
