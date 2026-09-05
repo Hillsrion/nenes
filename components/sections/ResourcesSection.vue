@@ -4,7 +4,7 @@
     :class="{ 'rounded-t-4xl': !isAtTop, '-mt-4': isIOS }"
     ref="sectionRef"
   >
-    <ThreeFruitPile v-if="fruitAvalanche && avalancheStarted" :active="true" entrance="right" />
+    <ThreeFruitPile v-if="avalancheStarted" :active="true" entrance="right" />
     <div
       class="container relative z-20 mx-auto px-6 xl:px-8 h-full flex flex-col ju stify-between"
     >
@@ -95,7 +95,6 @@ import { useIsIOS } from "~/composables/useIsIOS";
 import { useResourcesAnimations } from "~/composables/resources/useResourcesAnimations";
 // Animation store
 const store = useAnimationsStore();
-const props = withDefaults(defineProps<{ fruitAvalanche?: boolean }>(), { fruitAvalanche: false });
 const avalancheStarted = ref(false);
 let avalancheObserver: IntersectionObserver | null = null;
 
@@ -109,7 +108,7 @@ const illustrationProgress = ref(0);
 const isAtTop = ref(false);
 
 onMounted(() => {
-  if (!props.fruitAvalanche || !sectionRef.value) return;
+  if (!sectionRef.value) return;
   avalancheObserver = new IntersectionObserver(([entry]) => {
     if (!entry.isIntersecting) return;
     avalancheStarted.value = true;

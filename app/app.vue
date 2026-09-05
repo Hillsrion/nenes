@@ -11,8 +11,7 @@
 
     <MainLayout ref="mainLayoutRef">
       <!-- Loading Section -->
-      <NewLoadingSection v-if="isNewHome && !isLoadingComplete" />
-      <LoadingSection v-else-if="!isLoadingComplete" />
+      <LoadingSection v-if="!isLoadingComplete" />
       <div
         class="transition-transform duration-1000 ease-out"
         :class="{
@@ -26,22 +25,13 @@
         />
 
         <!-- Unified Statistics and Content Section -->
-        <NewEntrySection
-          v-if="isNewHome"
-          key="new-entry"
-          :statistics-text="statisticsText"
-          :content-elements="mainContentElements"
-        />
         <EntrySection
-          v-else
-          key="entry"
           :statistics-text="statisticsText"
           :content-elements="mainContentElements"
         />
         <ScreeningSection
           :sidebar-elements="screeningContentElements"
           :title="screeningMainTitle"
-          :inverted="isNewHome"
         />
         <div class="relative bg-white" ref="symptomsAndExaminationContainerRef">
           <!-- Shared 3D Bust Model anchored on left across both Symptoms & Palpation sections -->
@@ -84,7 +74,7 @@
         </div>
 
         <!-- Resources Section -->
-        <ResourcesSection :fruit-avalanche="isNewHome" />
+        <ResourcesSection />
         <CursorImageSpawner
           v-if="isCursorImageSpawnerEnabled"
           :images="cursorImages"
@@ -359,9 +349,7 @@
 <script setup lang="ts">
 import MainLayout from "~/components/layout/MainLayout.vue";
 import LoadingSection from "~/components/sections/LoadingSection.vue";
-import NewLoadingSection from "~/components/sections/NewLoadingSection.vue";
 import EntrySection from "~/components/sections/EntrySection.vue";
-import NewEntrySection from "~/components/sections/NewEntrySection.vue";
 import ScreeningSection from "~/components/sections/ScreeningSection.vue";
 import SelfExaminationSection from "~/components/sections/SelfExaminationSection.vue";
 import SymptomsSection from "~/components/sections/SymptomsSection.vue";
@@ -385,7 +373,6 @@ const store = useAnimationsStore();
 // Temporarily keep the editorial cursor trail out of the experience.
 const isCursorImageSpawnerEnabled = false;
 const route = useRoute();
-const isNewHome = computed(() => route.path === "/new");
 const isFruitTest = computed(() => route.path === "/fruits");
 const isThreeDFruitLoading = computed(() => route.path === "/loading-3d");
 const isLinksPage = computed(() => route.path === "/links");
