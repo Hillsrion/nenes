@@ -41,6 +41,7 @@
         <ScreeningSection
           :sidebar-elements="screeningContentElements"
           :title="screeningMainTitle"
+          :inverted="isNewHome"
         />
         <SymptomsSection :title="symptomsMainTitle" :cards="symptomsCards" />
 

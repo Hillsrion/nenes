@@ -1,8 +1,11 @@
 <template>
   <div class="lg:h-[150svh] relative">
     <section
-      class="flex h-screen items-center justify-center bg-white transition-all duration-300 ease-out sticky top-0 z-30"
-      :class="{ 'rounded-t-4xl': !isAtTop }"
+      class="sticky top-0 z-30 flex h-screen items-center justify-center transition-all duration-300 ease-out"
+      :class="[
+        inverted ? 'bg-primary text-white' : 'bg-white text-primary',
+        { 'rounded-t-4xl': !isAtTop },
+      ]"
       ref="sectionRef"
     >
       <div
@@ -14,7 +17,8 @@
           <div class="max-w-2xl">
             <p
               :ref="setTitleRef"
-              class="text-primary font-medium text-2xl xs:text-3xl md:text-4xl lg:text-5xl leading-title mb-8"
+              class="mb-8 text-2xl font-medium leading-title xs:text-3xl md:text-4xl lg:text-5xl"
+              :class="inverted ? 'text-white' : 'text-primary'"
             >
               {{ title }}
             </p>
@@ -32,11 +36,15 @@
               <!-- Content -->
               <div class="flex flex-col gap-4">
                 <h3
-                  class="text-primary uppercase leading-title lg:text-base text-sm tracking-title-sm"
+                  class="text-sm uppercase leading-title tracking-title-sm lg:text-base"
+                  :class="inverted ? 'text-white' : 'text-primary'"
                 >
                   {{ element.title }}
                 </h3>
-                <p class="text-primary text-base lg:text-xl leading-7.5">
+                <p
+                  class="text-base leading-7.5 lg:text-xl"
+                  :class="inverted ? 'text-white' : 'text-primary'"
+                >
                   {{ element.content }}
                 </p>
                 <div class="relative overflow-hidden mt-8">
@@ -135,11 +143,13 @@ interface SidebarElement {
 interface Props {
   sidebarElements: SidebarElement[];
   title?: string;
+  inverted?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   sidebarElements: () => [],
   title: () => "",
+  inverted: false,
 });
 
 const store = useAnimationsStore();

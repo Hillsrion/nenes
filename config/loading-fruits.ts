@@ -100,4 +100,15 @@ export const loadingFruitSequence: LoadingFruitDefinition[] = [
     roughness: 0.62,
     normalStrength: 0.34,
   },
+  {
+    name: "orange",
+    emoji: "🍊",
+    modelUrl: `${modelRoot}/food_lime_01/food_lime_01_1k.gltf`,
+    color: "#ed762f",
+    highlight: "#ffc16f",
+    roughness: 0.64,
+    normalStrength: 0.38,
+    rotation: [0.05, -0.18, 0.08],
+    scale: 1.08,
+  },
 ];

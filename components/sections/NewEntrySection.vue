@@ -126,26 +126,38 @@
 
     <div
       ref="contentSectionRef"
-      class="relative z-40 min-h-[220svh] w-full bg-primary px-8"
+      class="relative z-40 h-[280svh] w-full bg-white"
     >
       <div
-        class="container mx-auto grid min-h-[220svh] w-full max-w-[70rem] grid-cols-5 content-around py-[35svh] lg:grid-cols-6"
+        ref="contentStageRef"
+        class="sticky top-0 h-[100svh] w-full overflow-hidden bg-white"
       >
         <div
-          v-for="(element, index) in contentElements"
-          :key="element.content"
-          :class="[
-            index % 2 === 0
-              ? 'col-span-4'
-              : 'col-start-2 col-span-4 lg:col-start-3',
-          ]"
+          ref="orangeRef"
+          class="pointer-events-none absolute left-[8vw] top-0 z-10 h-[clamp(9rem,22vw,20rem)] w-[clamp(9rem,22vw,20rem)] will-change-transform max-md:left-1/2 max-md:-translate-x-1/2"
+          aria-hidden="true"
         >
+          <ThreeFruitLoadingAnimator
+            :progress="0"
+            :fruit-index="9"
+            :randomize="false"
+          />
+        </div>
+
+        <div
+          class="absolute right-[7vw] top-[18vh] z-20 flex w-[min(48rem,56vw)] flex-col gap-6 max-md:left-6 max-md:right-6 max-md:w-auto"
+        >
+          <div
+            v-for="(element, index) in contentElements"
+            :key="element.content"
+          >
           <p
             :ref="(elementRef) => setContentRef(elementRef, index)"
-            class="text-3xl font-medium leading-title text-secondary lg:text-5xl"
+            class="text-3xl font-medium leading-title text-primary opacity-0 lg:text-5xl"
           >
             {{ element.content }}
           </p>
+          </div>
         </div>
       </div>
     </div>
@@ -162,6 +174,7 @@
 </template>
 
 <script setup>
+import ThreeFruitLoadingAnimator from "~/components/ui/ThreeFruitLoadingAnimator.vue";
 import { useEntryRevealAnimation } from "~/composables/useEntryRevealAnimation";
 import { useNewContentElementsAnimation } from "~/composables/useNewContentElementsAnimation";
 import { useAnimationsStore } from "~/stores";
@@ -191,6 +204,8 @@ const numberMaskRef = ref(null);
 const numberTargetRef = ref(null);
 const phrasePartRefs = ref([]);
 const contentSectionRef = ref(null);
+const contentStageRef = ref(null);
+const orangeRef = ref(null);
 const textRefs = ref([]);
 
 const lastStatisticsLine = computed(
@@ -251,6 +266,8 @@ const {
   cleanup: cleanupContentElementsAnimation,
 } = useNewContentElementsAnimation({
   sectionRef: contentSectionRef,
+  stageRef: contentStageRef,
+  orangeRef,
   textRefs,
 });
 
