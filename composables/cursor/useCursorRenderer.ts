@@ -44,8 +44,11 @@ export const useCursorRenderer = ({
   const forceScaleState = reactive({ value: 0 });
 
   let animationId: number | null = null;
+  let scaleAnimationId: number | null = null;
+  let lastFrameTime = 0;
   let canvasDispose: (() => void) | null = null;
   let canvasComposable: ReturnType<typeof useCanvas> | null = null;
+  const frameInterval = 1000 / 30;
 
   const setupCanvas = () => {
     if (!containerRef.value || !canvasRef.value || isMobileOrTouch.value) {
@@ -89,6 +92,9 @@ export const useCursorRenderer = ({
   };
 
   const animate = (timestamp: number) => {
+    animationId = null;
+    if (!isActive.value) return;
+
     if (
       !canvasComposable?.context.value ||
       !canvasComposable?.canvas.value ||
@@ -101,6 +107,12 @@ export const useCursorRenderer = ({
       animationId = window.requestAnimationFrame(animate);
       return;
     }
+
+    if (timestamp - lastFrameTime < frameInterval) {
+      animationId = window.requestAnimationFrame(animate);
+      return;
+    }
+    lastFrameTime = timestamp;
 
     const ctx = canvasComposable.context.value;
     ctx.clearRect(0, 0, canvasState.value.width, canvasState.value.height);
@@ -149,11 +161,12 @@ export const useCursorRenderer = ({
           const centerX = x + xOffset + grid.imgSize * 0.5;
           const centerY = y + yOffset + grid.imgSize * 0.5;
 
-          const distance = Math.sqrt(
-            Math.pow(centerX - target.x, 2) + Math.pow(centerY - target.y, 2)
-          );
+          const deltaX = centerX - target.x;
+          const deltaY = centerY - target.y;
+          const distanceSquared = deltaX * deltaX + deltaY * deltaY;
 
-          if (distance < grid.maxDistance) {
+          if (distanceSquared < grid.maxDistance * grid.maxDistance) {
+            const distance = Math.sqrt(distanceSquared);
             const normalizedDistance = distance / grid.maxDistance;
             const scale =
               Math.max(0, 4 - normalizedDistance * 4) *
@@ -190,11 +203,13 @@ export const useCursorRenderer = ({
     }
 
     isActive.value = true;
+    lastFrameTime = 0;
 
     if (initializePosition) {
       initializePointerToCursor();
     }
 
+    if (scaleAnimationId) window.cancelAnimationFrame(scaleAnimationId);
     const startTime = performance.now();
     const duration = 800;
 
@@ -205,11 +220,13 @@ export const useCursorRenderer = ({
 
       forceScaleState.value = eased;
       if (progress < 1) {
-        window.requestAnimationFrame(animateForceScale);
+        scaleAnimationId = window.requestAnimationFrame(animateForceScale);
+      } else {
+        scaleAnimationId = null;
       }
     };
 
-    window.requestAnimationFrame(animateForceScale);
+    scaleAnimationId = window.requestAnimationFrame(animateForceScale);
     animationId = window.requestAnimationFrame(animate);
   };
 
@@ -219,6 +236,7 @@ export const useCursorRenderer = ({
     }
 
     const startValue = forceScaleState.value;
+    if (scaleAnimationId) window.cancelAnimationFrame(scaleAnimationId);
     const startTime = performance.now();
     const duration = 300;
 
@@ -230,10 +248,11 @@ export const useCursorRenderer = ({
       forceScaleState.value = startValue * (1 - eased);
 
       if (progress < 1) {
-        window.requestAnimationFrame(animateForceScale);
+        scaleAnimationId = window.requestAnimationFrame(animateForceScale);
         return;
       }
 
+      scaleAnimationId = null;
       isActive.value = false;
       if (animationId) {
         window.cancelAnimationFrame(animationId);
@@ -241,13 +260,17 @@ export const useCursorRenderer = ({
       }
     };
 
-    window.requestAnimationFrame(animateForceScale);
+    scaleAnimationId = window.requestAnimationFrame(animateForceScale);
   };
 
   const forceStopAnimation = () => {
     if (animationId) {
       window.cancelAnimationFrame(animationId);
       animationId = null;
+    }
+    if (scaleAnimationId) {
+      window.cancelAnimationFrame(scaleAnimationId);
+      scaleAnimationId = null;
     }
 
     isActive.value = false;
@@ -259,6 +282,10 @@ export const useCursorRenderer = ({
     if (animationId) {
       window.cancelAnimationFrame(animationId);
       animationId = null;
+    }
+    if (scaleAnimationId) {
+      window.cancelAnimationFrame(scaleAnimationId);
+      scaleAnimationId = null;
     }
 
     canvasDispose?.();

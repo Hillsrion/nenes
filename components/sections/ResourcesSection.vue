@@ -4,7 +4,7 @@
     :class="{ 'rounded-t-4xl': !isAtTop, '-mt-4': isIOS }"
     ref="sectionRef"
   >
-    <ThreeFruitPile v-if="fruitAvalanche" :active="avalancheStarted" entrance="right" />
+    <ThreeFruitPile v-if="fruitAvalanche && avalancheStarted" :active="true" entrance="right" />
     <div
       class="container relative z-20 mx-auto px-6 xl:px-8 h-full flex flex-col ju stify-between"
     >
