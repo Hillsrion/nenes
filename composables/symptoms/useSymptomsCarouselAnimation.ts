@@ -5,6 +5,8 @@ interface UseSymptomsCarouselAnimationOptions {
   sectionRef: Ref<HTMLElement | null>;
   cardRefs: Ref<(HTMLElement | null)[]>;
   titleRef: Ref<{ titleElement: HTMLElement } | null>;
+  cardStageRef?: Ref<HTMLElement | null>;
+  showProfileModel?: boolean;
 }
 
 export const useSymptomsCarouselAnimation = ({
@@ -12,12 +14,15 @@ export const useSymptomsCarouselAnimation = ({
   sectionRef,
   cardRefs,
   titleRef,
+  cardStageRef,
+  showProfileModel = false,
 }: UseSymptomsCarouselAnimationOptions) => {
   const isTitleHidden = ref(false);
 
   let carouselAnimation: any = null;
   let titleHideAnimation: any = null;
   let carouselMatchMedia: any = null;
+  let cardStageAnimation: any = null;
 
   const initializeCarouselAnimation = () => {
     if (!sectionRef.value || cardRefs.value.length === 0) {
@@ -40,6 +45,30 @@ export const useSymptomsCarouselAnimation = ({
         const { isMobile, isDesktop } = context.conditions;
         const mobileRotation = 40;
         const mobileStagger = 0.12;
+        const carouselStart = showProfileModel
+          ? isMobile
+            ? "22% top"
+            : "12% top"
+          : isMobile
+            ? "35% top"
+            : "top top";
+
+        if (showProfileModel && cardStageRef?.value) {
+          cardStageAnimation = $gsap.fromTo(
+            cardStageRef.value,
+            { opacity: 0 },
+            {
+              opacity: 1,
+              ease: "none",
+              scrollTrigger: {
+                trigger: sectionRef.value,
+                start: carouselStart,
+                end: isMobile ? "26% top" : "16% top",
+                scrub: 1,
+              },
+            }
+          );
+        }
 
         carouselAnimation = $gsap.fromTo(
           validRefs,
@@ -52,7 +81,7 @@ export const useSymptomsCarouselAnimation = ({
             stagger: isMobile ? mobileStagger : isDesktop ? 0.12 : 0.09,
             scrollTrigger: {
               trigger: sectionRef.value,
-              start: isMobile ? "35% top" : "top top",
+              start: carouselStart,
               end: "bottom bottom",
               scrub: true,
               onUpdate: (self: any) => {
@@ -98,12 +127,15 @@ export const useSymptomsCarouselAnimation = ({
 
   const cleanupCarouselAnimation = () => {
     titleHideAnimation?.kill?.();
+    cardStageAnimation?.scrollTrigger?.kill?.();
+    cardStageAnimation?.kill?.();
     carouselAnimation?.scrollTrigger?.kill?.();
     carouselAnimation?.kill?.();
     carouselMatchMedia?.revert?.();
     isTitleHidden.value = false;
 
     titleHideAnimation = null;
+    cardStageAnimation = null;
     carouselAnimation = null;
     carouselMatchMedia = null;
   };

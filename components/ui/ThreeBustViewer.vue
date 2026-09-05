@@ -56,6 +56,7 @@ interface Props {
   showBackdrop?: boolean;
   showLoadingIndicator?: boolean;
   initialRotationY?: number;
+  modelHorizontalAlignment?: "center" | "left";
   symptomType?: SymptomType;
   materialStyle?: MaterialStyle;
   shapeType?: "round" | "asymmetric" | "ptose" | "mastectomy";
@@ -72,6 +73,7 @@ const props = withDefaults(defineProps<Props>(), {
   showBackdrop: true,
   showLoadingIndicator: true,
   initialRotationY: 0,
+  modelHorizontalAlignment: "center",
   symptomType: "none",
   materialStyle: "original",
   shapeType: "round",
@@ -112,6 +114,26 @@ let composer: any = null;
 let bloomPass: any = null;
 let environmentTexture: THREE.Texture | null = null;
 let animationFrameId = 0;
+
+const alignModelHorizontally = () => {
+  if (!modelGroup || !camera || modelGroup.children.length === 0) return;
+
+  modelGroup.position.x = 0;
+
+  if (props.modelHorizontalAlignment !== "left") return;
+
+  modelGroup.updateMatrixWorld(true);
+  const bounds = new THREE.Box3().setFromObject(modelGroup);
+  const nearestDepth = Math.max(0.1, camera.position.z - bounds.max.z);
+  const halfFrustumWidth =
+    Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) *
+    nearestDepth *
+    camera.aspect;
+  const edgeBleed = Math.max(0.04, halfFrustumWidth * 0.035);
+
+  modelGroup.position.x = -halfFrustumWidth - bounds.min.x - edgeBleed;
+  modelGroup.updateMatrixWorld(true);
+};
 
 // Individual meshes for shape morphing
 let breastLeftMesh: THREE.Mesh | null = null;
@@ -558,6 +580,7 @@ const initThree = async () => {
 
           modelGroup.add(loadedModel);
           modelGroup.rotation.y = props.initialRotationY;
+          alignModelHorizontally();
           symptomEffects.build(loadedModel, props.symptomType);
           isLoading.value = false;
         },
@@ -588,6 +611,7 @@ const loadMockBust = () => {
   registerModelMaterials(mockBust, true);
   modelGroup.add(mockBust);
   modelGroup.rotation.y = props.initialRotationY;
+  alignModelHorizontally();
   
   // Set initial shape immediately without animation
   animateToShape(props.shapeType, true);
@@ -605,6 +629,7 @@ const handleResize = () => {
 
   camera.aspect = width / height;
   camera.updateProjectionMatrix();
+  alignModelHorizontally();
 
   renderer.setSize(width, height);
   composer?.setSize(width, height);
@@ -756,6 +781,11 @@ watch(
   (newStyle) => {
     applyMaterialStyle(newStyle);
   }
+);
+
+watch(
+  () => props.modelHorizontalAlignment,
+  () => alignModelHorizontally()
 );
 </script>
 

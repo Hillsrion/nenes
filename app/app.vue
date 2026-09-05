@@ -43,7 +43,11 @@
           :title="screeningMainTitle"
           :inverted="isNewHome"
         />
-        <SymptomsSection :title="symptomsMainTitle" :cards="symptomsCards" />
+        <SymptomsSection
+          :title="symptomsMainTitle"
+          :cards="symptomsCards"
+          :show-profile-model="isNewHome"
+        />
 
         <SelfExaminationSection :steps="selfExaminationSteps" />
 

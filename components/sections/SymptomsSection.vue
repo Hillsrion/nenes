@@ -14,10 +14,41 @@
         fixed: isIOS,
       }"
     >
-      <div ref="titleWrapperRef">
+      <div v-if="!showProfileModel" ref="titleWrapperRef">
         <Title ref="titleRef" :title="title" />
       </div>
-      <div class="absolute inset-0">
+      <div
+        v-else
+        ref="profileTitleRef"
+        class="pointer-events-none absolute left-[clamp(9rem,25vw,21rem)] top-[56%] z-20 -translate-x-1/2 -translate-y-1/2 rotate-[-72deg] whitespace-nowrap font-serif text-3xl leading-none text-primary opacity-0 xs:text-4xl md:text-5xl max-md:left-[38vw]"
+        aria-hidden="true"
+      >
+        {{ title }}
+      </div>
+      <div
+        v-if="showProfileModel"
+        ref="profileModelRef"
+        class="pointer-events-none absolute bottom-[-15svh] left-0 z-0 mx-0 h-[115svh] w-[min(78vw,42rem)] opacity-0 max-md:w-[95vw]"
+        aria-hidden="true"
+      >
+        <ThreeBustViewer
+          model-url="/models/bust-multiview-v2-symptoms.glb"
+          :auto-rotate="false"
+          :enable-zoom="false"
+          :interactive="false"
+          :initial-rotation-y="Math.PI / 2"
+          :model-scale="1.18"
+          model-horizontal-alignment="left"
+          :show-backdrop="false"
+          :show-loading-indicator="false"
+          compact
+        />
+      </div>
+      <div
+        ref="cardStageRef"
+        class="absolute inset-0"
+        :class="{ 'opacity-0': showProfileModel }"
+      >
         <div
           v-for="(card, index) in cards"
           :key="card.title"
@@ -45,9 +76,11 @@ import { useAnimationsStore } from "~/stores";
 import { Card } from "~/types";
 import Title from "~/components/ui/Title.vue";
 import SymptomCard from "~/components/ui/SymptomCard.vue";
+import ThreeBustViewer from "~/components/ui/ThreeBustViewer.vue";
 import { useIsIOS } from "~/composables/useIsIOS";
 import { useSymptomsTitleAnimation } from "~/composables/symptoms/useSymptomsTitleAnimation";
 import { useSymptomsCarouselAnimation } from "~/composables/symptoms/useSymptomsCarouselAnimation";
+import { useSymptomsProfileModelAnimation } from "~/composables/symptoms/useSymptomsProfileModelAnimation";
 
 declare const useNuxtApp: () => { $gsap: any };
 
@@ -60,6 +93,10 @@ const props = defineProps({
     type: Array as PropType<Card[]>,
     required: true,
   },
+  showProfileModel: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 // Check if iOS
@@ -70,7 +107,10 @@ const { $gsap } = useNuxtApp();
 const sectionRef = ref<HTMLElement | null>(null);
 const titleWrapperRef = ref<HTMLElement | null>(null);
 const titleRef = ref<{ titleElement: HTMLElement } | null>(null);
+const profileTitleRef = ref<HTMLElement | null>(null);
 const cardRefs = ref<(HTMLElement | null)[]>([]);
+const profileModelRef = ref<HTMLElement | null>(null);
+const cardStageRef = ref<HTMLElement | null>(null);
 
 const store = useAnimationsStore();
 
@@ -96,6 +136,16 @@ const { initializeCarouselAnimation, cleanupCarouselAnimation } =
     sectionRef,
     cardRefs,
     titleRef,
+    cardStageRef,
+    showProfileModel: props.showProfileModel,
+  });
+
+const { initializeModelAnimation, cleanupModelAnimation } =
+  useSymptomsProfileModelAnimation({
+    $gsap,
+    sectionRef,
+    modelRef: profileModelRef,
+    titleRef: profileTitleRef,
   });
 
 watch(
@@ -111,6 +161,7 @@ watch(
             requestAnimationFrame(() => {
               initializeTitleAnimation();
               initializeCarouselAnimation();
+              if (props.showProfileModel) initializeModelAnimation();
             });
           });
         }, 50);
@@ -122,5 +173,6 @@ watch(
 onUnmounted(() => {
   cleanupTitleAnimation();
   cleanupCarouselAnimation();
+  cleanupModelAnimation();
 });
 </script> 
