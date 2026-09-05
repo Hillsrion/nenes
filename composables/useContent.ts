@@ -49,7 +49,8 @@ export const useContent = () => {
       image: "/images/symptoms/symptoms-01.avif",
     },
     {
-      title: `Changement d'aspect de la peau (rougeur, aspect de "peau d'orange", plis)`,
+      title: "Changement d'aspect de la peau",
+      subtitle: `rougeur, aspect de "peau d'orange", plis`,
       image: "/images/symptoms/symptoms-02.avif",
     },
     {

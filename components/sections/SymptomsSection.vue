@@ -57,10 +57,11 @@
           class="w-[600%] aspect-square absolute top-1/2 -left-[250%] sm:w-[500%] sm:-left-[200%] lg:w-[300%] lg:-left-[100%]"
         >
           <div
-            class="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[25vw] min-w-[400px]"
+            class="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[25vw] min-w-[360px]"
           >
             <SymptomCard
               :title="card.title"
+              :subtitle="card.subtitle"
               :description="card.description"
               :image="card.image"
             />
