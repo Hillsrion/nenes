@@ -31,11 +31,24 @@
         isLoading ? 'opacity-0' : 'opacity-100',
       ]"
     />
+    <svg
+      v-if="profileLabel && profileContour"
+      class="profile-contour-label pointer-events-none absolute inset-0 z-20 h-full w-full overflow-visible text-primary"
+      :viewBox="`0 0 ${profileContour.width} ${profileContour.height}`"
+      :style="{ opacity: isLoading || profileLabelProgress <= 0 ? 0 : 1 }"
+      aria-hidden="true"
+    >
+      <defs><path :id="profileCurveId" :d="profileContour.path" /></defs>
+      <text class="font-serif" fill="currentColor" :font-size="Math.max(24, Math.min(38, profileContour.height * 0.031))">
+        <textPath :href="`#${profileCurveId}`" :startOffset="`${100 * (1 - profileLabelProgress)}%`">{{ profileLabel.toLocaleLowerCase('fr-FR') }}</textPath>
+      </text>
+    </svg>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted, watch } from "vue";
+import { computed, ref, onMounted, onUnmounted, watch, useId } from "vue";
+import { projectProfileContour } from "./three-bust/profile-contour";
 import * as THREE from "three";
 import { gsap } from "gsap";
 import {
@@ -46,6 +59,8 @@ import {
 type MaterialStyle = "original" | "glass" | "glow" | "iridescent";
 
 interface Props {
+  profileLabel?: string;
+  profileLabelProgress?: number;
   modelUrl?: string;
   scrollProgress?: number; // 0 to 100
   autoRotate?: boolean;
@@ -63,6 +78,8 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  profileLabel: "",
+  profileLabelProgress: 0,
   modelUrl: "",
   scrollProgress: 0,
   autoRotate: true,
@@ -95,6 +112,14 @@ const materialBackdropClass = computed(() => {
 const containerRef = ref<HTMLDivElement | null>(null);
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 const isLoading = ref(true);
+const profileCurveId = `bust-contour-${useId()}`;
+const profileContour = ref<ReturnType<typeof projectProfileContour>>(null);
+const refreshProfileContour = () => {
+  const root = loadedBustModel ?? mockBust;
+  if (!props.profileLabel || !root || !camera || !containerRef.value) return;
+  const { width, height } = containerRef.value.getBoundingClientRect();
+  if (width > 0 && height > 0) profileContour.value = projectProfileContour(root, camera, width, height);
+};
 
 // Three.js instances
 let renderer: THREE.WebGLRenderer | null = null;
@@ -669,6 +694,7 @@ const initThree = async () => {
           alignModelHorizontally();
           symptomEffects.build(loadedModel, props.symptomType);
           isLoading.value = false;
+          refreshProfileContour();
           scheduleRender();
         },
         undefined,
@@ -702,6 +728,7 @@ const loadMockBust = () => {
   animateToShape(props.shapeType, true);
   
   isLoading.value = false;
+  refreshProfileContour();
   scheduleRender();
 };
 
@@ -719,6 +746,7 @@ const handleResize = () => {
 
   renderer.setSize(width, height, false);
   composer?.setSize(width, height);
+  refreshProfileContour();
   scheduleRender();
 };
 

@@ -4,17 +4,18 @@ interface UseSymptomsProfileModelAnimationOptions {
   $gsap: any;
   sectionRef: Ref<HTMLElement | null>;
   modelRef: Ref<HTMLElement | null>;
-  titleRef: Ref<HTMLElement | null>;
+  onTitleProgress: (progress: number) => void;
 }
 
 export const useSymptomsProfileModelAnimation = ({
   $gsap,
   sectionRef,
   modelRef,
-  titleRef,
+  onTitleProgress,
 }: UseSymptomsProfileModelAnimationOptions) => {
   let modelAnimation: any = null;
   let titleAnimation: any = null;
+  let titleVisibilityAnimation: any = null;
 
   const initializeModelAnimation = () => {
     if (!sectionRef.value) return;
@@ -23,6 +24,8 @@ export const useSymptomsProfileModelAnimation = ({
     modelAnimation?.kill?.();
     titleAnimation?.scrollTrigger?.kill?.();
     titleAnimation?.kill?.();
+    titleVisibilityAnimation?.scrollTrigger?.kill?.();
+    titleVisibilityAnimation?.kill?.();
 
     if (modelRef?.value) {
       modelAnimation = $gsap.fromTo(
@@ -42,23 +45,31 @@ export const useSymptomsProfileModelAnimation = ({
       );
     }
 
-    if (!titleRef.value) return;
-
-    titleAnimation = $gsap.fromTo(
-      titleRef.value,
-      { yPercent: 45, opacity: 0 },
-      {
-        yPercent: 0,
-        opacity: 1,
+    const travel = { progress: 0 };
+    let inSection = true;
+    onTitleProgress(0);
+    titleAnimation = $gsap.to(travel, {
+        progress: 1,
         ease: "none",
+        onUpdate: () => onTitleProgress(inSection ? travel.progress : 0),
         scrollTrigger: {
           trigger: sectionRef.value,
           start: "top top",
-          end: "9% top",
+          end: "22% top",
           scrub: 1,
         },
-      }
-    );
+      });
+    titleVisibilityAnimation = $gsap.to({}, {
+      scrollTrigger: {
+        trigger: sectionRef.value,
+        start: "top bottom",
+        end: "bottom bottom",
+        onToggle: (trigger: { isActive: boolean }) => {
+          inSection = trigger.isActive;
+          onTitleProgress(inSection ? travel.progress : 0);
+        },
+      },
+    });
   };
 
   const cleanupModelAnimation = () => {
@@ -66,8 +77,11 @@ export const useSymptomsProfileModelAnimation = ({
     modelAnimation?.kill?.();
     titleAnimation?.scrollTrigger?.kill?.();
     titleAnimation?.kill?.();
+    titleVisibilityAnimation?.scrollTrigger?.kill?.();
+    titleVisibilityAnimation?.kill?.();
     modelAnimation = null;
     titleAnimation = null;
+    titleVisibilityAnimation = null;
   };
 
   return {
