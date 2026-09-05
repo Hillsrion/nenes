@@ -44,6 +44,8 @@
               class="absolute bottom-[-15svh] left-0 z-10 mx-0 h-[115svh] w-[min(78vw,42rem)] max-md:w-[95vw]"
             >
               <ThreeBustViewer
+                :profile-label="symptomsMainTitle"
+                :profile-label-progress="symptomsProfileProgress"
                 model-url="/models/bust-multiview-v2-symptoms.glb"
                 :auto-rotate="false"
                 :enable-zoom="false"
@@ -64,6 +66,7 @@
               :cards="symptomsCards"
               :show-profile-model="true"
               :use-shared-model="true"
+              @profile-progress="symptomsProfileProgress = $event"
             />
 
             <SelfExaminationSection
@@ -726,6 +729,7 @@ const globalContainer = ref(null);
 const mainLayoutRef = ref(null); // Ref to MainLayout component
 const symptomsAndExaminationContainerRef = ref<HTMLElement | null>(null);
 const sharedProfileModelRef = ref<HTMLElement | null>(null);
+const symptomsProfileProgress = ref(0);
 
 let sharedModelAnimation: any = null;
 

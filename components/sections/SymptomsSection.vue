@@ -19,20 +19,14 @@
         <Title ref="titleRef" :title="title" />
       </div>
       <div
-        v-else
-        ref="profileTitleRef"
-        class="pointer-events-none absolute left-[clamp(9rem,25vw,21rem)] top-[56%] z-20 -translate-x-1/2 -translate-y-1/2 rotate-[-72deg] whitespace-nowrap font-serif text-3xl leading-none text-primary opacity-0 xs:text-4xl md:text-5xl max-md:left-[38vw]"
-        aria-hidden="true"
-      >
-        {{ title }}
-      </div>
-      <div
         v-if="showProfileModel && !useSharedModel"
         ref="profileModelRef"
         class="pointer-events-none absolute bottom-[-15svh] left-0 z-0 mx-0 h-[115svh] w-[min(78vw,42rem)] opacity-0 max-md:w-[95vw]"
         aria-hidden="true"
       >
         <ThreeBustViewer
+          :profile-label="title"
+          :profile-label-progress="profileLabelProgress"
           model-url="/models/bust-multiview-v2-symptoms.glb"
           :auto-rotate="false"
           :enable-zoom="false"
@@ -113,7 +107,8 @@ const { $gsap } = useNuxtApp();
 const sectionRef = ref<HTMLElement | null>(null);
 const titleWrapperRef = ref<HTMLElement | null>(null);
 const titleRef = ref<{ titleElement: HTMLElement } | null>(null);
-const profileTitleRef = ref<HTMLElement | null>(null);
+const emit = defineEmits<{ profileProgress: [progress: number] }>();
+const profileLabelProgress = ref(0);
 const cardRefs = ref<(HTMLElement | null)[]>([]);
 const profileModelRef = ref<HTMLElement | null>(null);
 const cardStageRef = ref<HTMLElement | null>(null);
@@ -151,7 +146,10 @@ const { initializeModelAnimation, cleanupModelAnimation } =
     $gsap,
     sectionRef,
     modelRef: profileModelRef,
-    titleRef: profileTitleRef,
+    onTitleProgress: (progress: number) => {
+      profileLabelProgress.value = progress;
+      emit("profileProgress", progress);
+    },
   });
 
 watch(
