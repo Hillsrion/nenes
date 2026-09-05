@@ -2,14 +2,12 @@
   <div ref="trackRef" class="relative lg:h-[470svh]">
     <section
       ref="sectionRef"
-      class="relative z-30 overflow-hidden bg-white text-primary lg:sticky lg:top-0 lg:h-[100svh]"
-      :class="{ 'rounded-t-4xl': inverted }"
+      class="relative z-30 overflow-hidden rounded-t-4xl bg-white text-primary lg:sticky lg:top-0 lg:h-[100svh]"
     >
       <div
         ref="backgroundRef"
         aria-hidden="true"
-        class="absolute inset-0 z-0 bg-primary"
-        :class="inverted ? 'opacity-100' : 'opacity-0'"
+        class="absolute inset-0 z-0 bg-primary opacity-100"
       />
 
       <div
@@ -18,8 +16,7 @@
         <div class="relative z-20 max-w-[50rem] lg:pt-[17vh]">
           <p
             ref="titleRef"
-            class="text-3xl font-medium leading-title sm:text-4xl lg:text-5xl"
-            :class="inverted ? 'text-white' : 'text-primary'"
+            class="text-3xl font-medium leading-title text-white sm:text-4xl lg:text-5xl"
           >
             {{ title }}
           </p>
@@ -131,13 +128,11 @@ interface SidebarElement {
 interface Props {
   sidebarElements: SidebarElement[];
   title?: string;
-  inverted?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   sidebarElements: () => [],
   title: "",
-  inverted: false,
 });
 
 const store = useAnimationsStore();
@@ -242,23 +237,17 @@ const initializeScrollSequence = () => {
   gsap.set(selfExamPolaroid, { rotation: 16, transformOrigin: "50% 70%" });
   gsap.set(selfExamNote, { rotation: -13, transformOrigin: "50% 70%" });
 
-  if (props.inverted) {
-    gsap.set(background, { opacity: 1 });
-    gsap.set(title, { color: "white" });
-  } else {
-    gsap.set(background, { opacity: 0 });
-  }
+  gsap.set(background, { opacity: 1 });
+  gsap.set(title, { color: "white" });
 
   scrollTimeline = gsap.timeline({ defaults: { ease: "power2.inOut" } });
 
-  if (props.inverted) {
-    // Keep the full blue background while the bust fades in. Only once it is
-    // fully present do we fade that single blue layer away to stable white.
-    // The 3D canvas never participates in the background transition.
-    scrollTimeline
-      .to(background, { opacity: 0, duration: 0.2, ease: "none" }, 0.38)
-      .to(title, { color: blue, duration: 0.18, ease: "none" }, 0.4);
-  }
+  // Keep the full blue background while the bust fades in. Only once it is
+  // fully present do we fade that single blue layer away to stable white.
+  // The 3D canvas never participates in the background transition.
+  scrollTimeline
+    .to(background, { opacity: 0, duration: 0.2, ease: "none" }, 0.38)
+    .to(title, { color: blue, duration: 0.18, ease: "none" }, 0.4);
 
   scrollTimeline
     .to(
@@ -303,7 +292,7 @@ const initializeScrollSequence = () => {
     animation: scrollTimeline,
     onUpdate: (self) => {
       // The navigation mark must stay visible on the white phase.
-      store.updateLogoColor(!props.inverted || self.progress > 0.08);
+      store.updateLogoColor(self.progress > 0.08);
     },
   });
 };

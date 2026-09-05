@@ -1,136 +1,98 @@
 <template>
-  <section class="min-h-screen flex items-center relative" ref="sectionRef">
-    <!-- Entry Cover Image -->
-    <picture>
-      <!-- Portrait (<=768px) → AVIF, then WebP -->
-      <source
-        type="image/avif"
-        media="(max-width: 768px)"
-        srcset="
-          /images/entry-cover-portrait/entry-cover-portrait@640.avif   640w,
-          /images/entry-cover-portrait/entry-cover-portrait@828.avif   828w,
-          /images/entry-cover-portrait/entry-cover-portrait@1080.avif 1080w,
-          /images/entry-cover-portrait/entry-cover-portrait@1440.avif 1440w
-        "
-        sizes="100vw"
-      />
-      <source
-        type="image/webp"
-        media="(max-width: 768px)"
-        srcset="
-          /images/entry-cover-portrait/entry-cover-portrait@640.webp   640w,
-          /images/entry-cover-portrait/entry-cover-portrait@828.webp   828w,
-          /images/entry-cover-portrait/entry-cover-portrait@1080.webp 1080w,
-          /images/entry-cover-portrait/entry-cover-portrait@1440.webp 1440w
-        "
-        sizes="100vw"
-      />
-      <!-- Landscape (>=769px) → AVIF, then WebP -->
-      <source
-        type="image/avif"
-        media="(min-width: 769px)"
-        srcset="
-          /images/entry-cover/entry-cover@1024.avif 1024w,
-          /images/entry-cover/entry-cover@1280.avif 1280w,
-          /images/entry-cover/entry-cover@1920.avif 1920w,
-          /images/entry-cover/entry-cover@2560.avif 2560w,
-          /images/entry-cover/entry-cover@3840.avif 3840w
-        "
-        sizes="100vw"
-      />
-      <source
-        type="image/webp"
-        media="(min-width: 769px)"
-        srcset="
-          /images/entry-cover/entry-cover@1024.webp 1024w,
-          /images/entry-cover/entry-cover@1280.webp 1280w,
-          /images/entry-cover/entry-cover@1920.webp 1920w,
-          /images/entry-cover/entry-cover@2560.webp 2560w,
-          /images/entry-cover/entry-cover@3840.webp 3840w
-        "
-        sizes="100vw"
-      />
-      <img
-        ref="entryCoverRef"
-        src="/images/entry-cover/entry-cover@1280.webp"
-        alt="Entry Cover"
-        class="fixed z-5 pointer-events-none"
-        :style="{
-          width: '100vw',
-          height: '100vh',
-          transformOrigin: 'center center',
-          objectFit: 'cover',
-          willChange: 'transform',
-          top: 0,
-          left: 0,
-        }"
-      />
-    </picture>
-
-    <!-- Statistics Section -->
-    <div class="absolute -top-2 left-0 w-full h-16 bg-primary -z-1"></div>
+  <section ref="sectionRef" class="relative w-full bg-white">
     <div
-      class="relative h-[350svh] w-full min-h-screen bg-white transition-all duration-300 ease-out overflow-x-clip"
-      ref="whiteSectionRef"
-      :class="{
-        'rounded-t-4xl':
-          animationsStore?.sections?.loading?.state === 'isAnimating' ||
-          animationsStore?.sections?.loading?.state === 'idle',
-      }"
+      ref="revealTrackRef"
+      class="entry-reveal-track relative h-[960svh] w-full"
     >
-      <div v-if="isIOS" class="h-svh"></div>
       <div
-        class="max-w-[42rem] h-[100svh] w-full px-8 top-0 z-10 mx-auto flex flex-col justify-center"
-        :class="{
-          sticky: !isIOS,
-          fixed: isIOS,
-        }"
+        ref="revealStageRef"
+        class="sticky top-0 h-[100svh] w-full overflow-hidden rounded-t-4xl bg-white"
       >
+        <div ref="entryCoverRef" class="absolute inset-0 z-0 h-full w-full">
+          <IntroPhotoSequence ref="photoSequenceRef" />
+        </div>
+
+        <div
+          ref="whiteSectionRef"
+          class="absolute inset-x-0 top-full z-10 h-full bg-white will-change-transform"
+          aria-hidden="true"
+        />
+
+        <div class="pointer-events-none absolute inset-0 z-20" aria-hidden="true">
+          <span
+            ref="numberWhiteRef"
+            class="statistic-number absolute left-1/2 top-1/2 block text-white"
+          >
+            {{ statisticNumber }}
+          </span>
+
+          <div
+            ref="numberMaskRef"
+            class="absolute inset-0 overflow-hidden"
+            style="clip-path: inset(100% 0 0 0)"
+          >
+            <span
+              ref="numberBlueRef"
+              class="statistic-number absolute left-1/2 top-1/2 block text-primary"
+            >
+              {{ statisticNumber }}
+            </span>
+          </div>
+        </div>
+
         <div
           ref="statisticsTextRef"
-          class="text-2xl xs:text-3xl lg:text-5xl leading-snug font-medium text-center text-primary relative w-full break-words"
+          class="pointer-events-none absolute inset-0 z-30 mx-auto flex h-full w-full max-w-[42rem] flex-col justify-center px-8 text-center text-2xl font-medium leading-snug text-primary xs:text-3xl lg:text-5xl lg:leading-[4rem]"
+          :aria-label="fullStatisticsText"
         >
-          <template v-for="(line, index) in statisticsText" :key="index">
-            <span class="inline-block">
-              <template v-if="index === statisticsText.length - 1">
-                <!-- Split last line: first word goes left, rest goes right -->
-                <span
-                  class="inline-block animate-split-word-left sm:mr-3 xs:mr-2 mr-1.5"
-                >
-                  {{ textUtils.getFirstWord(line) }}
-                </span>
-                <span class="inline-block animate-split-word-right">
-                  {{ textUtils.getRemainingWords(line) }}
-                </span>
-              </template>
-              <template v-else>
-                {{ line }}
-              </template>
+          <template v-for="(line, index) in statisticsText" :key="line">
+            <span
+              v-if="index < statisticsText.length - 1"
+              :ref="(element) => setPhrasePartRef(element, index)"
+              class="block opacity-0"
+              aria-hidden="true"
+            >
+              {{ line }}
+            </span>
+
+            <span v-else class="block" aria-hidden="true">
+              <span
+                :ref="(element) => setPhrasePartRef(element, 2)"
+                class="inline-block whitespace-pre opacity-0"
+              >{{ lastLineParts.before }}</span>
+              <span :ref="setNumberTargetRef" class="invisible inline-block">
+                {{ statisticNumber }}
+              </span>
+              <span
+                :ref="(element) => setPhrasePartRef(element, 3)"
+                class="inline-block whitespace-pre opacity-0"
+              >{{ lastLineParts.after }}</span>
             </span>
           </template>
         </div>
       </div>
+    </div>
 
-      <div class="container w-full mx-auto px-8 relative z-100">
+    <div
+      ref="contentSectionRef"
+      class="relative z-40 h-[280svh] w-full bg-white"
+    >
+      <div
+        ref="contentStageRef"
+        class="sticky top-0 h-[100svh] w-full overflow-hidden bg-white"
+      >
+        <ThreeFruitPile v-if="fruitRainStarted" :active="true" />
+
         <div
-          class="max-w-[70rem] mx-auto grid grid-cols-5 lg:grid-cols-6 lg:gap-y-[60vh] gap-y-[40vh] auto-rows-auto mt-[60vh]"
+          class="absolute right-[7vw] top-[18vh] z-20 flex w-[min(48rem,56vw)] flex-col gap-6 max-md:left-6 max-md:right-6 max-md:w-auto"
         >
           <div
             v-for="(element, index) in contentElements"
-            :key="index"
-            :class="[
-              index % 2 === 0
-                ? 'col-span-4'
-                : 'col-start-2 lg:col-start-3 col-span-4 row-start-2',
-            ]"
+            :key="element.content"
           >
             <p
-              :ref="
-                (el) => {
-                  if (el) textRefs[index] = el;
-                }
-              "
-              class="text-secondary font-medium lg:text-5xl text-3xl leading-title"
+              :ref="(elementRef) => setContentRef(elementRef, index)"
+              class="text-3xl font-medium leading-title text-primary opacity-0 lg:text-5xl"
             >
               {{ element.content }}
             </p>
@@ -139,11 +101,10 @@
       </div>
     </div>
 
-    <!-- Serif Scroll Indicator -->
     <div
-      class="fixed sm:bottom-8 xs:bottom-6 bottom-4 left-1/2 -translate-x-1/2 z-20 font-serif text-serif-size text-primary transition-opacity duration-500"
+      class="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 font-serif text-serif-size text-secondary transition-opacity duration-500 xs:bottom-6 sm:bottom-8"
       :class="{
-        'opacity-0 pointer-events-none': animationsStore.cover.isScaling,
+        'pointer-events-none opacity-0': animationsStore.cover.isScaling,
       }"
     >
       scroll
@@ -152,18 +113,14 @@
 </template>
 
 <script setup>
-import { useTextUtils } from "~/composables/useTextUtils";
-import { useStatisticsAnimation } from "~/composables/useStatisticsAnimation";
-import { useEntryCoverAnimation } from "~/composables/useEntryCoverAnimation";
+import IntroPhotoSequence from "~/components/ui/IntroPhotoSequence.vue";
+import ThreeFruitPile from "~/components/ui/ThreeFruitPile.vue";
+import { useEntryRevealAnimation } from "~/composables/useEntryRevealAnimation";
 import { useContentElementsAnimation } from "~/composables/useContentElementsAnimation";
 import { useAnimationsStore } from "~/stores";
-import { gsap } from "gsap";
-import { useIsIOS } from "~/composables/useIsIOS";
 
-// Animations store
 const animationsStore = useAnimationsStore();
 
-// Props
 const props = defineProps({
   statisticsText: {
     type: Array,
@@ -173,104 +130,140 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
-  // scrollContainer: { // Removed, as Lenis will handle the scrolling context
-  //   type: [Object, Window],
-  //   default: () => window,
-  // },
 });
 
-// Check if iOS
-const { isIOS } = useIsIOS();
-
-// Refs
 const sectionRef = ref(null);
+const revealTrackRef = ref(null);
+const revealStageRef = ref(null);
 const whiteSectionRef = ref(null);
 const statisticsTextRef = ref(null);
 const entryCoverRef = ref(null);
+const photoSequenceRef = ref(null);
+const numberWhiteRef = ref(null);
+const numberBlueRef = ref(null);
+const numberMaskRef = ref(null);
+const numberTargetRef = ref(null);
+const phrasePartRefs = ref([]);
+const contentSectionRef = ref(null);
+const contentStageRef = ref(null);
+const fruitRainStarted = ref(false);
 const textRefs = ref([]);
 
-// Text utility functions
-const textUtils = useTextUtils();
+const lastStatisticsLine = computed(
+  () => props.statisticsText[props.statisticsText.length - 1] || "plus de 60000 femmes."
+);
 
-// Animation composables
-const {
-  firstTwoLinesFaded,
-  lastLineCentered,
-  initializeAnimations: initializeStatisticsAnimations,
-  cleanup: cleanupStatisticsAnimations,
-  getTimeline,
-} = useStatisticsAnimation({
-  sectionRef,
-  statisticsTextRef,
-  statisticsText: props.statisticsText,
-  // scrollContainer: props.scrollContainer, // Removed
+const statisticNumber = computed(
+  () => lastStatisticsLine.value.match(/\d[\d\s]*/)?.[0].trim() || "60000"
+);
+
+const lastLineParts = computed(() => {
+  const numberIndex = lastStatisticsLine.value.indexOf(statisticNumber.value);
+
+  if (numberIndex < 0) {
+    return { before: lastStatisticsLine.value, after: "" };
+  }
+
+  return {
+    before: lastStatisticsLine.value.slice(0, numberIndex),
+    after: lastStatisticsLine.value.slice(
+      numberIndex + statisticNumber.value.length
+    ),
+  };
 });
 
+const fullStatisticsText = computed(() => props.statisticsText.join(" "));
+
+const setPhrasePartRef = (element, index) => {
+  if (element) phrasePartRefs.value[index] = element;
+};
+
+const setNumberTargetRef = (element) => {
+  numberTargetRef.value = element || null;
+};
+
+const setContentRef = (element, index) => {
+  if (element) textRefs.value[index] = element;
+};
+
 const {
-  isCoverFullyVisible,
-  initializeAnimation: initializeEntryCoverAnimation,
-  cleanup: cleanupEntryCoverAnimation,
-} = useEntryCoverAnimation({
-  sectionRef,
+  prepareInitialState,
+  initializeAnimation: initializeEntryRevealAnimation,
+  cleanup: cleanupEntryRevealAnimation,
+} = useEntryRevealAnimation({
+  revealTrackRef,
+  revealStageRef,
   entryCoverRef,
-  statisticsTextRef,
-  // scrollContainer: props.scrollContainer, // Removed
-  getTimeline,
+  whiteSectionRef,
+  numberWhiteRef,
+  numberBlueRef,
+  numberMaskRef,
+  numberTargetRef,
+  phrasePartRefs,
+  onPhotoProgress: (progress) => photoSequenceRef.value?.setProgress(progress),
 });
 
 const {
   initializeAnimation: initializeContentElementsAnimation,
   cleanup: cleanupContentElementsAnimation,
-} =
-  useContentElementsAnimation({
-    textRefs,
-    sectionRef,
-    getTimeline,
-  });
-
-// Track if animations have been initialized
-let animationsInitialized = false;
-
-// Set initial state for cover image - must be scale 0 and hidden
-onMounted(() => {
-  if (entryCoverRef.value) {
-    gsap.set(entryCoverRef.value, {
-      scale: 0,
-      opacity: 0,
-    });
-  }
-
-  // Old alert trigger and refresh logic removed
+} = useContentElementsAnimation({
+  sectionRef: contentSectionRef,
+  stageRef: contentStageRef,
+  onEnter: () => {
+    fruitRainStarted.value = true;
+  },
+  textRefs,
 });
 
-// Watch for loading completion before initializing other animations
+let animationsInitialized = false;
+
+onMounted(() => {
+  prepareInitialState();
+});
+
 watch(
-  () => animationsStore?.sections?.loading?.state,
+  () => animationsStore.sections.loading?.state,
   (loadingState) => {
+    if (loadingState === "isAnimating") {
+      prepareInitialState();
+    }
+
     if (loadingState === "isComplete" && !animationsInitialized) {
-      if (sectionRef.value && props.statisticsText.length > 0) {
-        // Re-enable original animation initialization
-        initializeStatisticsAnimations();
-
-        nextTick(() => {
-          initializeEntryCoverAnimation();
-          initializeContentElementsAnimation();
-
-          // No longer need extra refresh here as composables handle their own
-        });
-      }
-
+      nextTick(() => {
+        initializeEntryRevealAnimation();
+        initializeContentElementsAnimation();
+      });
       animationsInitialized = true;
     }
   },
   { immediate: true }
 );
 
-// Note: All animation logic has been moved to composables for better organization
-
 onUnmounted(() => {
-  cleanupStatisticsAnimations();
-  cleanupEntryCoverAnimation();
+  cleanupEntryRevealAnimation();
   cleanupContentElementsAnimation();
 });
 </script>
+
+<style scoped>
+.statistic-number {
+  font-size: clamp(6rem, 28vw, 24rem);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  line-height: 0.82;
+  opacity: 0;
+  white-space: nowrap;
+  will-change: transform, opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .entry-reveal-track {
+    height: 100svh;
+  }
+
+  .statistic-number,
+  [class*="will-change"] {
+    will-change: auto;
+  }
+}
+</style>
