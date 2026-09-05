@@ -3,9 +3,18 @@
   publish = "dist"
   functions = ".netlify/functions-internal"
 
-[env]
-  [env.production]
-    NODE_ENV = "production"
+[context.production.environment]
+  NODE_ENV = "production"
+
+# Deploys from non-production branches use Netlify Branch Deploys.
+[context.branch-deploy]
+  command = "pnpm install && pnpm nuxi build"
+  publish = "dist"
+
+# Keep the develop branch on the Branch Deploy context explicitly.
+[context.develop]
+  command = "pnpm install && pnpm nuxi build"
+  publish = "dist"
 
 [functions]
   node_bundler = "esbuild"
