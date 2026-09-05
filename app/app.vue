@@ -49,7 +49,11 @@
 
         <!-- Resources Section -->
         <ResourcesSection :fruit-avalanche="isNewHome" />
-        <CursorImageSpawner :images="cursorImages" :disabled="isThreeDPreview" />
+        <CursorImageSpawner
+          v-if="isCursorImageSpawnerEnabled"
+          :images="cursorImages"
+          :disabled="isThreeDPreview"
+        />
       </div>
     </MainLayout>
   </div>
@@ -342,6 +346,8 @@ import { useLenis } from "lenis/vue";
 
 // Store
 const store = useAnimationsStore();
+// Temporarily keep the editorial cursor trail out of the experience.
+const isCursorImageSpawnerEnabled = false;
 const route = useRoute();
 const isNewHome = computed(() => route.path === "/new");
 const isFruitTest = computed(() => route.path === "/fruits");

@@ -1,5 +1,10 @@
 # Project instructions
 
+## Design reference
+
+The canonical Figma reference is [Nénés – Projet Octobre Rose V2](https://www.figma.com/design/F1VrBC3h7ojtRAoRlwqtn2/N%C3%A9n%C3%A9s---Projet-Octobre-Rose-V2?node-id=2063-448&t=53cL6wQwTfgPhuOt-0).
+Use the signed-in Figma desktop app through Computer Use for inspection; avoid the Figma MCP when possible because it is rate-limited. The editorial paper treatment is illustrated by frames `UI-1366-Nénés-V2-41` through `-45` and reused in `UI-1366-Nénés-V2-69`.
+
 ## Photo-to-3D work
 
 Before generating or modifying a bust from a photo, read

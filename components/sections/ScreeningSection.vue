@@ -1,122 +1,113 @@
 <template>
-  <div class="lg:h-[150svh] relative">
+  <div ref="trackRef" class="relative lg:h-[470svh]">
     <section
-      class="sticky top-0 z-30 flex h-screen items-center justify-center transition-all duration-300 ease-out"
-      :class="[
-        inverted ? 'bg-primary text-white' : 'bg-white text-primary',
-        { 'rounded-t-4xl': !isAtTop },
-      ]"
       ref="sectionRef"
+      class="relative z-30 overflow-hidden bg-white text-primary lg:sticky lg:top-0 lg:h-[100svh]"
+      :class="{ 'rounded-t-4xl': inverted }"
     >
       <div
-        class="container mx-auto px-4 flex flex-col lg:flex-row gap-8 xl:gap-12 origin-top h-[100svh] py-2 sm:py-14 lg:py-27"
-        ref="containerRef"
+        ref="backgroundRef"
+        aria-hidden="true"
+        class="absolute inset-0 z-0 bg-primary"
+        :class="inverted ? 'opacity-100' : 'opacity-0'"
+      />
+
+      <div
+        class="relative z-10 mx-auto min-h-[100svh] max-w-[1366px] px-5 py-24 sm:px-10 lg:h-full lg:px-12 lg:py-0"
       >
-        <!-- Main content -->
-        <div class="flex-1 lg:w-3/5">
-          <div class="max-w-2xl">
-            <p
-              :ref="setTitleRef"
-              class="mb-8 text-2xl font-medium leading-title xs:text-3xl md:text-4xl lg:text-5xl"
-              :class="inverted ? 'text-white' : 'text-primary'"
-            >
-              {{ title }}
-            </p>
-          </div>
+        <div class="relative z-20 max-w-[50rem] lg:pt-[17vh]">
+          <p
+            ref="titleRef"
+            class="text-3xl font-medium leading-title sm:text-4xl lg:text-5xl"
+            :class="inverted ? 'text-white' : 'text-primary'"
+          >
+            {{ title }}
+          </p>
         </div>
 
-        <!-- Sidebar elements -->
-        <div ref="sidebarRef" class="flex flex-col lg:w-1/4 gap-8 lg:gap-16">
-          <div
-            v-for="(element, index) in sidebarElements"
-            :key="index"
-            class="group"
+        <!-- The mono-view model replaces the former desktop sidebar. -->
+        <div
+          ref="modelRef"
+          class="relative z-10 mx-auto mt-10 h-[48svh] w-full max-w-[34rem] lg:invisible lg:absolute lg:right-[-3vw] lg:top-0 lg:mt-0 lg:h-[100svh] lg:w-[58vw] lg:max-w-none lg:opacity-0"
+        >
+          <ThreeBustViewer
+            :model-url="monoviewModelUrl"
+            material-style="glass"
+            :auto-rotate="true"
+            :interactive="false"
+            :compact="true"
+            :model-scale="2.2"
+            :show-backdrop="false"
+            :show-loading-indicator="false"
+          />
+        </div>
+
+        <!-- Desktop editorial layer: the former sidebar content becomes moving paper. -->
+        <div
+          class="pointer-events-none absolute inset-0 z-30 hidden lg:block"
+          aria-hidden="true"
+        >
+          <figure
+            ref="screeningPolaroidRef"
+            class="polaroid polaroid--screening"
           >
-            <div class="flex flex-col gap-4">
-              <!-- Content -->
-              <div class="flex flex-col gap-4">
-                <h3
-                  class="text-sm uppercase leading-title tracking-title-sm lg:text-base"
-                  :class="inverted ? 'text-white' : 'text-primary'"
-                >
-                  {{ element.title }}
-                </h3>
-                <p
-                  class="text-base leading-7.5 lg:text-xl"
-                  :class="inverted ? 'text-white' : 'text-primary'"
-                >
-                  {{ element.content }}
-                </p>
-                <div class="relative overflow-hidden mt-8">
-                  <picture :ref="(el) => setLastImageRef(el, index)">
-                    <!-- Mobile (<=767px) -->
-                    <source
-                      type="image/avif"
-                      media="(max-width: 767px)"
-                      :srcset="element.image.replace('.jpg', '_mobile.avif')"
-                      sizes="100vw"
-                    />
-                    <source
-                      type="image/webp"
-                      media="(max-width: 767px)"
-                      :srcset="element.image.replace('.jpg', '_mobile.webp')"
-                      sizes="100vw"
-                    />
-                    <!-- Tablet (768-820px) - using regular -->
-                    <source
-                      type="image/avif"
-                      media="(min-width: 768px) and (max-width: 820px)"
-                      :srcset="element.image.replace('.jpg', '_regular.avif')"
-                      sizes="100vw"
-                    />
-                    <source
-                      type="image/webp"
-                      media="(min-width: 768px) and (max-width: 820px)"
-                      :srcset="element.image.replace('.jpg', '_regular.webp')"
-                      sizes="100vw"
-                    />
-                    <!-- Medium tablet (821-1024px) -->
-                    <source
-                      type="image/avif"
-                      media="(min-width: 821px) and (max-width: 1024px)"
-                      :srcset="element.image.replace('.jpg', '_tablet.avif')"
-                      sizes="(min-width: 1024px) 25vw, 100vw"
-                    />
-                    <source
-                      type="image/webp"
-                      media="(min-width: 821px) and (max-width: 1024px)"
-                      :srcset="element.image.replace('.jpg', '_tablet.webp')"
-                      sizes="(min-width: 1024px) 25vw, 100vw"
-                    />
-                    <!-- Desktop (>1024px) - using regular -->
-                    <source
-                      type="image/avif"
-                      media="(min-width: 1025px)"
-                      :srcset="element.image.replace('.jpg', '_regular.avif')"
-                      sizes="(min-width: 1024px) 25vw, 100vw"
-                    />
-                    <source
-                      type="image/webp"
-                      media="(min-width: 1025px)"
-                      :srcset="element.image.replace('.jpg', '_regular.webp')"
-                      sizes="(min-width: 1024px) 25vw, 100vw"
-                    />
-                    <img
-                      :src="element.image.replace('.jpg', '_regular.webp')"
-                      :alt="element.title"
-                      loading="lazy"
-                      class="w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      width="312"
-                      height="468"
-                    />
-                  </picture>
-                  <div
-                    class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                  ></div>
-                </div>
-              </div>
-            </div>
-          </div>
+            <img
+              src="/images/screening/screening-01_regular.webp"
+              alt=""
+              width="312"
+              height="468"
+            />
+            <figcaption>dépistage</figcaption>
+          </figure>
+
+          <article
+            ref="screeningNoteRef"
+            class="paper-note paper-note--screening"
+          >
+            <p>{{ sidebarElements[0]?.content }}</p>
+          </article>
+
+          <figure
+            ref="selfExamPolaroidRef"
+            class="polaroid polaroid--self-exam"
+          >
+            <img
+              src="/images/screening/screening-02_regular.webp"
+              alt=""
+              width="312"
+              height="468"
+            />
+            <figcaption>autopalpation</figcaption>
+          </figure>
+
+          <article
+            ref="selfExamNoteRef"
+            class="paper-note paper-note--self-exam"
+          >
+            <p>{{ sidebarElements[1]?.content }}</p>
+          </article>
+        </div>
+
+        <!-- Keep the information available and calm on touch layouts. -->
+        <div class="relative z-20 mt-12 grid gap-10 lg:hidden">
+          <article
+            v-for="element in sidebarElements"
+            :key="element.title"
+            class="rounded-[1.5rem] bg-white p-5 text-primary shadow-[0_16px_35px_rgba(42,82,194,0.12)] ring-1 ring-primary/10"
+          >
+            <img
+              :src="element.image.replace('.jpg', '_regular.webp')"
+              :alt="element.title"
+              width="312"
+              height="468"
+              class="mb-5 aspect-[2/3] w-full rounded-[1rem] object-cover"
+              loading="lazy"
+            />
+            <h3 class="text-sm uppercase tracking-title-sm">
+              {{ element.title }}
+            </h3>
+            <p class="mt-3 text-base leading-7">{{ element.content }}</p>
+          </article>
         </div>
       </div>
     </section>
@@ -124,16 +115,13 @@
 </template>
 
 <script setup lang="ts">
-import type { ComponentPublicInstance } from "vue";
-import { useAnimationsStore } from "../../stores";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { gsap } from "gsap";
-import { useScreeningTitleAnimation } from "~/composables/screening/useScreeningTitleAnimation";
-import { useScreeningSidebarAnimation } from "~/composables/screening/useScreeningSidebarAnimation";
-import { useScreeningFadeOut } from "~/composables/screening/useScreeningFadeOut";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import SplitType from "split-type";
+import ThreeBustViewer from "~/components/ui/ThreeBustViewer.vue";
 import { useScreeningWarmup } from "~/composables/screening/useScreeningWarmup";
+import { useAnimationsStore } from "~/stores";
 
-// Define the interface for sidebar elements
 interface SidebarElement {
   title: string;
   content: string;
@@ -148,181 +136,332 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   sidebarElements: () => [],
-  title: () => "",
+  title: "",
   inverted: false,
 });
 
 const store = useAnimationsStore();
-let logoScrollTrigger: ScrollTrigger | null = null;
-let topScrollTrigger: ScrollTrigger | null = null;
-let mm: gsap.MatchMedia | null = null;
+const runtimeConfig = useRuntimeConfig();
+const modelsPublicUrl = String(
+  runtimeConfig.public.r2.modelsPublicUrl || ""
+).replace(/\/+$/, "");
+// The reference mono-view is already part of the published 3D catalogue.
+const monoviewModelUrl = computed(() => {
+  const fileName = "bust-reference-front-single-symptoms.glb";
+  return modelsPublicUrl
+    ? `${modelsPublicUrl}/models/${fileName}`
+    : `/models/${fileName}`;
+});
 
+const trackRef = ref<HTMLElement | null>(null);
 const sectionRef = ref<HTMLElement | null>(null);
-const sidebarRef = ref<HTMLElement | null>(null);
-const containerRef = ref<HTMLElement | null>(null);
+const backgroundRef = ref<HTMLElement | null>(null);
 const titleRef = ref<HTMLElement | null>(null);
-const lastImageRef = ref<HTMLImageElement | null>(null);
+const modelRef = ref<HTMLElement | null>(null);
+const screeningPolaroidRef = ref<HTMLElement | null>(null);
+const screeningNoteRef = ref<HTMLElement | null>(null);
+const selfExamPolaroidRef = ref<HTMLElement | null>(null);
+const selfExamNoteRef = ref<HTMLElement | null>(null);
 
-const isAtTop = ref(false);
-const textRefs = ref<HTMLElement[]>([]);
-
-const setTextRef = (
-  el: Element | ComponentPublicInstance | null,
-  index: number
-) => {
-  if (el && el instanceof HTMLElement) {
-    textRefs.value[index] = el;
-  }
-};
-
-const setLastImageRef = (el: Element | null, index: number) => {
-  if (el instanceof HTMLElement && index === props.sidebarElements.length - 1) {
-    lastImageRef.value = el.querySelector("img") as HTMLImageElement | null;
-  }
-};
-
-const setTitleRef = (el: Element | ComponentPublicInstance | null) => {
-  if (el) {
-    titleRef.value = el as HTMLElement;
-    setTextRef(el, 0);
-  }
-};
-
-const { initializeTitleAnimation, cleanupTitleAnimation } =
-  useScreeningTitleAnimation({
-    sectionRef,
-    textRefs,
-  });
-
-const { initializeSidebarAnimation, cleanupSidebarAnimation } =
-  useScreeningSidebarAnimation({
-    sidebarRef,
-    sectionRef,
-    titleRef,
-    lastImageRef,
-    containerRef,
-  });
-
-const { initializeFadeOutAnimation, cleanupFadeOutAnimation } =
-  useScreeningFadeOut({
-    containerRef,
-    sidebarRef,
-    sectionRef,
-  });
+let scrollTimeline: gsap.core.Timeline | null = null;
+let scrollTrigger: ScrollTrigger | null = null;
+let mediaQuery: gsap.MatchMedia | null = null;
+let hasInitializedScrollSequence = false;
+let titleSplit: SplitType | null = null;
 
 const { setupScreeningPreloadObserver, cleanupWarmupObserver } =
   useScreeningWarmup({
     sectionRef,
+    modelUrl: monoviewModelUrl,
+    imageUrls: props.sidebarElements.map((element) =>
+      element.image.replace(".jpg", "_regular.webp")
+    ),
   });
 
-const initializeLogoColorChangeAnimation = () => {
-  if (!sectionRef.value?.parentElement) {
+useHead(() => ({
+  link: [
+    {
+      rel: "preload",
+      href: monoviewModelUrl.value,
+      as: "fetch",
+      crossorigin: "anonymous",
+    },
+  ],
+}));
+
+const initializeScrollSequence = () => {
+  const section = sectionRef.value;
+  const background = backgroundRef.value;
+  const track = trackRef.value;
+  const title = titleRef.value;
+  const model = modelRef.value;
+  const screeningPolaroid = screeningPolaroidRef.value;
+  const screeningNote = screeningNoteRef.value;
+  const selfExamPolaroid = selfExamPolaroidRef.value;
+  const selfExamNote = selfExamNoteRef.value;
+
+  if (
+    !section ||
+    !background ||
+    !track ||
+    !title ||
+    !model ||
+    !screeningPolaroid ||
+    !screeningNote ||
+    !selfExamPolaroid ||
+    !selfExamNote
+  ) {
     return;
   }
 
-  logoScrollTrigger = ScrollTrigger.create({
-    trigger: sectionRef.value.parentElement,
-    start: "top top+100px",
+  const paper = [
+    screeningPolaroid,
+    screeningNote,
+    selfExamPolaroid,
+    selfExamNote,
+  ];
+  const notes = [screeningNote, selfExamNote];
+  const polaroids = [screeningPolaroid, selfExamPolaroid];
+  const blue = "#335ede";
+
+  titleSplit?.revert();
+  titleSplit = new SplitType(title, {
+    types: "words",
+    wordClass: "screening-word",
+    tagName: "span",
+  });
+  const titleWords = titleSplit.words ?? [];
+
+  gsap.set(model, { autoAlpha: 0, y: 0, scale: 1 });
+  gsap.set(paper, { autoAlpha: 0, y: "110vh" });
+  gsap.set(titleWords, { opacity: 0.14 });
+  // Each sheet enters a little looser than its final resting angle. The two
+  // stacks intentionally do not mirror each other, as in frame V2-44.
+  gsap.set(screeningPolaroid, { rotation: -14, transformOrigin: "50% 70%" });
+  gsap.set(screeningNote, { rotation: 8, transformOrigin: "50% 70%" });
+  gsap.set(selfExamPolaroid, { rotation: 16, transformOrigin: "50% 70%" });
+  gsap.set(selfExamNote, { rotation: -13, transformOrigin: "50% 70%" });
+
+  if (props.inverted) {
+    gsap.set(background, { opacity: 1 });
+    gsap.set(title, { color: "white" });
+  } else {
+    gsap.set(background, { opacity: 0 });
+  }
+
+  scrollTimeline = gsap.timeline({ defaults: { ease: "power2.inOut" } });
+
+  if (props.inverted) {
+    // Keep the full blue background while the bust fades in. Only once it is
+    // fully present do we fade that single blue layer away to stable white.
+    // The 3D canvas never participates in the background transition.
+    scrollTimeline
+      .to(background, { opacity: 0, duration: 0.2, ease: "none" }, 0.38)
+      .to(title, { color: blue, duration: 0.18, ease: "none" }, 0.4);
+  }
+
+  scrollTimeline
+    .to(
+      titleWords,
+      {
+        opacity: 1,
+        duration: 0.12,
+        stagger: { amount: 0.2, from: "start" },
+        ease: "power1.out",
+      },
+      0.04
+    )
+    .to(model, { autoAlpha: 1, duration: 0.2 }, 0.14)
+    .to(
+      screeningPolaroid,
+      { autoAlpha: 1, y: 0, rotation: -6, duration: 0.22 },
+      0.64
+    )
+    .to(
+      screeningNote,
+      { autoAlpha: 1, y: 0, rotation: 1.5, duration: 0.2 },
+      0.7
+    )
+    .to(
+      selfExamPolaroid,
+      { autoAlpha: 1, y: 0, rotation: 7, duration: 0.22 },
+      0.78
+    )
+    .to(selfExamNote, { autoAlpha: 1, y: 0, rotation: -4, duration: 0.2 }, 0.84)
+    // The loose notes leave first, then their Polaroids, the main copy, and finally the bust.
+    .to(notes, { autoAlpha: 0, y: "-24vh", duration: 0.16 }, 1.16)
+    .to(polaroids, { autoAlpha: 0, y: "-18vh", duration: 0.14 }, 1.22)
+    .to(title, { autoAlpha: 0, y: "-10vh", duration: 0.16 }, 1.31)
+    .to(model, { autoAlpha: 0, duration: 0.17 }, 1.43);
+
+  scrollTrigger = ScrollTrigger.create({
+    trigger: track,
+    start: "top top",
     end: "bottom bottom",
-    onEnter: () => {
-      store.updateLogoColor(true);
-    },
-    onLeaveBack: () => {
-      store.updateLogoColor(false);
-    },
-    onEnterBack: () => {
-      store.updateLogoColor(true);
+    scrub: 0.6,
+    invalidateOnRefresh: true,
+    animation: scrollTimeline,
+    onUpdate: (self) => {
+      // The navigation mark must stay visible on the white phase.
+      store.updateLogoColor(!props.inverted || self.progress > 0.08);
     },
   });
 };
 
-const initializeTopTracking = () => {
-  if (!sectionRef.value) {
-    return;
-  }
+const initializeScrollSequenceAfterLoading = () => {
+  if (hasInitializedScrollSequence) return;
+  hasInitializedScrollSequence = true;
 
-  topScrollTrigger = ScrollTrigger.create({
-    trigger: sectionRef.value,
-    start: "top top",
-    end: "bottom top",
-    onEnter: () => {
-      isAtTop.value = true;
-    },
-    onLeaveBack: () => {
-      isAtTop.value = false;
-    },
+  mediaQuery = gsap.matchMedia();
+  mediaQuery.add("(min-width: 1024px)", () => {
+    nextTick(() => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          initializeScrollSequence();
+          ScrollTrigger.refresh();
+        });
+      });
+    });
   });
 };
 
 watch(
   () => store.getSectionState("loading"),
   (loadingState) => {
-    if (
-      loadingState === "isComplete" &&
-      sectionRef.value &&
-      sectionRef.value.parentElement
-    ) {
-      nextTick(() => {
-        setTimeout(() => {
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-              // Always initialize these animations (all screen sizes)
-              initializeLogoColorChangeAnimation();
-              initializeTitleAnimation();
-              initializeTopTracking();
-
-              mm = gsap.matchMedia();
-              mm.add("(min-width: 1024px)", () => {
-                initializeSidebarAnimation();
-                initializeFadeOutAnimation();
-              });
-              ScrollTrigger.refresh();
-
-              setupScreeningPreloadObserver();
-            });
-          });
-        }, 50);
-      });
+    if (loadingState === "isComplete") {
+      initializeScrollSequenceAfterLoading();
     }
-  }
+  },
+  { immediate: true }
 );
 
+onMounted(() => {
+  setupScreeningPreloadObserver();
+
+  if (store.getSectionState("loading") === "isComplete") {
+    initializeScrollSequenceAfterLoading();
+  }
+});
+
 onUnmounted(() => {
-  mm?.revert();
-  cleanupTitleAnimation();
-  cleanupSidebarAnimation();
-  cleanupFadeOutAnimation();
+  mediaQuery?.revert();
+  scrollTrigger?.kill();
+  scrollTimeline?.kill();
+  titleSplit?.revert();
   cleanupWarmupObserver();
-  logoScrollTrigger?.kill();
-  topScrollTrigger?.kill();
 });
 </script>
 
 <style scoped>
-.selection-highlight {
-  position: relative;
-  display: inline-block;
-}
-
-.selection-highlight .selection-svg {
+.polaroid,
+.paper-note {
   position: absolute;
-  top: 50%;
+  background: #fff;
+  box-shadow: 0 18px 36px rgb(42 82 194 / 16%);
+}
+
+.polaroid {
+  width: clamp(10rem, 15vw, 13.5rem);
+  padding: 0.7rem 0.7rem 2.1rem;
+}
+
+.polaroid img {
+  display: block;
+  aspect-ratio: 0.78;
+  width: 100%;
+  object-fit: cover;
+}
+
+.polaroid figcaption {
+  bottom: 0.45rem;
+  color: var(--color-primary);
+  font-family: "Dawning of a New Day", cursive;
+  font-size: clamp(1.15rem, 1.8vw, 1.6rem);
   left: 50%;
-  transform: translate(-50%, -50%);
-  width: calc(100% + 30px);
-  height: 160%;
-  opacity: 0;
-  pointer-events: none;
-  z-index: 0;
-  transition: opacity 0.6s ease 0.3s;
+  line-height: 1;
+  position: absolute;
+  transform: translateX(-50%);
+  white-space: nowrap;
 }
 
-.selection-highlight.revealed .selection-svg {
-  opacity: 1;
+.paper-note {
+  background: #f7f7f7;
+  color: var(--color-primary);
+  font-size: clamp(0.85rem, 1.25vw, 1.1rem);
+  line-height: 1.45;
+  padding: clamp(1.3rem, 2vw, 2rem);
+  width: clamp(12rem, 18vw, 17rem);
 }
 
-.selection-highlight .split-word {
-  position: relative;
-  z-index: 1;
+.paper-note p {
+  margin: 0;
+}
+
+.polaroid--screening {
+  left: 25%;
+  top: 18%;
+}
+
+.paper-note--screening {
+  --hole-radius: clamp(0.3rem, 0.43vw, 0.42rem);
+
+  /* A mask cuts actual holes out of the sheet, so the photograph/model below
+     remains visible through every perforation. */
+  -webkit-mask-image: radial-gradient(
+    circle at 1.4rem 1.05rem,
+    transparent 0 var(--hole-radius),
+    #000 calc(var(--hole-radius) + 1px)
+  );
+  -webkit-mask-position: 0 0;
+  -webkit-mask-repeat: repeat-y;
+  -webkit-mask-size: 100% 2.25rem;
+  filter: drop-shadow(0 18px 22px rgb(42 82 194 / 16%));
+  left: 38%;
+  mask-image: radial-gradient(
+    circle at 1.4rem 1.05rem,
+    transparent 0 var(--hole-radius),
+    #000 calc(var(--hole-radius) + 1px)
+  );
+  mask-position: 0 0;
+  mask-repeat: repeat-y;
+  mask-size: 100% 2.25rem;
+  padding-left: clamp(3rem, 3.6vw, 3.35rem);
+  top: 35%;
+  width: clamp(13rem, 19vw, 18rem);
+}
+
+.polaroid--self-exam {
+  /* Bring the two paper stacks just into one another, as in V2-44. */
+  right: 30%;
+  top: 19%;
+}
+
+.paper-note--self-exam {
+  /* The second note is a separate torn sheet, not the perforated notebook
+     paper used for screening. */
+  clip-path: polygon(
+    0 0.8%,
+    10% 0,
+    22% 0.7%,
+    36% 0.2%,
+    51% 0.9%,
+    66% 0,
+    82% 0.6%,
+    100% 0,
+    100% 96.5%,
+    94% 97.6%,
+    87% 96.8%,
+    78% 98.6%,
+    69% 97.2%,
+    59% 99.2%,
+    49% 97.4%,
+    39% 99%,
+    30% 97.5%,
+    20% 98.8%,
+    11% 97.2%,
+    0 99.2%
+  );
+  right: 15%;
+  top: 39%;
 }
 </style>

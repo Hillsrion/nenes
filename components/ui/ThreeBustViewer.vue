@@ -5,6 +5,7 @@
     :class="compact ? 'min-h-0' : 'min-h-[350px] md:min-h-[500px]'"
   >
     <div
+      v-if="showBackdrop"
       aria-hidden="true"
       class="absolute inset-0 transition-all duration-700"
       :class="materialBackdropClass"
@@ -12,7 +13,7 @@
 
     <!-- Loading indicator -->
     <div
-      v-if="isLoading"
+      v-if="isLoading && showLoadingIndicator"
       class="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-transparent transition-opacity duration-300"
     >
       <div class="flex flex-col items-center gap-3">
@@ -24,8 +25,11 @@
     <!-- WebGL Canvas -->
     <canvas
       ref="canvasRef"
-      class="relative z-10 block h-full w-full touch-none"
-      :class="{ 'pointer-events-none': !interactive }"
+      class="relative z-10 block h-full w-full touch-none transition-opacity duration-700"
+      :class="[
+        { 'pointer-events-none': !interactive },
+        isLoading ? 'opacity-0' : 'opacity-100',
+      ]"
     />
   </div>
 </template>
@@ -48,6 +52,9 @@ interface Props {
   enableZoom?: boolean;
   interactive?: boolean;
   compact?: boolean;
+  modelScale?: number;
+  showBackdrop?: boolean;
+  showLoadingIndicator?: boolean;
   initialRotationY?: number;
   symptomType?: SymptomType;
   materialStyle?: MaterialStyle;
@@ -61,6 +68,9 @@ const props = withDefaults(defineProps<Props>(), {
   enableZoom: false,
   interactive: true,
   compact: false,
+  modelScale: 1,
+  showBackdrop: true,
+  showLoadingIndicator: true,
   initialRotationY: 0,
   symptomType: "none",
   materialStyle: "original",
@@ -411,6 +421,9 @@ const initThree = async () => {
   });
   renderer.setSize(width, height);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  // Non-glow scenes intentionally remain transparent: their host section owns
+  // the background colour and it must not jump when the canvas fades in.
+  renderer.setClearColor(0x000000, 0);
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -536,7 +549,7 @@ const initThree = async () => {
 
           // Scale model to fit scene nicely
           const maxDim = Math.max(size.x, size.y, size.z);
-          const targetHeight = 2.8;
+          const targetHeight = 2.8 * props.modelScale;
           const scale = targetHeight / maxDim;
           loadedModel.scale.set(scale, scale, scale);
           
