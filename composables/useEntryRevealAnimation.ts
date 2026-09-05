@@ -1,4 +1,5 @@
 import type { Ref } from "vue";
+import { INTRO_END, INTRO_TIMELINE_DURATION } from "~/utils/intro-sequence";
 import { useAnimationsStore } from "~/stores";
 
 declare const useNuxtApp: () => { $gsap: any };
@@ -13,6 +14,7 @@ interface EntryRevealAnimationOptions {
   numberMaskRef: Ref<HTMLElement | null>;
   numberTargetRef: Ref<HTMLElement | null>;
   phrasePartRefs: Ref<HTMLElement[]>;
+  onPhotoProgress: (progress: number) => void;
 }
 
 export const useEntryRevealAnimation = ({
@@ -25,6 +27,7 @@ export const useEntryRevealAnimation = ({
   numberMaskRef,
   numberTargetRef,
   phrasePartRefs,
+  onPhotoProgress,
 }: EntryRevealAnimationOptions) => {
   const animationsStore = useAnimationsStore();
   let timeline: any = null;
@@ -37,7 +40,8 @@ export const useEntryRevealAnimation = ({
     );
 
   const updateGlobalState = (progress: number) => {
-    const shouldUsePrimaryLogo = progress >= 0.57;
+    const statisticsProgress = (progress * (INTRO_TIMELINE_DURATION + 1.2) - INTRO_TIMELINE_DURATION) / 1.2;
+    const shouldUsePrimaryLogo = statisticsProgress >= 0.57;
     const shouldHideScrollIndicator = progress > 0.015;
 
     if (logoIsPrimary !== shouldUsePrimaryLogo) {
@@ -112,6 +116,7 @@ export const useEntryRevealAnimation = ({
       y: 16,
     });
 
+    onPhotoProgress(0);
     updateGlobalState(0);
   };
 
@@ -164,6 +169,8 @@ export const useEntryRevealAnimation = ({
 
     const { $gsap } = useNuxtApp();
     const holdState = { progress: 0 };
+    const photoState = { progress: 0 };
+    const photoEnd = INTRO_TIMELINE_DURATION;
 
     prepareInitialState();
 
@@ -182,6 +189,12 @@ export const useEntryRevealAnimation = ({
       },
     });
 
+    timeline.to(photoState, {
+      progress: INTRO_END,
+      duration: photoEnd,
+      onUpdate: () => onPhotoProgress(photoState.progress),
+    }, 0);
+
     timeline
       .to(
         numberLayers,
@@ -191,7 +204,7 @@ export const useEntryRevealAnimation = ({
           duration: 0.22,
           ease: "power2.out",
         },
-        0
+        photoEnd
       )
       .to(
         entryCover,
@@ -199,7 +212,7 @@ export const useEntryRevealAnimation = ({
           yPercent: -100,
           duration: 0.38,
         },
-        0.3
+        photoEnd + 0.3
       )
       .to(
         whiteSection,
@@ -207,7 +220,7 @@ export const useEntryRevealAnimation = ({
           yPercent: -100,
           duration: 0.38,
         },
-        0.3
+        photoEnd + 0.3
       )
       .to(
         numberMask,
@@ -215,7 +228,7 @@ export const useEntryRevealAnimation = ({
           clipPath: "inset(0% 0 0 0)",
           duration: 0.38,
         },
-        0.3
+        photoEnd + 0.3
       )
       .to(
         numberLayers,
@@ -226,7 +239,7 @@ export const useEntryRevealAnimation = ({
           duration: 0.28,
           ease: "power2.inOut",
         },
-        0.72
+        photoEnd + 0.72
       )
       .to(
         phraseParts,
@@ -237,7 +250,7 @@ export const useEntryRevealAnimation = ({
           stagger: 0.025,
           ease: "power1.out",
         },
-        0.78
+        photoEnd + 0.78
       )
       .to(
         holdState,
@@ -245,7 +258,7 @@ export const useEntryRevealAnimation = ({
           progress: 1,
           duration: 0.15,
         },
-        1.05
+        photoEnd + 1.05
       );
   };
 

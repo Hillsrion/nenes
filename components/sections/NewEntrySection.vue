@@ -2,66 +2,15 @@
   <section ref="sectionRef" class="relative w-full bg-white">
     <div
       ref="revealTrackRef"
-      class="entry-reveal-track relative h-[360svh] w-full"
+      class="entry-reveal-track relative h-[960svh] w-full"
     >
       <div
         ref="revealStageRef"
         class="sticky top-0 h-[100svh] w-full overflow-hidden rounded-t-4xl bg-white"
       >
-        <picture class="absolute inset-0 z-0 block h-full w-full">
-          <source
-            type="image/avif"
-            media="(max-width: 768px)"
-            srcset="
-              /images/entry-cover-portrait/entry-cover-portrait@640.avif   640w,
-              /images/entry-cover-portrait/entry-cover-portrait@828.avif   828w,
-              /images/entry-cover-portrait/entry-cover-portrait@1080.avif 1080w,
-              /images/entry-cover-portrait/entry-cover-portrait@1440.avif 1440w
-            "
-            sizes="100vw"
-          />
-          <source
-            type="image/webp"
-            media="(max-width: 768px)"
-            srcset="
-              /images/entry-cover-portrait/entry-cover-portrait@640.webp   640w,
-              /images/entry-cover-portrait/entry-cover-portrait@828.webp   828w,
-              /images/entry-cover-portrait/entry-cover-portrait@1080.webp 1080w,
-              /images/entry-cover-portrait/entry-cover-portrait@1440.webp 1440w
-            "
-            sizes="100vw"
-          />
-          <source
-            type="image/avif"
-            media="(min-width: 769px)"
-            srcset="
-              /images/entry-cover/entry-cover@1024.avif 1024w,
-              /images/entry-cover/entry-cover@1280.avif 1280w,
-              /images/entry-cover/entry-cover@1920.avif 1920w,
-              /images/entry-cover/entry-cover@2560.avif 2560w,
-              /images/entry-cover/entry-cover@3840.avif 3840w
-            "
-            sizes="100vw"
-          />
-          <source
-            type="image/webp"
-            media="(min-width: 769px)"
-            srcset="
-              /images/entry-cover/entry-cover@1024.webp 1024w,
-              /images/entry-cover/entry-cover@1280.webp 1280w,
-              /images/entry-cover/entry-cover@1920.webp 1920w,
-              /images/entry-cover/entry-cover@2560.webp 2560w,
-              /images/entry-cover/entry-cover@3840.webp 3840w
-            "
-            sizes="100vw"
-          />
-          <img
-            ref="entryCoverRef"
-            src="/images/entry-cover/entry-cover@1280.webp"
-            alt="Quatre femmes réunies dans un salon"
-            class="absolute inset-0 h-full w-full object-cover"
-          />
-        </picture>
+        <div ref="entryCoverRef" class="absolute inset-0 z-0 h-full w-full">
+          <IntroPhotoSequence ref="photoSequenceRef" />
+        </div>
 
         <div
           ref="whiteSectionRef"
@@ -164,6 +113,7 @@
 </template>
 
 <script setup>
+import IntroPhotoSequence from "~/components/ui/IntroPhotoSequence.vue";
 import ThreeFruitPile from "~/components/ui/ThreeFruitPile.vue";
 import { useEntryRevealAnimation } from "~/composables/useEntryRevealAnimation";
 import { useNewContentElementsAnimation } from "~/composables/useNewContentElementsAnimation";
@@ -188,6 +138,7 @@ const revealStageRef = ref(null);
 const whiteSectionRef = ref(null);
 const statisticsTextRef = ref(null);
 const entryCoverRef = ref(null);
+const photoSequenceRef = ref(null);
 const numberWhiteRef = ref(null);
 const numberBlueRef = ref(null);
 const numberMaskRef = ref(null);
@@ -249,6 +200,7 @@ const {
   numberMaskRef,
   numberTargetRef,
   phrasePartRefs,
+  onPhotoProgress: (progress) => photoSequenceRef.value?.setProgress(progress),
 });
 
 const {

@@ -40,6 +40,7 @@ import { gsap } from "gsap";
 import Logo from "~/components/ui/Logo.vue";
 import ThreeFruitLoadingAnimator from "~/components/ui/ThreeFruitLoadingAnimator.vue";
 import { useAnimationsStore } from "~/stores";
+import { INTRO_ASSETS } from "~/utils/intro-sequence";
 import { useAssetPreloader } from "~/composables/useAssetPreloader";
 
 const store = useAnimationsStore();
@@ -74,7 +75,14 @@ onMounted(async () => {
     const { preloadAllAssets } = useAssetPreloader({
       onError: (error) => console.warn("Asset preloading failed:", error),
     });
-    await preloadAllAssets();
+    await Promise.all([
+      preloadAllAssets(),
+      ...INTRO_ASSETS.map((src) => {
+        const image = new Image();
+        image.src = src;
+        return image.decode().catch(() => undefined);
+      }),
+    ]);
   } catch (error) {
     console.warn("Asset preloading encountered issues:", error);
   }
