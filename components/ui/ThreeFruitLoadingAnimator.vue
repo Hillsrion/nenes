@@ -53,10 +53,29 @@ let camera: THREE.PerspectiveCamera | null = null;
 let fruitGroup: THREE.Group | null = null;
 let animationFrameId = 0;
 let resizeObserver: ResizeObserver | null = null;
+let intersectionObserver: IntersectionObserver | null = null;
 let lastTransitionIndex = -1;
 let transitionRequestId = 0;
 let hasEmittedReady = false;
 let reducedMotion = false;
+let isVisible = true;
+let lastRenderTime = 0;
+const frameInterval = 1000 / 30;
+
+const stopRendering = () => {
+  if (animationFrameId) cancelAnimationFrame(animationFrameId);
+  animationFrameId = 0;
+};
+
+const scheduleRender = () => {
+  if (
+    animationFrameId ||
+    !renderer ||
+    !isVisible ||
+    document.hidden
+  ) return;
+  animationFrameId = requestAnimationFrame(tick);
+};
 
 const notifyReady = () => {
   if (hasEmittedReady) return;
@@ -144,6 +163,7 @@ const transitionToFruit = async (index: number, immediate = false) => {
     fruitGroup.userData.current = presentationGroup;
     isUnavailable.value = false;
     notifyReady();
+    scheduleRender();
 
     if (!immediate && !reducedMotion) {
       gsap.to(presentationGroup.scale, {
@@ -169,11 +189,20 @@ const handleResize = () => {
   camera.aspect = width / height;
   camera.updateProjectionMatrix();
   renderer.setSize(width, height, false);
+  scheduleRender();
 };
 
-const tick = () => {
+const tick = (timestamp: number) => {
+  animationFrameId = 0;
   if (!renderer || !scene || !camera || !fruitGroup) return;
-  const elapsed = performance.now() / 1000;
+  if (!isVisible || document.hidden) return;
+  if (!reducedMotion && timestamp - lastRenderTime < frameInterval) {
+    scheduleRender();
+    return;
+  }
+
+  lastRenderTime = timestamp;
+  const elapsed = timestamp / 1000;
   const activeFruit = fruitGroup.userData.current as THREE.Group | undefined;
 
   if (activeFruit && !reducedMotion) {
@@ -183,7 +212,12 @@ const tick = () => {
   }
 
   renderer.render(scene, camera);
-  animationFrameId = requestAnimationFrame(tick);
+  if (!reducedMotion) scheduleRender();
+};
+
+const handleVisibilityChange = () => {
+  if (document.hidden) stopRendering();
+  else scheduleRender();
 };
 
 const initThree = () => {
@@ -201,9 +235,9 @@ const initThree = () => {
       canvas: canvasRef.value,
       alpha: true,
       antialias: true,
-      powerPreference: "high-performance",
+      powerPreference: "low-power",
     });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25));
     renderer.setSize(width, height, false);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -225,7 +259,13 @@ const initThree = () => {
     void transitionToFruit(getFruitIndex(props.progress), true);
     resizeObserver = new ResizeObserver(handleResize);
     resizeObserver.observe(containerRef.value);
-    tick();
+    intersectionObserver = new IntersectionObserver(([entry]) => {
+      isVisible = entry.isIntersecting;
+      if (isVisible) scheduleRender();
+      else stopRendering();
+    });
+    intersectionObserver.observe(containerRef.value);
+    scheduleRender();
   } catch (error) {
     console.warn("3D loading fruit unavailable:", error);
     isUnavailable.value = true;
@@ -244,6 +284,7 @@ watch(
 
 onMounted(() => {
   reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  document.addEventListener("visibilitychange", handleVisibilityChange);
   if (props.fruitIndex === undefined) {
     loaderIndexes.value = props.randomize
       ? createRandomLoaderIndexes()
@@ -259,7 +300,9 @@ onMounted(() => {
 onUnmounted(() => {
   transitionRequestId += 1;
   resizeObserver?.disconnect();
-  if (animationFrameId) cancelAnimationFrame(animationFrameId);
+  intersectionObserver?.disconnect();
+  document.removeEventListener("visibilitychange", handleVisibilityChange);
+  stopRendering();
   if (fruitGroup) {
     const activeFruit = fruitGroup.userData.current as THREE.Group | undefined;
     if (activeFruit) gsap.killTweensOf(activeFruit.scale);
@@ -267,6 +310,7 @@ onUnmounted(() => {
     fruitGroup.clear();
   }
   renderer?.dispose();
+  renderer?.forceContextLoss();
   scene = null;
   camera = null;
   renderer = null;

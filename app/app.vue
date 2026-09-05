@@ -11,8 +11,8 @@
 
     <MainLayout ref="mainLayoutRef">
       <!-- Loading Section -->
-      <NewLoadingSection v-if="isNewHome" v-show="!isLoadingComplete" />
-      <LoadingSection v-else v-show="!isLoadingComplete" />
+      <NewLoadingSection v-if="isNewHome && !isLoadingComplete" />
+      <LoadingSection v-else-if="!isLoadingComplete" />
       <div
         class="transition-transform duration-1000 ease-out"
         :class="{

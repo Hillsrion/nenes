@@ -112,8 +112,56 @@ const modelMaterialEntries: Array<{
 let controls: any = null;
 let composer: any = null;
 let bloomPass: any = null;
+let composerSetupPromise: Promise<void> | null = null;
 let environmentTexture: THREE.Texture | null = null;
 let animationFrameId = 0;
+let viewportObserver: IntersectionObserver | null = null;
+let resizeObserver: ResizeObserver | null = null;
+let initTimer = 0;
+let initialized = false;
+let disposed = false;
+let isVisible = false;
+let lastRenderTime = 0;
+let renderUntil = 0;
+let visibilityChangeHandler: (() => void) | null = null;
+let controlsActive = false;
+
+type PerformanceNavigator = Navigator & {
+  deviceMemory?: number;
+  connection?: { saveData?: boolean };
+};
+
+const isConstrainedDevice = () => {
+  const currentNavigator = navigator as PerformanceNavigator;
+  return (
+    currentNavigator.connection?.saveData === true ||
+    (currentNavigator.deviceMemory ?? 8) <= 4 ||
+    (currentNavigator.hardwareConcurrency ?? 8) <= 4
+  );
+};
+
+const needsContinuousRendering = () =>
+  props.autoRotate ||
+  controlsActive ||
+  props.symptomType === "nipple" ||
+  props.materialStyle === "glow";
+
+const stopRendering = () => {
+  if (animationFrameId) cancelAnimationFrame(animationFrameId);
+  animationFrameId = 0;
+};
+
+const scheduleRender = (duration = 0) => {
+  if (duration > 0) renderUntil = Math.max(renderUntil, performance.now() + duration);
+  if (
+    animationFrameId ||
+    !renderer ||
+    !isVisible ||
+    document.hidden ||
+    disposed
+  ) return;
+  animationFrameId = requestAnimationFrame(tick);
+};
 
 const alignModelHorizontally = () => {
   if (!modelGroup || !camera || modelGroup.children.length === 0) return;
@@ -255,6 +303,34 @@ const applyMaterialStyle = (style: MaterialStyle) => {
   }
 
   symptomEffects.applyTint(props.symptomType);
+};
+
+const ensureComposer = () => {
+  if (composer || composerSetupPromise || !renderer || !scene || !camera) {
+    return composerSetupPromise ?? Promise.resolve();
+  }
+
+  const activeRenderer = renderer;
+  const activeScene = scene;
+  const activeCamera = camera;
+  composerSetupPromise = Promise.all([
+    import("three/examples/jsm/postprocessing/EffectComposer.js"),
+    import("three/examples/jsm/postprocessing/RenderPass.js"),
+    import("three/examples/jsm/postprocessing/UnrealBloomPass.js"),
+  ]).then(([{ EffectComposer }, { RenderPass }, { UnrealBloomPass }]) => {
+    if (disposed || renderer !== activeRenderer) return;
+    const rect = containerRef.value?.getBoundingClientRect();
+    const width = rect?.width ?? 1;
+    const height = rect?.height ?? 1;
+    composer = new EffectComposer(activeRenderer);
+    composer.addPass(new RenderPass(activeScene, activeCamera));
+    bloomPass = new UnrealBloomPass(new THREE.Vector2(width, height), 0, 0.2, 0.78);
+    composer.addPass(bloomPass);
+    applyMaterialStyle(props.materialStyle);
+    scheduleRender();
+  });
+
+  return composerSetupPromise;
 };
 
 const registerModelMaterials = (root: THREE.Object3D, keepUntexturedOriginal = false) => {
@@ -421,11 +497,14 @@ const animateToShape = (shape: "round" | "asymmetric" | "ptose" | "mastectomy", 
 
 // Initialize ThreeJS
 const initThree = async () => {
-  if (!canvasRef.value || !containerRef.value) return;
+  if (initialized || disposed || !canvasRef.value || !containerRef.value) return;
 
   const rect = containerRef.value.getBoundingClientRect();
   const width = rect.width;
   const height = rect.height;
+  if (!width || !height) return;
+  initialized = true;
+  const constrainedDevice = isConstrainedDevice();
 
   // Scene
   scene = new THREE.Scene();
@@ -439,25 +518,26 @@ const initThree = async () => {
     canvas: canvasRef.value,
     alpha: true,
     antialias: true,
-    powerPreference: "high-performance",
+    powerPreference: props.interactive ? "high-performance" : "low-power",
   });
-  renderer.setSize(width, height);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(width, height, false);
+  renderer.setPixelRatio(
+    Math.min(window.devicePixelRatio, constrainedDevice ? 1 : props.interactive ? 1.5 : 1.25)
+  );
   // Non-glow scenes intentionally remain transparent: their host section owns
   // the background colour and it must not jump when the canvas fades in.
   renderer.setClearColor(0x000000, 0);
-  renderer.shadowMap.enabled = true;
+  const useShadows = props.interactive && !props.compact && !constrainedDevice;
+  renderer.shadowMap.enabled = useShadows;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.1;
 
-  const [{ RoomEnvironment }, { EffectComposer }, { RenderPass }, { UnrealBloomPass }] =
-    await Promise.all([
-      import("three/examples/jsm/environments/RoomEnvironment.js"),
-      import("three/examples/jsm/postprocessing/EffectComposer.js"),
-      import("three/examples/jsm/postprocessing/RenderPass.js"),
-      import("three/examples/jsm/postprocessing/UnrealBloomPass.js"),
-    ]);
+  const [{ RoomEnvironment }, { OrbitControls }] = await Promise.all([
+    import("three/examples/jsm/environments/RoomEnvironment.js"),
+    import("three/examples/jsm/controls/OrbitControls.js"),
+  ]);
+  if (disposed) return;
   const pmremGenerator = new THREE.PMREMGenerator(renderer);
   const roomEnvironment = new RoomEnvironment();
   environmentTexture = pmremGenerator.fromScene(roomEnvironment, 0.04).texture;
@@ -465,14 +545,11 @@ const initThree = async () => {
   roomEnvironment.dispose();
   pmremGenerator.dispose();
 
-  composer = new EffectComposer(renderer);
-  composer.addPass(new RenderPass(scene, camera));
-  bloomPass = new UnrealBloomPass(new THREE.Vector2(width, height), 0, 0.2, 0.78);
-  composer.addPass(bloomPass);
   applyMaterialStyle(props.materialStyle);
+  if (props.materialStyle === "glow") await ensureComposer();
+  if (disposed || !renderer || !scene || !camera) return;
 
   // OrbitControls
-  const { OrbitControls } = await import("three/examples/jsm/controls/OrbitControls.js");
   controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
   controls.dampingFactor = 0.05;
@@ -481,6 +558,15 @@ const initThree = async () => {
   controls.enablePan = false;
   controls.minPolarAngle = Math.PI / 3; // Keep rotation bounded vertically
   controls.maxPolarAngle = Math.PI / 1.7;
+  controls.addEventListener("start", () => {
+    controlsActive = true;
+    scheduleRender();
+  });
+  controls.addEventListener("change", () => scheduleRender());
+  controls.addEventListener("end", () => {
+    controlsActive = false;
+    scheduleRender(500);
+  });
 
   // Lighting
   const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
@@ -489,7 +575,7 @@ const initThree = async () => {
   // Key Studio Light (Warm)
   const keyLight = new THREE.DirectionalLight(0xfff3e0, 2.5);
   keyLight.position.set(5, 5, 5);
-  keyLight.castShadow = true;
+  keyLight.castShadow = useShadows;
   keyLight.shadow.mapSize.width = 1024;
   keyLight.shadow.mapSize.height = 1024;
   keyLight.shadow.bias = -0.001;
@@ -535,8 +621,8 @@ const initThree = async () => {
           // Traverse to apply beautiful materials and shadows
           loadedModel.traverse((child) => {
             if (child instanceof THREE.Mesh) {
-              child.castShadow = true;
-              child.receiveShadow = true;
+              child.castShadow = useShadows;
+              child.receiveShadow = useShadows;
 
               if (!child.geometry.getAttribute("normal")) {
                 child.geometry.computeVertexNormals();
@@ -583,6 +669,7 @@ const initThree = async () => {
           alignModelHorizontally();
           symptomEffects.build(loadedModel, props.symptomType);
           isLoading.value = false;
+          scheduleRender();
         },
         undefined,
         (error) => {
@@ -598,11 +685,9 @@ const initThree = async () => {
     loadMockBust();
   }
 
-  // Handle Resize
-  window.addEventListener("resize", handleResize);
-
-  // Animation Loop
-  tick();
+  resizeObserver = new ResizeObserver(handleResize);
+  resizeObserver.observe(containerRef.value);
+  scheduleRender();
 };
 
 const loadMockBust = () => {
@@ -617,6 +702,7 @@ const loadMockBust = () => {
   animateToShape(props.shapeType, true);
   
   isLoading.value = false;
+  scheduleRender();
 };
 
 // Resize Handler
@@ -631,8 +717,9 @@ const handleResize = () => {
   camera.updateProjectionMatrix();
   alignModelHorizontally();
 
-  renderer.setSize(width, height);
+  renderer.setSize(width, height, false);
   composer?.setSize(width, height);
+  scheduleRender();
 };
 
 // Scroll Reaction
@@ -640,15 +727,24 @@ const updateRotationFromScroll = (progress: number) => {
   if (!modelGroup) return;
   // Map scroll progress (0-100) to rotation (ex. -45deg to +45deg)
   const targetRotationY = ((progress - 50) / 100) * Math.PI * 0.8;
-  // Smoothly interpolate rotation
-  modelGroup.rotation.y = THREE.MathUtils.lerp(modelGroup.rotation.y, targetRotationY, 0.1);
+  // The progress itself is already smoothed by the scroll timeline.
+  modelGroup.rotation.y = targetRotationY;
 };
 
 // Render Loop
-const tick = () => {
+const tick = (timestamp: number) => {
+  animationFrameId = 0;
   if (!renderer || !scene || !camera) return;
+  if (!isVisible || document.hidden || disposed) return;
 
-  const elapsedTime = clock.getElapsedTime();
+  const targetFps = isConstrainedDevice() ? 24 : props.interactive ? 45 : 30;
+  if (timestamp - lastRenderTime < 1000 / targetFps) {
+    scheduleRender();
+    return;
+  }
+  lastRenderTime = timestamp;
+
+  const elapsedTime = timestamp / 1000;
 
   // Update controls
   if (controls) {
@@ -667,45 +763,61 @@ const tick = () => {
   }
 
   symptomEffects.tick(elapsedTime);
-  // If scrollProgress is driven by GSAP, apply it
-  if (props.scrollProgress !== 0) {
-    updateRotationFromScroll(props.scrollProgress);
-  }
-
   if (props.materialStyle === "glow") {
     glowMaterial.emissiveIntensity = 0.7 + Math.sin(elapsedTime * 1.8) * 0.08;
   }
 
   if (composer && props.materialStyle === "glow") composer.render();
   else renderer.render(scene, camera);
-  animationFrameId = requestAnimationFrame(tick);
+  if (needsContinuousRendering() || timestamp < renderUntil) scheduleRender();
 };
 
-const clock = new THREE.Clock();
-
 onMounted(() => {
-  if (process.client) {
-    // Short delay to let the DOM settle and get correct dimensions
-    setTimeout(() => {
-      initThree();
-    }, 100);
-  }
+  if (!process.client || !containerRef.value) return;
+
+  visibilityChangeHandler = () => {
+    if (document.hidden) stopRendering();
+    else scheduleRender();
+  };
+  document.addEventListener("visibilitychange", visibilityChangeHandler);
+
+  viewportObserver = new IntersectionObserver(
+    ([entry]) => {
+      isVisible = entry.isIntersecting;
+      if (!isVisible) {
+        stopRendering();
+        return;
+      }
+
+      if (!initialized) {
+        window.clearTimeout(initTimer);
+        initTimer = window.setTimeout(() => void initThree(), 50);
+      } else {
+        scheduleRender();
+      }
+    },
+    { rootMargin: "300px 0px", threshold: 0 }
+  );
+  viewportObserver.observe(containerRef.value);
 });
 
 onUnmounted(() => {
-  if (process.client) {
-    window.removeEventListener("resize", handleResize);
+  disposed = true;
+  window.clearTimeout(initTimer);
+  viewportObserver?.disconnect();
+  resizeObserver?.disconnect();
+  if (visibilityChangeHandler) {
+    document.removeEventListener("visibilitychange", visibilityChangeHandler);
   }
-  if (animationFrameId) {
-    cancelAnimationFrame(animationFrameId);
-  }
+  stopRendering();
   if (controls) {
     controls.dispose();
   }
+  composer?.dispose?.();
   if (renderer) {
     renderer.dispose();
+    renderer.forceContextLoss();
   }
-  composer?.dispose?.();
   environmentTexture?.dispose();
   
   // Dispose geometries and materials
@@ -747,6 +859,15 @@ onUnmounted(() => {
       }
     });
   }
+
+  controls = null;
+  composer = null;
+  bloomPass = null;
+  composerSetupPromise = null;
+  renderer = null;
+  scene = null;
+  camera = null;
+  modelGroup = null;
 });
 
 // Watch shapeType change and animate
@@ -755,6 +876,7 @@ watch(
   (newShape) => {
     if (newShape) {
       animateToShape(newShape);
+      scheduleRender(1000);
     }
   }
 );
@@ -765,6 +887,7 @@ watch(
   (newVal) => {
     if (newVal !== undefined) {
       updateRotationFromScroll(newVal);
+      scheduleRender();
     }
   }
 );
@@ -773,6 +896,7 @@ watch(
   () => props.symptomType,
   (newSymptom) => {
     symptomEffects.update(newSymptom);
+    scheduleRender(newSymptom === "nipple" ? 0 : 150);
   }
 );
 
@@ -780,18 +904,16 @@ watch(
   () => props.materialStyle,
   (newStyle) => {
     applyMaterialStyle(newStyle);
+    if (newStyle === "glow") void ensureComposer();
+    scheduleRender(newStyle === "glow" ? 0 : 150);
   }
 );
 
 watch(
   () => props.modelHorizontalAlignment,
-  () => alignModelHorizontally()
+  () => {
+    alignModelHorizontally();
+    scheduleRender();
+  }
 );
 </script>
-
-<style scoped>
-/* Ensuring GPU acceleration on canvas container */
-canvas {
-  will-change: transform;
-}
-</style>

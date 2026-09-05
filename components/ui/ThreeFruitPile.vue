@@ -134,8 +134,13 @@ onMounted(async () => {
     scene = new THREE.Scene();
     camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 4000);
     camera.position.z = 2000;
-    renderer = new THREE.WebGLRenderer({ canvas: canvasRef.value, alpha: true, antialias: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    renderer = new THREE.WebGLRenderer({
+      canvas: canvasRef.value,
+      alpha: true,
+      antialias: true,
+      powerPreference: "low-power",
+    });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.1;
@@ -221,6 +226,7 @@ onUnmounted(() => {
   fruits.length = 0;
   scene?.clear();
   renderer?.dispose();
+  renderer?.forceContextLoss();
   renderer = null;
   scene = null;
   camera = null;
