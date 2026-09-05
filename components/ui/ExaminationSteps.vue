@@ -1,128 +1,132 @@
 <template>
-  <div
-    ref="containerRef"
-    class="relative mt-[250svh] pt-[300svh] container mx-auto"
-  >
-    <!-- Fixed video at center of viewport with multiple sources -->
-    <video
-      ref="videoRef"
-      class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full h-[100lvh] object-cover scale-0 origin-center"
-      autoplay
-      muted
-      loop
-      preload="auto"
-      playsinline
-    >
-      <!-- iOS: MP4 first (native hardware acceleration) -->
-      <template v-if="isIOSDevice">
-        <!-- Mobile MP4 for iOS -->
-        <source
-          :src="getCurrentStepVideoSource('mp4', 'mobile')"
-          type="video/mp4"
-          media="(max-width: 768px)"
-        />
-        <!-- Desktop MP4 sources for iOS -->
-        <source
-          :src="getCurrentStepVideoSource('mp4', '1440p')"
-          type="video/mp4"
-          media="(min-width: 1920px)"
-        />
-        <source
-          :src="getCurrentStepVideoSource('mp4', '1080p')"
-          type="video/mp4"
-          media="(min-width: 769px)"
-        />
-      </template>
-
-      <!-- Non-iOS: WebM first (better compression), MP4 fallback -->
-      <template v-else>
-        <!-- Mobile WebM sources -->
-        <source
-          :src="getCurrentStepVideoSource('webm', 'mobile')"
-          type="video/webm"
-          media="(max-width: 768px)"
-        />
-        <source
-          :src="getCurrentStepVideoSource('mp4', 'mobile')"
-          type="video/mp4"
-          media="(max-width: 768px)"
-        />
-
-        <!-- Desktop WebM sources -->
-        <source
-          :src="getCurrentStepVideoSource('webm', '1440p')"
-          type="video/webm"
-          media="(min-width: 1920px)"
-        />
-        <source
-          :src="getCurrentStepVideoSource('webm', '1080p')"
-          type="video/webm"
-          media="(min-width: 769px)"
-        />
-
-        <!-- Desktop MP4 fallback -->
-        <source
-          :src="getCurrentStepVideoSource('mp4', '1440p')"
-          type="video/mp4"
-          media="(min-width: 1920px)"
-        />
-        <source
-          :src="getCurrentStepVideoSource('mp4', '1080p')"
-          type="video/mp4"
-          media="(min-width: 769px)"
-        />
-      </template>
-
-      <!-- Default fallback -->
-      <source :src="actualVideoUrl" type="video/mp4" />
-    </video>
-
-    <!-- Black overlay for video transitions -->
+  <div ref="stepsContainerRef" class="relative w-full">
+    <!-- Video and Post-It Stage -->
     <div
-      ref="overlayRef"
-      class="fixed top-0 left-0 w-full h-full bg-black pointer-events-none opacity-0"
-    ></div>
-
-    <!-- Video loading indicator -->
-    <div
-      v-if="videoLoading"
-      class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 flex items-center justify-center"
+      ref="stageRef"
+      class="relative w-full flex flex-col items-start opacity-0"
     >
+      <!-- Landscape Video Container -->
       <div
-        class="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin"
-      ></div>
-    </div>
+        ref="videoContainerRef"
+        class="relative w-full max-w-[480px] lg:max-w-[540px] aspect-video rounded-2xl sm:rounded-3xl overflow-hidden shadow-[0_16px_36px_rgba(36,66,219,0.1)] border border-black/[0.06] bg-[#f0f2f6]"
+      >
+        <video
+          ref="videoRef"
+          class="w-full h-full object-cover"
+          autoplay
+          muted
+          loop
+          preload="auto"
+          playsinline
+        >
+          <!-- iOS sources -->
+          <template v-if="isIOSDevice">
+            <source
+              :src="getCurrentStepVideoSource('mp4', 'mobile')"
+              type="video/mp4"
+              media="(max-width: 768px)"
+            />
+            <source
+              :src="getCurrentStepVideoSource('mp4', '1440p')"
+              type="video/mp4"
+              media="(min-width: 1920px)"
+            />
+            <source
+              :src="getCurrentStepVideoSource('mp4', '1080p')"
+              type="video/mp4"
+              media="(min-width: 769px)"
+            />
+          </template>
 
-    <!-- Examination Cards in normal document flow -->
-    <div
-      v-for="(step, index) in steps"
-      :key="`card-${index}`"
-      class="min-h-screen flex items-center py-16 relative z-1"
-      :class="[index % 2 === 0 ? 'justify-start' : 'justify-end']"
-      ref="cardRefs"
-    >
-      <ExaminationCard
-        :step-number="`${index + 1}`"
-        :description="step.content"
-      />
+          <!-- Non-iOS sources -->
+          <template v-else>
+            <source
+              :src="getCurrentStepVideoSource('webm', 'mobile')"
+              type="video/webm"
+              media="(max-width: 768px)"
+            />
+            <source
+              :src="getCurrentStepVideoSource('mp4', 'mobile')"
+              type="video/mp4"
+              media="(max-width: 768px)"
+            />
+            <source
+              :src="getCurrentStepVideoSource('webm', '1440p')"
+              type="video/webm"
+              media="(min-width: 1920px)"
+            />
+            <source
+              :src="getCurrentStepVideoSource('webm', '1080p')"
+              type="video/webm"
+              media="(min-width: 769px)"
+            />
+            <source
+              :src="getCurrentStepVideoSource('mp4', '1440p')"
+              type="video/mp4"
+              media="(min-width: 1920px)"
+            />
+            <source
+              :src="getCurrentStepVideoSource('mp4', '1080p')"
+              type="video/mp4"
+              media="(min-width: 769px)"
+            />
+          </template>
+
+          <!-- Default fallback -->
+          <source :src="actualVideoUrl" type="video/mp4" />
+        </video>
+
+        <!-- Video transition overlay -->
+        <div
+          ref="overlayRef"
+          class="absolute inset-0 bg-black/40 pointer-events-none opacity-0 transition-opacity duration-300"
+        />
+
+        <!-- Loading spinner -->
+        <div
+          v-if="videoLoading"
+          class="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-[2px] pointer-events-none"
+        >
+          <div
+            class="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin"
+          />
+        </div>
+      </div>
+
+      <!-- Post-It Cards Deck (Overlapping bottom-left of video) -->
+      <div
+        class="relative -mt-14 sm:-mt-18 -ml-2 sm:-ml-6 lg:-ml-8 w-full max-w-[360px] sm:max-w-[420px] min-h-[220px] pointer-events-auto"
+      >
+        <div
+          v-for="(step, index) in steps"
+          :key="`card-${index}`"
+          :ref="(el) => setCardRef(el, index)"
+          class="absolute top-0 left-0 w-full"
+          :style="{ zIndex: 10 + index }"
+        >
+          <ExaminationPostIt
+            :step-number="index + 1"
+            :content="step.content"
+            :color-scheme="getCardColorScheme(index)"
+          />
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { useAnimationsStore } from "../../stores";
-import { useVideos } from "../../composables/useVideos";
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from "vue";
+import { useAnimationsStore } from "~/stores";
+import { useVideos } from "~/composables/useVideos";
 import { useExaminationVideoSources } from "~/composables/examination/useExaminationVideoSources";
-import { useExaminationScrollTriggers } from "~/composables/examination/useExaminationScrollTriggers";
-import ExaminationCard from "./ExaminationCard.vue";
-// GSAP with ScrollTrigger is registered globally in the app
+import ExaminationPostIt from "./ExaminationPostIt.vue";
 
-// Nuxt composables are auto-imported
 declare const useNuxtApp: () => { $gsap: any };
 
 interface Step {
   content: string;
-  videoUrl?: string; // For backward compatibility
+  videoUrl?: string;
   mobileUrl?: string;
   desktopUrl?: string;
 }
@@ -138,51 +142,47 @@ const { $gsap } = useNuxtApp();
 const store = useAnimationsStore();
 
 // Refs
+const stepsContainerRef = ref<HTMLElement | null>(null);
+const stageRef = ref<HTMLElement | null>(null);
+const videoContainerRef = ref<HTMLElement | null>(null);
 const videoRef = ref<HTMLVideoElement | null>(null);
-const containerRef = ref<HTMLElement | null>(null);
-const cardRefs = ref<(HTMLElement | null)[]>([]);
 const overlayRef = ref<HTMLDivElement | null>(null);
+const cardRefs = ref<(HTMLElement | null)[]>([]);
 
 const currentStepIndex = ref(0);
-const stepsCount = computed(() => props.steps.length);
 const fallbackVideoUrl = ref("");
+const isIOSDevice = ref(false);
 
+const setCardRef = (el: any, index: number) => {
+  if (el) cardRefs.value[index] = el;
+};
+
+// Video sources setup
 const { getVideoSourceFor, getCurrentStepVideoSource } =
   useExaminationVideoSources({
     currentStepIndex,
     fallbackVideoUrl,
   });
 
-// Transition callback to handle fade effect with overlay
 const handleVideoTransition = (url: string) => {
   if (!overlayRef.value) return;
-
-  // Create GSAP timeline for smooth fade transition
   const tl = $gsap.timeline();
-
-  // Fade in overlay (to black)
   tl.to(overlayRef.value, {
     opacity: 1,
-    duration: 0.3,
+    duration: 0.25,
     ease: "power2.inOut",
   })
-    // Keep black for a moment while video switches
-    .to({}, { duration: 0.2 })
-    // Fade out overlay (reveal new video)
+    .to({}, { duration: 0.15 })
     .to(overlayRef.value, {
       opacity: 0,
-      duration: 0.3,
+      duration: 0.25,
       ease: "power2.inOut",
     });
 };
 
-// Use the videos composable
-const {
-  videoLoading,
-  actualVideoUrl,
-} = useVideos({
+const { videoLoading, actualVideoUrl } = useVideos({
   steps: props.steps,
-  currentStepIndex: currentStepIndex,
+  currentStepIndex,
   videoRef,
   overlayRef,
   transitionCallback: handleVideoTransition,
@@ -190,79 +190,178 @@ const {
     getVideoSourceFor(stepIndex, format, resolution),
 });
 
-const { initializeStepScrollTriggers, cleanupStepScrollTriggers } =
-  useExaminationScrollTriggers({
-    $gsap,
-    cardRefs,
-    stepsCount,
-    currentStepIndex,
-  });
-
-// iOS device detection for conditional source ordering
-const isIOSDevice = ref(false);
-onMounted(() => {
-  isIOSDevice.value = /iPad|iPhone|iPod/.test(navigator.userAgent);
-});
-
-// Computed trigger element (parent section or current section)
-const triggerElement = computed(() => {
-  // If parentSection prop is provided, use it
-  if (props.parentSection) {
-    return props.parentSection;
-  }
-
-  // Otherwise, try to find parent with bg-secondary-light class
-  if (containerRef.value) {
-    let parent = containerRef.value.parentElement;
-    while (parent && !parent.classList.contains("bg-secondary-light")) {
-      parent = parent.parentElement;
-    }
-    if (parent) {
-      return parent;
-    }
-  }
-
-  // Fallback to current section
-  return containerRef.value;
-});
-
-// Initialize all animations with GSAP ScrollTrigger
-const initializeAnimations = async () => {
-  if (!containerRef.value || !videoRef.value) return;
-
-  // Set initial video state
-  $gsap.set(videoRef.value, { scale: 0 });
-
-  // Initialize the first step
-  currentStepIndex.value = 0;
-
-  // Video entrance animation using GSAP with ScrollTrigger
-  $gsap.fromTo(
-    videoRef.value,
-    { scale: 0 },
-    {
-      scale: 1,
-      duration: 0.2,
-      ease: "power2.out",
-      onUpdate: function () {
-        const shouldShow = this.progress() < 0.55;
-        if (store.getLogoState !== shouldShow) {
-          store.updateLogoColor(shouldShow);
-        }
-      },
-      scrollTrigger: {
-        trigger: triggerElement.value,
-        start: "center 10%",
-        end: "60% 70%",
-        scrub: 1,
-      },
-    }
-  );
-
-  initializeStepScrollTriggers();
+// Color scheme rotation for post-it notes
+const getCardColorScheme = (
+  index: number
+): "white" | "grey" | "rose" | "cream" | "blush" => {
+  const schemes: ("white" | "grey" | "rose" | "cream" | "blush")[] = [
+    "white",
+    "grey",
+    "rose",
+    "cream",
+    "blush",
+  ];
+  return schemes[index % schemes.length];
 };
 
-// Watch for video URL changes and reload video
+// Resting offsets for stacking cards organically
+const restingOffsets = [
+  { x: 0, y: 0, rotate: -1 },
+  { x: -16, y: 16, rotate: 1.8 },
+  { x: 10, y: 32, rotate: -1.5 },
+  { x: -10, y: 48, rotate: 1.2 },
+  { x: 12, y: 64, rotate: -0.8 },
+];
+
+let scrollTimeline: any = null;
+
+const initializeAnimations = () => {
+  const trigger = props.parentSection || stepsContainerRef.value;
+  if (!trigger || !stageRef.value) return;
+
+  scrollTimeline?.scrollTrigger?.kill();
+  scrollTimeline?.kill();
+
+  const totalSteps = props.steps.length;
+
+  // Set initial state for Card 0 (resting at base offset)
+  if (cardRefs.value[0]) {
+    const o0 = restingOffsets[0];
+    $gsap.set(cardRefs.value[0], {
+      opacity: 1,
+      x: o0.x,
+      y: o0.y,
+      rotation: o0.rotate,
+      scale: 1,
+    });
+  }
+
+  // Set initial state for subsequent cards (hidden below)
+  for (let i = 1; i < totalSteps; i++) {
+    const card = cardRefs.value[i];
+    if (card) {
+      const o = restingOffsets[i % restingOffsets.length];
+      $gsap.set(card, {
+        opacity: 0,
+        x: o.x,
+        y: o.y + 40,
+        rotation: o.rotate + 2.5,
+        scale: 0.95,
+      });
+    }
+  }
+
+  // Set initial stage state
+  $gsap.set(stageRef.value, { opacity: 0, y: 30 });
+
+  // Main scroll-scrubbed timeline
+  const tl = $gsap.timeline({
+    scrollTrigger: {
+      trigger,
+      start: "top top",
+      end: "bottom bottom",
+      scrub: 0.8,
+      onUpdate: (self: any) => {
+        const progress = self.progress;
+
+        if (totalSteps <= 1) {
+          currentStepIndex.value = 0;
+          return;
+        }
+
+        const stepFraction = 0.8 / (totalSteps - 1);
+        const targetStep =
+          progress < 0.18
+            ? 0
+            : Math.min(
+                totalSteps - 1,
+                1 + Math.floor((progress - 0.18) / stepFraction)
+              );
+
+        if (currentStepIndex.value !== targetStep) {
+          currentStepIndex.value = targetStep;
+        }
+      },
+    },
+  });
+
+  // 1. Entrance of the stage (video + base card 0)
+  tl.to(
+    stageRef.value,
+    {
+      opacity: 1,
+      y: 0,
+      duration: 0.15,
+      ease: "power2.out",
+    },
+    0.05
+  );
+
+  // 2. Sequential stacking animations for cards 1..N-1
+  if (totalSteps > 1) {
+    const stepDuration = 0.8 / (totalSteps - 1);
+
+    for (let i = 1; i < totalSteps; i++) {
+      const card = cardRefs.value[i];
+      if (!card) continue;
+
+      const o = restingOffsets[i % restingOffsets.length];
+      const startTime = 0.18 + (i - 1) * stepDuration;
+
+      tl.to(
+        card,
+        {
+          opacity: 1,
+          x: o.x,
+          y: o.y,
+          rotation: o.rotate,
+          scale: 1,
+          duration: stepDuration * 0.65,
+          ease: "power2.out",
+        },
+        startTime
+      );
+    }
+  }
+
+  // Hold briefly at end
+  tl.to({}, { duration: 0.08 });
+
+  scrollTimeline = tl;
+};
+
+// Device check on mount
+onMounted(() => {
+  isIOSDevice.value = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  if (store.getSectionState("loading") === "isComplete") {
+    nextTick(() => {
+      setTimeout(() => {
+        requestAnimationFrame(() => {
+          initializeAnimations();
+        });
+      }, 100);
+    });
+  }
+});
+
+// Watch loading state to initialize animations
+watch(
+  () => store.getSectionState("loading"),
+  (loadingState) => {
+    if (loadingState === "isComplete") {
+      nextTick(() => {
+        setTimeout(() => {
+          requestAnimationFrame(() => {
+            initializeAnimations();
+          });
+        }, 80);
+      });
+    }
+  },
+  { immediate: true }
+);
+
+// Watch for video URL updates
 watch(actualVideoUrl, (newUrl) => {
   fallbackVideoUrl.value = newUrl || "";
   if (newUrl && videoRef.value) {
@@ -270,33 +369,9 @@ watch(actualVideoUrl, (newUrl) => {
   }
 });
 
-// Watch for loading completion to start animations
-watch(
-  () => store.getSectionState("loading"),
-  (loadingState) => {
-    if (
-      loadingState === "isComplete" &&
-      containerRef.value &&
-      containerRef.value.parentElement
-    ) {
-      nextTick(() => {
-        setTimeout(() => {
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-              initializeAnimations();
-              // ScrollTrigger.refresh(); // This line was removed as per the edit hint
-            });
-          });
-        }, 50);
-      });
-    }
-  }
-);
-
-// Cleanup
 onUnmounted(() => {
-  // Kill all GSAP animations and ScrollTriggers
-  cleanupStepScrollTriggers();
-  $gsap.killTweensOf([videoRef.value, overlayRef.value, ...cardRefs.value]);
+  scrollTimeline?.scrollTrigger?.kill();
+  scrollTimeline?.kill();
+  scrollTimeline = null;
 });
 </script>
