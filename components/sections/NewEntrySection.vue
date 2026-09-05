@@ -132,17 +132,7 @@
         ref="contentStageRef"
         class="sticky top-0 h-[100svh] w-full overflow-hidden bg-white"
       >
-        <div
-          ref="orangeRef"
-          class="pointer-events-none absolute left-[8vw] top-0 z-10 h-[clamp(9rem,22vw,20rem)] w-[clamp(9rem,22vw,20rem)] will-change-transform max-md:left-1/2 max-md:-translate-x-1/2"
-          aria-hidden="true"
-        >
-          <ThreeFruitLoadingAnimator
-            :progress="0"
-            :fruit-index="9"
-            :randomize="false"
-          />
-        </div>
+        <ThreeFruitPile :active="fruitRainStarted" />
 
         <div
           class="absolute right-[7vw] top-[18vh] z-20 flex w-[min(48rem,56vw)] flex-col gap-6 max-md:left-6 max-md:right-6 max-md:w-auto"
@@ -174,7 +164,7 @@
 </template>
 
 <script setup>
-import ThreeFruitLoadingAnimator from "~/components/ui/ThreeFruitLoadingAnimator.vue";
+import ThreeFruitPile from "~/components/ui/ThreeFruitPile.vue";
 import { useEntryRevealAnimation } from "~/composables/useEntryRevealAnimation";
 import { useNewContentElementsAnimation } from "~/composables/useNewContentElementsAnimation";
 import { useAnimationsStore } from "~/stores";
@@ -205,7 +195,7 @@ const numberTargetRef = ref(null);
 const phrasePartRefs = ref([]);
 const contentSectionRef = ref(null);
 const contentStageRef = ref(null);
-const orangeRef = ref(null);
+const fruitRainStarted = ref(false);
 const textRefs = ref([]);
 
 const lastStatisticsLine = computed(
@@ -267,7 +257,7 @@ const {
 } = useNewContentElementsAnimation({
   sectionRef: contentSectionRef,
   stageRef: contentStageRef,
-  orangeRef,
+  onEnter: () => { fruitRainStarted.value = true; },
   textRefs,
 });
 
