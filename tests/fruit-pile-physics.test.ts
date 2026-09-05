@@ -43,3 +43,30 @@ for (const [width, height] of [[1440, 900], [390, 844]]) {
     assert.equal(physics.fruits.length, 0);
   });
 }
+
+for (const [width, height, count] of [[1440, 900, 42], [390, 844, 28]]) {
+  test(`right-edge avalanche enters and settles at ${width}×${height}`, () => {
+    for (let seed = 1; seed <= 10; seed += 1) {
+      let state = seed;
+      const random = () => ((state = (Math.imul(state, 1664525) + 1013904223) >>> 0) / 4294967296);
+      const physics = createFruitPilePhysics(width, height, random, "right");
+      const radius = Math.min(72, Math.max(32, width / 20));
+      for (let index = 0; index < count; index += 1) {
+        const body = physics.add(Array.from({ length: 16 }, (_, point) => ({
+          x: Math.cos(point / 8 * Math.PI) * radius,
+          y: Math.sin(point / 8 * Math.PI) * radius,
+        })), index, count);
+        assert.ok(body.bounds.min.x > width, "fruit starts outside the right edge");
+        assert.ok(body.velocity.x < 0, "fruit spills toward the viewport");
+      }
+      assert.ok(Math.max(...physics.fruits.map(({ delay }) => delay)) < 1000, "cupboard empties in one short burst");
+      for (let step = 0; step < 3600 && !physics.settled; step += 1) physics.step();
+      assert.ok(physics.settled, `seed ${seed}: all fruits settle`);
+      for (const { body } of physics.fruits) {
+        assert.ok(body.bounds.min.x >= -2 && body.bounds.max.x <= width + 2, "fruit stays between the walls");
+        assert.ok(body.bounds.max.y <= height + 2, "fruit rests on the floor");
+      }
+      physics.dispose();
+    }
+  });
+}

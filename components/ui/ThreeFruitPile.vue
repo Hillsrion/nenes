@@ -14,7 +14,7 @@ import { loadingFruitSequence } from "~/config/loading-fruits";
 import { createFruitModel } from "~/utils/loading-fruit-models";
 import { createFruitPilePhysics, FRUIT_PHYSICS_STEP } from "~/utils/fruit-pile-physics";
 
-const props = defineProps<{ active: boolean }>();
+const props = withDefaults(defineProps<{ active: boolean; entrance?: "rain" | "right" }>(), { entrance: "rain" });
 const containerRef = ref<HTMLDivElement | null>(null);
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 const unavailable = ref(false);
@@ -167,9 +167,11 @@ onMounted(async () => {
     }));
     if (disposed) return;
     if (!templates.length) throw new Error("No fruit models available");
-    physics = createFruitPilePhysics(width, height);
+    physics = createFruitPilePhysics(width, height, Math.random, props.entrance);
     const diameter = Math.min(145, Math.max(64, width / 10));
-    const count = Math.min(36, Math.max(18, Math.round(width / diameter * 2.6)));
+    const count = props.entrance === "right"
+      ? Math.min(56, Math.max(28, Math.round(width / diameter * 4.2)))
+      : Math.min(36, Math.max(18, Math.round(width / diameter * 2.6)));
     let bag: THREE.Group[] = [];
     for (let index = 0; index < count; index += 1) {
       if (!bag.length) {

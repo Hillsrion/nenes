@@ -48,7 +48,7 @@
         <SelfExaminationSection :steps="selfExaminationSteps" />
 
         <!-- Resources Section -->
-        <ResourcesSection />
+        <ResourcesSection :fruit-avalanche="isNewHome" />
         <CursorImageSpawner :images="cursorImages" :disabled="isThreeDPreview" />
       </div>
     </MainLayout>

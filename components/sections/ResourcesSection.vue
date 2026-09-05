@@ -1,11 +1,12 @@
 <template>
   <section
-    class="lg:h-screen py-9 bg-primary sticky top-0 z-30 transition-all duration-300 ease-out"
+    class="lg:h-screen overflow-hidden py-9 bg-primary sticky top-0 z-30 transition-all duration-300 ease-out"
     :class="{ 'rounded-t-4xl': !isAtTop, '-mt-4': isIOS }"
     ref="sectionRef"
   >
+    <ThreeFruitPile v-if="fruitAvalanche" :active="avalancheStarted" entrance="right" />
     <div
-      class="container mx-auto px-6 xl:px-8 h-full flex flex-col ju stify-between"
+      class="container relative z-20 mx-auto px-6 xl:px-8 h-full flex flex-col ju stify-between"
     >
       <div
         class="flex flex-wrap items-center justify-between flex-1 lg:pt-15 md:pt-10 sm:pt-6 pt-4"
@@ -88,11 +89,15 @@
 <script setup lang="ts">
 import { useAnimationsStore } from "../../stores";
 import ImageSequenceAnimator from "~/components/ui/ImageSequenceAnimator.vue";
+import ThreeFruitPile from "~/components/ui/ThreeFruitPile.vue";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useIsIOS } from "~/composables/useIsIOS";
 import { useResourcesAnimations } from "~/composables/resources/useResourcesAnimations";
 // Animation store
 const store = useAnimationsStore();
+const props = withDefaults(defineProps<{ fruitAvalanche?: boolean }>(), { fruitAvalanche: false });
+const avalancheStarted = ref(false);
+let avalancheObserver: IntersectionObserver | null = null;
 
 // Check if iOS
 const { isIOS } = useIsIOS();
@@ -102,6 +107,16 @@ const illustrationProgress = ref(0);
 
 // Track if section is at top (sticky)
 const isAtTop = ref(false);
+
+onMounted(() => {
+  if (!props.fruitAvalanche || !sectionRef.value) return;
+  avalancheObserver = new IntersectionObserver(([entry]) => {
+    if (!entry.isIntersecting) return;
+    avalancheStarted.value = true;
+    avalancheObserver?.disconnect();
+  }, { rootMargin: "0px 0px -25% 0px", threshold: 0 });
+  avalancheObserver.observe(sectionRef.value);
+});
 
 const {
   initializeTopTracking,
@@ -138,6 +153,7 @@ watch(
 
 // Cleanup on unmount
 onUnmounted(() => {
+  avalancheObserver?.disconnect();
   cleanupResourcesAnimations();
 });
 
