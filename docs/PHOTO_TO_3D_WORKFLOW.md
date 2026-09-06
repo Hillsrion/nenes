@@ -238,6 +238,13 @@ lancer :
     NUXT_PUBLIC_R2_INPUTS_BUCKET_NAME=<nom-du-bucket-prive> \
     pnpm dev
 
+Pour les GLB présents uniquement dans `public/models/`, le serveur de
+développement cherche aussi automatiquement la source correspondante dans
+`private-3d-inputs/` (puis dans `breast-images/`) à partir du nom du modèle.
+Les fichiers `front-cropped`, `left-cropped`, `back-cropped` et `right-cropped`
+sont privilégiés lorsqu’ils existent. Cette résolution locale ne s’active pas
+en production et ne modifie pas le mapping R2 des modèles publiés.
+
 En développement, le serveur utilise automatiquement le CLI Wrangler et sa
 session OAuth lorsque les clés S3 ne sont pas définies. Cette voie est plus
 lente, mais adaptée à une revue occasionnelle. Sur Netlify, le CLI n'est pas
