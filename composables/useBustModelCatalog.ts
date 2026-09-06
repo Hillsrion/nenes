@@ -1,12 +1,8 @@
-import {
-  publishedBustModels,
-  referenceBustModels,
-  type BustModelCatalogEntry,
-} from "~/config/bust-models";
+import type { BustModelCatalogEntry } from "~/types/3d-models";
 
 export const useBustModelCatalog = () => {
   const { data: publishedModels } = useAsyncData<BustModelCatalogEntry[]>(
-    "published-bust-models",
+    "bust-model-catalog",
     async () => {
       try {
         return await $fetch<BustModelCatalogEntry[]>("/api/3d/models");
@@ -18,11 +14,5 @@ export const useBustModelCatalog = () => {
     { default: () => [] }
   );
 
-  return computed(() => {
-    const entries = [...referenceBustModels, ...publishedBustModels, ...(publishedModels.value || [])];
-    return entries.filter(
-      (model, index, allModels) =>
-        allModels.findIndex((candidate) => candidate.fileName === model.fileName) === index
-    );
-  });
+  return computed(() => publishedModels.value || []);
 };

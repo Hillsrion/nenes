@@ -23,7 +23,7 @@
         aria-hidden="true"
       >
         <ThreeBustViewer
-          model-url="/models/bust-multiview-v2-symptoms.glb"
+          :model-url="getModelUrl(multiviewFileName)"
           :auto-rotate="false"
           :enable-zoom="false"
           :interactive="false"
@@ -79,6 +79,8 @@ import ExaminationSteps from "~/components/ui/ExaminationSteps.vue";
 import ThreeBustViewer from "~/components/ui/ThreeBustViewer.vue";
 import { useAnimationsStore } from "~/stores";
 import { useIsIOS } from "~/composables/useIsIOS";
+
+const { multiviewFileName, getModelUrl } = useDemoBustModelUrls();
 
 declare const useNuxtApp: () => { $gsap: any };
 

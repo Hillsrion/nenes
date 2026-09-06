@@ -29,54 +29,82 @@
           :statistics-text="statisticsText"
           :content-elements="mainContentElements"
         />
-        <ScreeningSection
-          :sidebar-elements="screeningContentElements"
-          :title="screeningMainTitle"
-        />
-        <div class="relative bg-white" ref="symptomsAndExaminationContainerRef">
-          <!-- Shared 3D Bust Model anchored on left across both Symptoms & Palpation sections -->
+        <!-- One full-viewport 3D stage hosts the screening bust and the symptoms
+             bust in a single scene; the camera glides from one to the other as
+             the reader scrolls between the two sections. A zero-height sticky
+             sentinel carries the canvas: `fixed` would resolve against the
+             transformed body (GSAP normalizeScroll) instead of the viewport. -->
+        <div ref="journeyTrackRef" class="relative">
           <div
-            class="pointer-events-none sticky top-0 h-screen w-full z-15 overflow-hidden"
+            v-if="journeyStageReady"
+            ref="journeyStageRef"
+            class="pointer-events-none sticky top-0 z-10 hidden h-0 overflow-visible lg:block"
             aria-hidden="true"
           >
-            <div
-              ref="sharedProfileModelRef"
-              class="absolute bottom-[-15svh] left-0 z-10 mx-0 h-[115svh] w-[min(100vw,56rem)] max-md:w-[100vw]"
-            >
-              <ThreeBustViewer
+            <div class="absolute inset-x-0 top-0 h-screen">
+              <ThreeBustJourney
+                :first-model-url="journeyFirstModelUrl"
+                :second-model-url="getModelUrl(multiviewFileName)"
+                :camera-progress="journeyCamera.progress"
+                :symptom-type="activeSectionSymptom"
                 :profile-label="symptomsMainTitle"
                 :profile-label-progress="symptomsProfileProgress"
-                model-url="/models/bust-multiview-v2-symptoms.glb"
-                :auto-rotate="false"
-                :enable-zoom="false"
-                :interactive="false"
-                :initial-rotation-y="isSymptomsProfileView ? Math.PI / 2 : 0"
-                :symptom-type="activeSectionSymptom"
-                :model-scale="1.05"
-                model-horizontal-alignment="left"
-                :show-backdrop="false"
-                :show-loading-indicator="false"
-                compact
+                :second-rotation-y="isSymptomsProfileView ? Math.PI / 2 : 0"
+                :debug-path="isJourneyDebug"
               />
             </div>
           </div>
 
-          <div class="relative z-20 -mt-[100vh]">
-            <SymptomsSection
-              :title="symptomsMainTitle"
-              :intro-card="symptomsIntroCard"
-              :cards="symptomsCards"
-              :show-profile-model="true"
-              :use-shared-model="true"
-              @profile-progress="symptomsProfileProgress = $event"
-              @symptom-change="activeSectionSymptom = $event"
-              @profile-view-change="isSymptomsProfileView = $event"
-            />
+          <ScreeningSection
+            :sidebar-elements="screeningContentElements"
+            :title="screeningMainTitle"
+          />
+          <div class="relative bg-white" ref="symptomsAndExaminationContainerRef">
+            <!-- Shared 3D Bust Model anchored on left across both Symptoms & Palpation sections.
+                 Desktop reads the journey stage above; this sticky viewer stays for touch layouts. -->
+            <div
+              class="pointer-events-none sticky top-0 h-screen w-full z-15 overflow-hidden lg:hidden"
+              aria-hidden="true"
+            >
+              <div
+                ref="sharedProfileModelRef"
+                class="absolute bottom-[-15svh] left-0 z-10 mx-0 h-[115svh] w-[min(100vw,56rem)] max-md:w-[100vw]"
+              >
+                <ThreeBustViewer
+                  :profile-label="symptomsMainTitle"
+                  :profile-label-progress="symptomsProfileProgress"
+                  :model-url="getModelUrl(multiviewFileName)"
+                  :auto-rotate="false"
+                  :enable-zoom="false"
+                  :interactive="false"
+                  :initial-rotation-y="isSymptomsProfileView ? Math.PI / 2 : 0"
+                  :symptom-type="activeSectionSymptom"
+                  :model-scale="1.05"
+                  model-horizontal-alignment="left"
+                  :show-backdrop="false"
+                  :show-loading-indicator="false"
+                  compact
+                />
+              </div>
+            </div>
 
-            <SelfExaminationSection
-              :steps="selfExaminationSteps"
-              :use-shared-model="true"
-            />
+            <div class="relative z-20 -mt-[100vh]">
+              <SymptomsSection
+                :title="symptomsMainTitle"
+                :intro-card="symptomsIntroCard"
+                :cards="symptomsCards"
+                :show-profile-model="true"
+                :use-shared-model="true"
+                @profile-progress="symptomsProfileProgress = $event"
+                @symptom-change="activeSectionSymptom = $event"
+                @profile-view-change="isSymptomsProfileView = $event"
+              />
+
+              <SelfExaminationSection
+                :steps="selfExaminationSteps"
+                :use-shared-model="true"
+              />
+            </div>
           </div>
         </div>
 
@@ -159,7 +187,7 @@
               Recherche du modèle local…
             </p>
             <p v-else-if="isUsingDefaultPreviewModel" class="mt-0.5 text-[#a35f2d]">
-              Modèle non généré · affichage du modèle de référence
+              Modèle non généré · affichage du modèle de démonstration
             </p>
             <p v-else class="mt-0.5 text-[#27845b]">Modèle 3D disponible</p>
           </div>
@@ -355,6 +383,7 @@
 
 <script setup lang="ts">
 import type { SymptomType } from "~/components/ui/three-bust/symptom-effects";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import MainLayout from "~/components/layout/MainLayout.vue";
 import LoadingSection from "~/components/sections/LoadingSection.vue";
 import EntrySection from "~/components/sections/EntrySection.vue";
@@ -365,13 +394,14 @@ import ResourcesSection from "~/components/sections/ResourcesSection.vue";
 import Logo from "~/components/ui/Logo.vue";
 import CursorImageSpawner from "~/components/ui/CursorImageSpawner.vue";
 import ThreeBustViewer from "~/components/ui/ThreeBustViewer.vue";
+import ThreeBustJourney from "~/components/ui/ThreeBustJourney.vue";
 import ThreeDStudio from "~/components/ui/ThreeDStudio.vue";
 import ThreeDModelCatalogPage from "~/components/ui/ThreeDModelCatalogPage.vue";
 import ThreeDFruitLoadingPage from "~/components/ui/ThreeDFruitLoadingPage.vue";
 import FruitTestPage from "~/components/ui/FruitTestPage.vue";
 import LinksPage from "~/components/ui/LinksPage.vue";
-import { defaultBustModel } from "~/config/bust-models";
 import { useBustModelCatalog } from "~/composables/useBustModelCatalog";
+import { useDemoBustModelUrls } from "~/composables/useDemoBustModelUrls";
 import { useAnimationsStore } from "~/stores";
 import { useContent } from "~/composables/useContent";
 import { useLenis } from "lenis/vue";
@@ -389,6 +419,7 @@ const isThreeDStudio = computed(
   () => route.path === "/studio-3d" || route.query.studio3d === "upload"
 );
 const isThreeDPreview = computed(() => route.query.preview3d === "photo");
+const { monoviewFileName, multiviewFileName, getModelUrl } = useDemoBustModelUrls();
 const fallbackPreviewModelName = computed(() => {
   const requestedModel = Array.isArray(route.query.model)
     ? route.query.model[0]
@@ -397,7 +428,7 @@ const fallbackPreviewModelName = computed(() => {
   return requestedModel &&
     /^[a-zA-Z0-9][a-zA-Z0-9_-]*(?:\/[a-zA-Z0-9][a-zA-Z0-9_-]*)*\.glb$/.test(requestedModel)
     ? requestedModel
-    : defaultBustModel.fileName;
+    : multiviewFileName;
 });
 const requestedFruit = Array.isArray(route.query.fruit)
   ? route.query.fruit[0]
@@ -410,7 +441,7 @@ const requestedCatalogModel = computed(() =>
       model.id === `volume-${requestedFruit}`
   )
 );
-const activeCatalogModelId = ref(requestedCatalogModel.value?.id ?? "reference-multiview-v2");
+const activeCatalogModelId = ref(requestedCatalogModel.value?.id ?? "");
 const activeCatalogModel = computed(
   () =>
     bustModelCatalog.value.find((model) => model.id === activeCatalogModelId.value) ??
@@ -421,7 +452,7 @@ watch(requestedCatalogModel, (model) => {
 });
 watch(bustModelCatalog, (models) => {
   if (!models.some((model) => model.id === activeCatalogModelId.value)) {
-    activeCatalogModelId.value = models[0]?.id ?? "reference-multiview-v2";
+    activeCatalogModelId.value = models[0]?.id ?? "";
   }
 });
 const previewModelName = ref(fallbackPreviewModelName.value);
@@ -431,17 +462,7 @@ const runtimeConfig = useRuntimeConfig();
 const sourceComparisonEnabled = Boolean(
   runtimeConfig.public.modelReview?.sourceComparisonEnabled
 );
-const modelsPublicUrl = String(runtimeConfig.public.r2.modelsPublicUrl || "").replace(
-  /\/+$/,
-  ""
-);
-const getPreviewModelUrl = (fileName: string) => {
-  const encodedName = fileName.split("/").map(encodeURIComponent).join("/");
-
-  return modelsPublicUrl
-    ? `${modelsPublicUrl}/models/${encodedName}`
-    : `/models/${encodedName}`;
-};
+const getPreviewModelUrl = getModelUrl;
 const previewModelUrl = computed(() => getPreviewModelUrl(previewModelName.value));
 interface SourceComparison {
   imageUrl: string;
@@ -484,7 +505,7 @@ const resolvePreviewModel = async () => {
   if (!import.meta.client || !isThreeDPreview.value) return;
 
   const requestId = ++previewModelRequestId;
-  const candidateName = activeCatalogModel.value.fileName;
+  const candidateName = requestedCatalogModel.value?.fileName ?? fallbackPreviewModelName.value;
   isResolvingPreviewModel.value = true;
 
   try {
@@ -735,9 +756,115 @@ const globalContainer = ref(null);
 const mainLayoutRef = ref(null); // Ref to MainLayout component
 const symptomsAndExaminationContainerRef = ref<HTMLElement | null>(null);
 const sharedProfileModelRef = ref<HTMLElement | null>(null);
+const journeyTrackRef = ref<HTMLElement | null>(null);
+const journeyStageRef = ref<HTMLElement | null>(null);
 const symptomsProfileProgress = ref(0);
 const activeSectionSymptom = ref<SymptomType>("none");
 const isSymptomsProfileView = ref(true);
+
+// Journey stage: one scene with the screening bust and the symptoms bust. The
+// ScrollTrigger below scrubs the camera from the screening framing, over the
+// first bust's shoulder, onto the second one in profile.
+const journeyCamera = reactive({ progress: 0 });
+const isJourneyDebug = computed(() => route.query.journeyDebug === "1");
+// The content wrapper carries a 1s transform transition when the loading gate
+// lifts; mounting the fixed stage before it ends would resolve `fixed` against
+// the transformed ancestor and size the canvas to the whole document.
+const journeyStageReady = ref(false);
+// Same asset as the screening section's viewer, so the browser cache serves it.
+const journeyFirstModelUrl = computed(() => {
+  return getModelUrl(monoviewFileName);
+});
+
+let journeyCameraTimeline: any = null;
+let journeyStageInAnimation: any = null;
+let journeyStageOutAnimation: any = null;
+let journeyStageReadyTimer: number | null = null;
+
+const killJourneyAnimations = () => {
+  [journeyCameraTimeline, journeyStageInAnimation, journeyStageOutAnimation].forEach(
+    (animation) => {
+      animation?.scrollTrigger?.kill?.();
+      animation?.kill?.();
+    }
+  );
+  journeyCameraTimeline = null;
+  journeyStageInAnimation = null;
+  journeyStageOutAnimation = null;
+};
+
+// The stage mounts only once the wrapper's exit transform has fully
+// transitioned; its ScrollTriggers and camera timeline follow right after.
+watch(journeyStageReady, (ready) => {
+  if (!ready) return;
+  nextTick(() => initializeJourneyStage());
+});
+
+const initializeJourneyStage = () => {
+  const track = journeyTrackRef.value;
+  const stage = journeyStageRef.value;
+  if (!track || !stage || !symptomsAndExaminationContainerRef.value) return;
+
+  killJourneyAnimations();
+
+  // The stage fades in while the screening section slides up, and out again as
+  // the resources section takes the viewport.
+  journeyStageInAnimation = $gsap.fromTo(
+    stage,
+    { autoAlpha: 0 },
+    {
+      autoAlpha: 1,
+      ease: "none",
+      scrollTrigger: {
+        trigger: track,
+        start: "top bottom",
+        end: "top 20%",
+        scrub: true,
+      },
+    }
+  );
+  journeyStageOutAnimation = $gsap.to(stage, {
+    autoAlpha: 0,
+    ease: "none",
+    immediateRender: false,
+    scrollTrigger: {
+      trigger: symptomsAndExaminationContainerRef.value,
+      start: "bottom 92%",
+      end: "bottom 55%",
+      scrub: true,
+    },
+  });
+
+  // Hold the opening framing through most of the screening scroll, then spend
+  // the remaining runway (screening outro + symptoms rise-in) on the move so
+  // the camera locks on the profile exactly when the symptoms section pins.
+  journeyCameraTimeline = $gsap.timeline({
+    scrollTrigger: {
+      trigger: track,
+      start: "top top",
+      endTrigger: symptomsAndExaminationContainerRef.value,
+      end: "top top",
+      scrub: 0.8,
+      invalidateOnRefresh: true,
+    },
+  });
+  journeyCameraTimeline
+    .to({}, { duration: 3, ease: "none" })
+    .to(journeyCamera, { progress: 1, duration: 1, ease: "power1.inOut" });
+
+  // The loading gate collapses the document height while it hides the page;
+  // re-measure every trigger once the real layout is back.
+  ScrollTrigger.refresh();
+};
+
+// Called wherever the shared-model animation is initialized: the stage mounts
+// 1.1s later, once the wrapper's exit transform has fully transitioned.
+const scheduleJourneyStageMount = () => {
+  if (journeyStageReadyTimer) window.clearTimeout(journeyStageReadyTimer);
+  journeyStageReadyTimer = window.setTimeout(() => {
+    journeyStageReady.value = true;
+  }, 1100);
+};
 
 let sharedModelAnimation: any = null;
 
@@ -795,6 +922,7 @@ watch(
         setTimeout(() => {
           requestAnimationFrame(() => {
             initializeSharedModelAnimation();
+            scheduleJourneyStageMount();
           });
         }, 120);
       });
@@ -807,6 +935,8 @@ onUnmounted(() => {
   sharedModelAnimation?.scrollTrigger?.kill();
   sharedModelAnimation?.kill();
   sharedModelAnimation = null;
+  killJourneyAnimations();
+  if (journeyStageReadyTimer) window.clearTimeout(journeyStageReadyTimer);
 });
 
 onMounted(async () => {
@@ -827,6 +957,7 @@ onMounted(async () => {
       setTimeout(() => {
         requestAnimationFrame(() => {
           initializeSharedModelAnimation();
+          scheduleJourneyStageMount();
         });
       }, 150);
     });

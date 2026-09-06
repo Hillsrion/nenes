@@ -38,13 +38,25 @@ const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const projectDirectory = path.resolve(scriptDirectory, "..");
 const cliArguments = process.argv.slice(2);
 if (cliArguments[0] === "--") cliArguments.shift();
+try {
+  process.loadEnvFile?.(path.join(projectDirectory, ".env"));
+} catch {
+  // A deployed or CI environment may provide variables without a local .env.
+}
+const inputModelPath = cliArguments[0] ?? process.env.NUXT_3D_SYMPTOMS_INPUT;
+const outputModelPath = cliArguments[1] ?? process.env.NUXT_3D_SYMPTOMS_OUTPUT;
+if (!inputModelPath || !outputModelPath) {
+  throw new Error(
+    "Provide an input and output GLB, or set NUXT_3D_SYMPTOMS_INPUT and NUXT_3D_SYMPTOMS_OUTPUT."
+  );
+}
 const inputPath = path.resolve(
   projectDirectory,
-  cliArguments[0] ?? "public/models/bust-photo-test.glb"
+  inputModelPath
 );
 const outputPath = path.resolve(
   projectDirectory,
-  cliArguments[1] ?? "public/models/bust-photo-symptoms.glb"
+  outputModelPath
 );
 const profilePath = cliArguments[3];
 const profile = profilePath ? JSON.parse(await readFile(path.resolve(projectDirectory, profilePath), "utf8")) : null;

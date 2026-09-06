@@ -144,24 +144,25 @@ trois symptômes ; les morph targets et les couleurs de sommets suffisent. Les
 petites croûtes 3D et les gouttes animées sont ajoutées par le viewer et ne
 créent pas de copie supplémentaire du GLB.
 
-Pour régénérer les symptômes de la référence multivue, utiliser ses repères
+Pour régénérer les symptômes du modèle multivue d’Anaïs, utiliser ses repères
 calibrés, enregistrés dans le GLB et relus par le viewer pour les couleurs et
 l'écoulement :
 
     pnpm model:symptoms -- \
-      public/models/bust-multiview-v2-base.glb \
-      public/models/bust-multiview-v2-symptoms.glb \
-      "Modèle de référence multivue" config/reference-symptoms.json
+      public/models/bust-anais-multiview-base.glb \
+      public/models/bust-anais-multiview.glb \
+      "Modèle multivue Anaïs" config/anais-symptoms.json
 
 Conserver auparavant une copie du résultat précédent dans `private-3d-inputs/`.
 Les coordonnées du profil sont relatives au centre et aux demi-dimensions du
-maillage neutre. Ce profil est propre à cette référence : ne pas l'appliquer
+maillage neutre. Ce profil est propre au modèle d’Anaïs : ne pas l'appliquer
 automatiquement à un autre buste.
 
 ## Nommer les variantes de volume par fruit
 
-Le catalogue suivi par Git se trouve dans `config/bust-models.ts`. Les fruits
-sont des repères visuels et non des équivalences médicales ou des tailles de
+Le catalogue n’est pas suivi par Git : il est découvert depuis les GLB locaux
+dans `public/models/` en développement et depuis le bucket R2 en production.
+Les fruits sont des repères visuels et non des équivalences médicales ou des tailles de
 soutien-gorge.
 
 | Fruit | Label du modèle | GLB final local |
@@ -186,7 +187,7 @@ Pour produire par exemple la variante Orange :
 
 Le troisième argument de `model:symptoms` est enregistré dans les métadonnées
 du GLB. Tant que `bust-orange.glb` n'existe pas, le sélecteur affiche
-automatiquement `bust-multiview-v2-symptoms.glb`, le modèle de référence. Il n'est
+automatiquement `bust-anais-multiview.glb`, le modèle de démonstration. Il n'est
 donc pas nécessaire de créer des fichiers factices pour compléter le catalogue.
 Les noms finaux déclarés dans le catalogue doivent toujours être produits par
 `model:symptoms` : ne pas renommer directement un fichier `*-base.glb`, car il
@@ -214,10 +215,10 @@ Le catalogue public des bustes est disponible à l'adresse :
 
     http://localhost:3000/models-3d
 
-Il garde uniquement les références fixes dans `referenceBustModels` de
-`config/bust-models.ts`. Les autres cartes sont découvertes automatiquement
-dans `models/` du bucket R2 : un fruit n’est donc proposé que lorsque son GLB
-a été publié. Chaque carte ouvre le modèle correspondant dans le viewer.
+Les cartes sont découvertes automatiquement dans `models/` du bucket R2, ou
+dans `public/models/` en développement. Un modèle n’est donc proposé que
+lorsque son GLB est réellement disponible. Chaque carte ouvre le modèle
+correspondant dans le viewer.
 
 ## Comparer un modèle à sa photo source
 

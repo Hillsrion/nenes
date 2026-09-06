@@ -4,7 +4,7 @@
  * Upload a reviewed, derived GLB model to the dedicated Cloudflare R2 bucket.
  *
  * Usage:
- *   pnpm models:upload -- bust-multiview-v2-symptoms.glb
+ *   pnpm models:upload -- <reviewed-model>.glb
  *   pnpm models:upload -- --all-local
  *
  * The script accepts only final GLB names in public/models. Source photos and
@@ -15,7 +15,19 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { hiddenBustModelFiles } from "../config/bust-models";
+
+try {
+  process.loadEnvFile?.(path.join(process.cwd(), ".env"));
+} catch {
+  // Wrangler or CI may provide the environment without a local .env file.
+}
+
+const hiddenBustModelFiles = new Set(
+  String(process.env.NUXT_3D_HIDDEN_MODEL_FILES || "")
+    .split(",")
+    .map((fileName) => fileName.trim())
+    .filter(Boolean)
+);
 
 const bucketName =
   process.env.CLOUDFLARE_R2_3D_BUCKET_NAME || "nenes-3d-models";
@@ -49,7 +61,7 @@ function getRequestedFiles(): string[] {
 
   if (args.length !== 1) {
     fail(
-      "Choose exactly one reviewed model, for example: pnpm models:upload -- bust-multiview-v2-symptoms.glb"
+      "Choose exactly one reviewed model, for example: pnpm models:upload -- <reviewed-model>.glb"
     );
   }
 

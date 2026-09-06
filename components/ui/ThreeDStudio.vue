@@ -125,7 +125,7 @@
         <div class="flex items-start justify-between gap-5 px-5 pb-4 pt-6 md:px-7">
           <div>
             <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-[#9d2146]">Bibliothèque publiée</p>
-            <h2 class="mt-2 text-2xl font-bold">{{ defaultBustModel.label }}</h2>
+            <h2 class="mt-2 text-2xl font-bold">Modèle multivue Hunyuan3D</h2>
           </div>
         </div>
 
@@ -151,7 +151,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from "vue";
-import { defaultBustModel } from "~/config/bust-models";
+import { useDemoBustModelUrls } from "~/composables/useDemoBustModelUrls";
 import ThreeBustViewer from "~/components/ui/ThreeBustViewer.vue";
 
 type SelectedPhoto = {
@@ -165,11 +165,10 @@ type SelectedPhoto = {
 const maxPhotoCount = 4;
 const maxFileSize = 12 * 1024 * 1024;
 const acceptedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
-const runtimeConfig = useRuntimeConfig();
-const baseModelsUrl = String(runtimeConfig.public.r2.modelsPublicUrl || "").replace(/\/+$/, "");
-const modelUrl = computed(() => `${baseModelsUrl}/models/${defaultBustModel.fileName}`);
+const { multiviewFileName, getModelUrl } = useDemoBustModelUrls();
+const modelUrl = computed(() => getModelUrl(multiviewFileName));
 const previewHref = computed(
-  () => `/?preview3d=photo&model=${encodeURIComponent(defaultBustModel.fileName)}&material=glass`
+  () => `/?preview3d=photo&model=${encodeURIComponent(multiviewFileName)}&material=glass`
 );
 
 const photos = ref<SelectedPhoto[]>([]);

@@ -11,7 +11,7 @@ conversation restent exclusivement locaux.
 - région : Europe de l'Ouest ;
 - URL publique : `https://pub-43370cee5bda403fb0a2206c460fe804.r2.dev` ;
 - CORS : `GET` et `HEAD` depuis toutes les origines ;
-- modèle de référence : `models/bust-multiview-v2-symptoms.glb` ;
+- modèle de démonstration : `models/bust-anais-multiview.glb` ;
 - type MIME : `model/gltf-binary` ;
 - cache : une heure avec revalidation.
 
@@ -40,8 +40,8 @@ Le script n'accepte que des GLB finaux nommés `bust-… .glb`, présents dans
 refusés.
 
 ```bash
-# Charge le modèle final de référence.
-pnpm models:upload -- bust-multiview-v2-symptoms.glb
+# Charge le modèle final de démonstration.
+pnpm models:upload -- bust-anais-multiview.glb
 
 # Charge tous les GLB finaux présents localement.
 pnpm models:upload -- --all-local
@@ -55,8 +55,8 @@ script appelle Wrangler et publie vers `models/<nom-du-fichier>.glb`.
 ```bash
 mkdir -p public/models
 curl --fail \
-  --output public/models/bust-multiview-v2-symptoms.glb \
-  https://pub-43370cee5bda403fb0a2206c460fe804.r2.dev/models/bust-multiview-v2-symptoms.glb
+  --output public/models/bust-anais-multiview.glb \
+  https://pub-43370cee5bda403fb0a2206c460fe804.r2.dev/models/bust-anais-multiview.glb
 ```
 
 Le fichier téléchargé reste ignoré par Git. Son SHA-256 de référence est :
@@ -70,7 +70,7 @@ Le fichier téléchargé reste ignoré par Git. Son SHA-256 de référence est :
 ```bash
 curl -I \
   -H 'Origin: http://localhost:3000' \
-  https://pub-43370cee5bda403fb0a2206c460fe804.r2.dev/models/bust-multiview-v2-symptoms.glb
+  https://pub-43370cee5bda403fb0a2206c460fe804.r2.dev/models/bust-anais-multiview.glb
 ```
 
 La réponse doit être `200`, avec `Content-Type: model/gltf-binary` et
@@ -79,7 +79,7 @@ La réponse doit être `200`, avec `Content-Type: model/gltf-binary` et
 La démo de production se trouve à :
 
 ```text
-https://main--nenes.netlify.app/?preview3d=photo&model=bust-multiview-v2-symptoms.glb
+https://main--nenes.netlify.app/?preview3d=photo&model=bust-anais-multiview.glb
 ```
 
 Le catalogue public se trouve sur `/models-3d`. La comparaison avec les photos
@@ -98,10 +98,10 @@ fruit. Il ne doit jamais être déplacé dans le bucket public des modèles.
 3. Vérifier son URL publique.
 4. Déployer ensuite le catalogue vers `main`.
 
-Les cartes non-référence sont indexées automatiquement depuis le préfixe
+Toutes les cartes sont indexées automatiquement depuis le préfixe
 `models/` du bucket : aucune modification de catalogue n’est nécessaire. Les
-références restent déclarées dans `referenceBustModels` de
-`config/bust-models.ts`. Pour activer cet index sur Netlify, définir ces
+modèles locaux sont indexés en développement depuis `public/models/`. Pour
+activer cet index sur Netlify, définir ces
 variables serveur (jamais préfixées par `NUXT_PUBLIC_`) avec un jeton R2 en
 lecture/listage limité au bucket des modèles :
 

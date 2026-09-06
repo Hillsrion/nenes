@@ -2,11 +2,16 @@ import { readdir } from "node:fs/promises";
 import path from "node:path";
 import {
   bustFruitModels,
-  fixedBustModelFiles,
-  hiddenBustModelFiles,
-  type BustModelCatalogEntry,
-} from "~/config/bust-models";
+} from "~/config/bust-fruit-catalog";
+import type { BustModelCatalogEntry } from "~/types/3d-models";
 import { listPublishedR2ModelFiles } from "~/server/utils/r2-models";
+
+const hiddenBustModelFiles = new Set(
+  String(process.env.NUXT_3D_HIDDEN_MODEL_FILES || "")
+    .split(",")
+    .map((fileName) => fileName.trim())
+    .filter(Boolean)
+);
 
 const fruitModelsByFile = new Map(
   bustFruitModels.map((model) => [model.fileName, model])
@@ -44,23 +49,23 @@ const humanizeModelName = (fileName: string) =>
 
 const toCatalogEntry = (
   fileName: string,
-  source: "local" | "published" = "published"
+  source: "local" | "bucket" = "bucket"
 ): BustModelCatalogEntry => {
   const fruitModel = fruitModelsByFile.get(fileName);
   if (fruitModel) {
     return {
-      id: `volume-${fruitModel.id}`,
+      id: `${source}-volume-${fruitModel.id}`,
       label: fruitModel.modelLabel,
       shortLabel: `${fruitModel.emoji} ${fruitModel.fruit}`,
       description: `Repère visuel de volume ${fruitModel.sizeLabel.toLowerCase()}.`,
       fileName,
-      badge: `Bucket · ${fruitModel.sizeLabel}`,
+      badge: `${source === "local" ? "Local" : "Bucket"} · ${fruitModel.sizeLabel}`,
     };
   }
 
-  const name = humanizeModelName(fileName) || "Modèle publié";
+  const name = humanizeModelName(fileName) || "Modèle 3D";
   return {
-    id: `published-${fileName.replace(/\.glb$/i, "").replaceAll("/", "-")}`,
+    id: `model-${fileName.replace(/\.glb$/i, "").replaceAll("/", "-")}`,
     label: name,
     shortLabel: name,
     description:
@@ -78,21 +83,21 @@ export default defineEventHandler(async (event) => {
       listLocalModelFiles(),
       listPublishedR2ModelFiles(event),
     ]);
-    const localFileNames = new Set(localFiles);
-    const files = [...new Set([...localFiles, ...publishedFiles])];
+    const visibleFileName = (fileName: string) => !hiddenBustModelFiles.has(fileName);
+    const localEntries = [...new Set(localFiles)]
+      .filter(visibleFileName)
+      .map((fileName) => toCatalogEntry(fileName, "local"));
+    const bucketEntries = [...new Set(publishedFiles)]
+      .filter(visibleFileName)
+      .map((fileName) => toCatalogEntry(fileName, "bucket"));
     setResponseHeader(event, "Cache-Control", "private, max-age=60");
 
-    return files
-      .filter((fileName) => !fixedBustModelFiles.has(fileName))
-      .filter((fileName) => !hiddenBustModelFiles.has(fileName))
-      .map((fileName) =>
-        toCatalogEntry(fileName, localFileNames.has(fileName) ? "local" : "published")
-      );
+    return [...localEntries, ...bucketEntries];
   } catch (error) {
     console.error("[3d-model-catalog] Unable to list published R2 models", error);
     throw createError({
       statusCode: 503,
-      statusMessage: "Le catalogue des modèles publiés est temporairement indisponible.",
+      statusMessage: "Le catalogue des modèles est temporairement indisponible.",
     });
   }
 });

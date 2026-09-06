@@ -108,6 +108,11 @@ type NavBranch = {
   children: NavLink[];
 };
 
+const { multiviewFileName } = useDemoBustModelUrls();
+const multiviewPreviewHref = computed(
+  () => `/?preview3d=photo&model=${encodeURIComponent(multiviewFileName)}&material=glass`
+);
+
 const navTree: NavBranch[] = [
   {
     label: "Site principal",
@@ -147,8 +152,8 @@ const navTree: NavBranch[] = [
         description: "Préparer une génération à partir de plusieurs vues.",
       },
       {
-        label: "Viewer du modèle de référence",
-        href: "/?preview3d=photo&model=bust-multiview-v2-symptoms.glb&material=glass",
+        label: "Viewer du modèle multivue",
+        href: multiviewPreviewHref.value,
         description: "Aperçu interactif avec les matières expérimentales.",
       },
     ],

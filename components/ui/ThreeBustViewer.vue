@@ -52,6 +52,7 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted, watch, useId } from "vue";
 import { projectProfileContour } from "./three-bust/profile-contour";
+import { createGeneratedShapeMaterial, createGlassMaterial } from "./three-bust/materials";
 import * as THREE from "three";
 import { gsap } from "gsap";
 import {
@@ -241,31 +242,9 @@ const baseMaterial = new THREE.MeshStandardMaterial({
 });
 
 // Neutral clay material for shape-only photogrammetry exports.
-const generatedShapeMaterial = new THREE.MeshPhysicalMaterial({
-  color: 0xe2aabf,
-  roughness: 0.78,
-  metalness: 0,
-  envMapIntensity: 0.18,
-  clearcoat: 0.08,
-  clearcoatRoughness: 0.8,
-});
+const generatedShapeMaterial = createGeneratedShapeMaterial();
 
-const glassMaterial = new THREE.MeshPhysicalMaterial({
-  color: 0xffd8ea,
-  roughness: 0.08,
-  metalness: 0,
-  transmission: 0.88,
-  thickness: 1.25,
-  ior: 1.42,
-  attenuationColor: new THREE.Color(0xff8fbd),
-  attenuationDistance: 1.8,
-  envMapIntensity: 1.35,
-  clearcoat: 1,
-  clearcoatRoughness: 0.06,
-  transparent: true,
-  opacity: 0.94,
-  side: THREE.DoubleSide,
-});
+const glassMaterial = createGlassMaterial();
 
 const glowMaterial = new THREE.MeshPhysicalMaterial({
   color: 0x160315,
