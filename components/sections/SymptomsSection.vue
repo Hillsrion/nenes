@@ -1,6 +1,6 @@
 <template>
   <section
-    class="py-16 h-[450svh] relative z-20 sm:-mt-[25svh]"
+    class="py-16 h-[600svh] relative z-20 sm:-mt-[25svh]"
     ref="sectionRef"
     :data-active-symptom="activeSymptom"
     :class="[
