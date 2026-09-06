@@ -3,6 +3,7 @@ import {
   getThreeDSourceViews,
   isThreeDSourceComparisonEnabled,
 } from "../../utils/three-d-source-comparison";
+import { getLocalThreeDSourceComparison } from "../../utils/local-three-d-source-comparison";
 
 export default defineEventHandler(async (event) => {
   if (!isThreeDSourceComparisonEnabled()) {
@@ -11,7 +12,18 @@ export default defineEventHandler(async (event) => {
 
   const query = getQuery(event);
   const model = Array.isArray(query.model) ? query.model[0] : query.model;
-  const entry = await getThreeDModelManifestEntry(event, String(model || ""));
+  const modelFileName = String(model || "");
+
+  const localComparison = await getLocalThreeDSourceComparison(modelFileName);
+  if (localComparison) {
+    setResponseHeaders(event, {
+      "cache-control": "private, no-store, max-age=0",
+      "x-robots-tag": "noindex, nofollow, noarchive",
+    });
+    return localComparison;
+  }
+
+  const entry = await getThreeDModelManifestEntry(event, modelFileName);
 
   if (!entry) {
     throw createError({ statusCode: 404, statusMessage: "Source introuvable." });
