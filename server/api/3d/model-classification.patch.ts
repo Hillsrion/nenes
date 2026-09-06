@@ -1,5 +1,5 @@
 import { timingSafeEqual } from "node:crypto";
-import { bustFruitModels, type BustFruitId } from "../../../config/bust-models";
+import { bustFruitModels, type BustFruitId } from "../../../config/bust-fruit-catalog";
 import {
   assertThreeDModelFileName,
   readThreeDModelManifest,

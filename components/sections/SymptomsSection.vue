@@ -37,7 +37,7 @@
         <ThreeBustViewer
           :profile-label="title"
           :profile-label-progress="profileLabelProgress"
-          model-url="/models/bust-multiview-v2-symptoms.glb"
+          :model-url="getModelUrl(multiviewFileName)"
           :auto-rotate="false"
           :enable-zoom="false"
           :interactive="false"
@@ -86,6 +86,8 @@ import ThreeBustViewer from "~/components/ui/ThreeBustViewer.vue";
 import { useIsIOS } from "~/composables/useIsIOS";
 import { useSymptomsCarouselAnimation } from "~/composables/symptoms/useSymptomsCarouselAnimation";
 import { useSymptomsProfileModelAnimation } from "~/composables/symptoms/useSymptomsProfileModelAnimation";
+
+const { multiviewFileName, getModelUrl } = useDemoBustModelUrls();
 
 declare const useNuxtApp: () => { $gsap: any };
 

@@ -2,7 +2,7 @@
   <div ref="trackRef" class="relative lg:h-[470svh]">
     <section
       ref="sectionRef"
-      class="relative z-30 overflow-hidden rounded-t-4xl bg-white text-primary lg:sticky lg:top-0 lg:h-[100svh]"
+      class="relative z-30 overflow-hidden rounded-t-4xl bg-white text-primary lg:sticky lg:top-0 lg:z-auto lg:h-[100svh]"
     >
       <div
         ref="backgroundRef"
@@ -22,10 +22,11 @@
           </p>
         </div>
 
-        <!-- The mono-view model replaces the former desktop sidebar. -->
+        <!-- The mono-view model replaces the former desktop sidebar. On desktop
+             it lives inside the shared journey stage instead (see app.vue). -->
         <div
           ref="modelRef"
-          class="relative z-10 mx-auto mt-10 h-[48svh] w-full max-w-[34rem] lg:invisible lg:absolute lg:right-[-3vw] lg:top-0 lg:mt-0 lg:h-[100svh] lg:w-[58vw] lg:max-w-none lg:opacity-0"
+          class="relative z-10 mx-auto mt-10 h-[48svh] w-full max-w-[34rem] lg:hidden"
         >
           <ThreeBustViewer
             :model-url="monoviewModelUrl"
@@ -136,17 +137,8 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const store = useAnimationsStore();
-const runtimeConfig = useRuntimeConfig();
-const modelsPublicUrl = String(
-  runtimeConfig.public.r2.modelsPublicUrl || ""
-).replace(/\/+$/, "");
-// The reference mono-view is already part of the published 3D catalogue.
-const monoviewModelUrl = computed(() => {
-  const fileName = "bust-reference-front-single-symptoms.glb";
-  return modelsPublicUrl
-    ? `${modelsPublicUrl}/models/${fileName}`
-    : `/models/${fileName}`;
-});
+const { monoviewFileName, getModelUrl } = useDemoBustModelUrls();
+const monoviewModelUrl = computed(() => getModelUrl(monoviewFileName));
 
 const trackRef = ref<HTMLElement | null>(null);
 const sectionRef = ref<HTMLElement | null>(null);
