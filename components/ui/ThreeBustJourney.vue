@@ -150,6 +150,7 @@ const scheduleRender = (duration = 0) => {
 const needsContinuousRendering = () =>
   (!props.debugPath && lastCameraProgress < IDLE_SPIN_PROGRESS) ||
   modelIsRotating ||
+  symptomEffects.isTransitioning() ||
   props.symptomType === "nipple";
 
 // Normalize a freshly loaded GLB exactly like ThreeBustViewer does: strip the

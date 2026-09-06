@@ -21,7 +21,8 @@ interface AnimatedDroplet {
 }
 
 interface SymptomColorState {
-  original?: THREE.BufferAttribute | THREE.InterleavedBufferAttribute;
+  neutral: Float32Array;
+  blended: THREE.Float32BufferAttribute;
   skin: THREE.Float32BufferAttribute;
   dimpling: THREE.Float32BufferAttribute;
 }
@@ -32,6 +33,7 @@ export interface SymptomEffectsController {
   dispose: () => void;
   registerMesh: (mesh: THREE.Mesh, ensureSkinRelief?: boolean) => void;
   tick: (elapsedTime: number) => void;
+  isTransitioning: () => boolean;
   update: (symptom: SymptomType) => void;
 }
 
@@ -44,6 +46,16 @@ export const createSymptomEffects = (
   const symptomMorphMeshes: THREE.Mesh[] = [];
   const animatedDroplets: AnimatedDroplet[] = [];
   const symptomColorStates = new WeakMap<THREE.BufferGeometry, SymptomColorState>();
+  const weights = { asymmetry: 0, skin: 0, dimpling: 0, nipple: 0 };
+  let fromWeights = { ...weights };
+  let targetSymptom: SymptomType = "none";
+  let transitionStart = 0;
+  let transitioning = false;
+  const transitionDuration = 0.75;
+  const layerMaterials = new Map<SymptomType, Map<THREE.Material, number>>();
+  const prefersReducedMotion = () =>
+    typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
 
   const findFrontSurface = (
     loadedModel: THREE.Object3D,
@@ -207,6 +219,7 @@ export const createSymptomEffects = (
       [center.x - half.x * 0.3, center.y + half.y * 0.08],
       [center.x - half.x * 0.42, center.y - half.y * 0.04],
     ];
+    const neutralColors = new Float32Array(positions.count * 3);
     const skinColors = new Float32Array(positions.count * 3);
     const dimpleColors = new Float32Array(positions.count * 3);
     const neutral = new THREE.Color(0xffffff);
@@ -230,6 +243,7 @@ export const createSymptomEffects = (
       const skinBlend = THREE.MathUtils.clamp(skinWeight * (profile ? 0.32 : 0.18 + pore * 0.62), 0, 0.7);
       const original = geometry.getAttribute("color");
       if (original) neutral.setRGB(original.getX(index), original.getY(index), original.getZ(index));
+      neutral.toArray(neutralColors, index * 3);
       mixed.lerpColors(neutral, irritatedSkin, skinBlend);
       skinColors[index * 3] = mixed.r;
       skinColors[index * 3 + 1] = mixed.g;
@@ -251,7 +265,8 @@ export const createSymptomEffects = (
     }
 
     const state: SymptomColorState = {
-      original: geometry.getAttribute("color"),
+      neutral: neutralColors,
+      blended: new THREE.Float32BufferAttribute(neutralColors.slice(), 3).setUsage(THREE.DynamicDrawUsage),
       skin: new THREE.Float32BufferAttribute(skinColors, 3),
       dimpling: new THREE.Float32BufferAttribute(dimpleColors, 3),
     };
@@ -259,19 +274,26 @@ export const createSymptomEffects = (
     return state;
   };
 
-  const applyTint = (symptom: SymptomType) => {
+  // Keep the same color buffer bound throughout the transition, including when
+  // switching materials. Only upload colors while their weights are changing.
+  const applyTint = (_symptom: SymptomType) => {
     symptomMorphMeshes.forEach((mesh) => {
       const state = createColorState(mesh);
-      const tint = symptom === "skin" || symptom === "dimpling" ? state[symptom] : undefined;
-      if (tint) mesh.geometry.setAttribute("color", tint);
-      else if (state.original) mesh.geometry.setAttribute("color", state.original);
-      else mesh.geometry.deleteAttribute("color");
-
-      const useVertexColors = Boolean(tint || state.original);
+      const colors = state.blended.array;
+      for (let i = 0; i < colors.length; i += 1) {
+        colors[i] = state.neutral[i]
+          + (state.skin.array[i] - state.neutral[i]) * weights.skin
+          + (state.dimpling.array[i] - state.neutral[i]) * weights.dimpling;
+      }
+      state.blended.needsUpdate = true;
+      mesh.geometry.setAttribute("color", state.blended);
       const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
       materials.forEach((material) => {
-        (material as THREE.MeshStandardMaterial).vertexColors = useVertexColors;
-        material.needsUpdate = true;
+        const coloredMaterial = material as THREE.MeshStandardMaterial;
+        if (!coloredMaterial.vertexColors) {
+          coloredMaterial.vertexColors = true;
+          material.needsUpdate = true;
+        }
       });
     });
   };
@@ -447,22 +469,48 @@ export const createSymptomEffects = (
     });
   };
 
-  const update = (symptom: SymptomType) => {
+  const applyWeights = (updateColors = true) => {
     symptomMorphMeshes.forEach((mesh) => {
       if (!mesh.morphTargetInfluences || !mesh.morphTargetDictionary) return;
       symptomMorphNames.forEach((name) => {
         const index = mesh.morphTargetDictionary?.[name];
-        if (index !== undefined) mesh.morphTargetInfluences![index] = 0;
+        if (index !== undefined) mesh.morphTargetInfluences![index] = weights[name];
       });
-      if (symptomMorphNames.includes(symptom as MorphSymptomType)) {
-        const targetIndex = mesh.morphTargetDictionary[symptom];
-        if (targetIndex !== undefined) mesh.morphTargetInfluences[targetIndex] = 1;
-      }
     });
     symptomLayers.forEach((layer, type) => {
-      layer.visible = symptom !== "none" && type === symptom;
+      const weight = type === "none" ? 0 : weights[type];
+      layer.visible = weight > 0;
+      layerMaterials.get(type)?.forEach((opacity, material) => {
+        material.opacity = opacity * weight;
+      });
     });
-    applyTint(symptom);
+    if (updateColors) applyTint(targetSymptom);
+  };
+
+  const advanceTransition = (now: number) => {
+    if (!transitioning) return;
+    const progress = prefersReducedMotion() ? 1
+      : THREE.MathUtils.clamp((now - transitionStart) / transitionDuration, 0, 1);
+    const eased = progress * progress * (3 - 2 * progress);
+    const previousSkin = weights.skin;
+    const previousDimpling = weights.dimpling;
+    for (const name of Object.keys(weights) as Array<keyof typeof weights>) {
+      weights[name] = THREE.MathUtils.lerp(fromWeights[name], targetSymptom === name ? 1 : 0, eased);
+    }
+    applyWeights(previousSkin !== weights.skin || previousDimpling !== weights.dimpling);
+    transitioning = progress < 1;
+  };
+
+  const update = (symptom: SymptomType) => {
+    if (symptom === targetSymptom) return;
+    const now = performance.now() / 1000;
+    // Start from the current blend when scrolling quickly or reversing direction.
+    advanceTransition(now);
+    fromWeights = { ...weights };
+    targetSymptom = symptom;
+    transitionStart = now;
+    transitioning = true;
+    if (prefersReducedMotion()) advanceTransition(now);
   };
 
   const build = (loadedModel: THREE.Object3D, symptom: SymptomType) => {
@@ -499,10 +547,26 @@ export const createSymptomEffects = (
     } else {
       addNippleDischarge(nippleLayer, loadedModel, 0.34, 0.26);
     }
+    symptomLayers.forEach((layer, type) => {
+      const materials = new Map<THREE.Material, number>();
+      layer.traverse((child) => {
+        if (!(child instanceof THREE.Mesh)) return;
+        (Array.isArray(child.material) ? child.material : [child.material]).forEach((material) => {
+          if (materials.has(material)) return;
+          materials.set(material, material.opacity);
+          material.transparent = true;
+          material.depthWrite = false;
+          material.needsUpdate = true;
+        });
+      });
+      layerMaterials.set(type, materials);
+    });
+    applyWeights();
     update(symptom);
   };
 
   const tick = (elapsedTime: number) => {
+    advanceTransition(elapsedTime);
     if (!symptomLayers.get("nipple")?.visible) return;
     if (nippleSourceBead) {
       const beadScale = 0.82 + (Math.sin(elapsedTime * 4.8) + 1) * 0.09;
@@ -546,6 +610,11 @@ export const createSymptomEffects = (
     symptomRoot = null;
     nippleSourceBead = null;
     symptomLayers.clear();
+    layerMaterials.clear();
+    transitioning = false;
+    targetSymptom = "none";
+    weights.asymmetry = weights.skin = weights.dimpling = weights.nipple = 0;
+    fromWeights = { ...weights };
     symptomMorphMeshes.length = 0;
     animatedDroplets.length = 0;
   };
@@ -557,5 +626,5 @@ export const createSymptomEffects = (
     createColorState(mesh);
   };
 
-  return { applyTint, build, dispose, registerMesh, tick, update };
+  return { applyTint, build, dispose, registerMesh, tick, update, isTransitioning: () => transitioning };
 };

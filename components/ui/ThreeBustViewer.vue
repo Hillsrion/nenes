@@ -177,6 +177,7 @@ const needsContinuousRendering = () =>
   props.autoRotate ||
   controlsActive ||
   modelIsRotating ||
+  symptomEffects.isTransitioning() ||
   props.symptomType === "nipple" ||
   props.materialStyle === "glow";
 
