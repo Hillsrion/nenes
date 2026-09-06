@@ -41,7 +41,7 @@
           >
             <div
               ref="sharedProfileModelRef"
-              class="absolute bottom-[-15svh] left-0 z-10 mx-0 h-[115svh] w-[min(78vw,42rem)] max-md:w-[95vw]"
+              class="absolute bottom-[-15svh] left-0 z-10 mx-0 h-[115svh] w-[min(100vw,56rem)] max-md:w-[100vw]"
             >
               <ThreeBustViewer
                 :profile-label="symptomsMainTitle"
@@ -50,8 +50,9 @@
                 :auto-rotate="false"
                 :enable-zoom="false"
                 :interactive="false"
-                :initial-rotation-y="Math.PI / 2"
-                :model-scale="1.18"
+                :initial-rotation-y="isSymptomsProfileView ? Math.PI / 2 : 0"
+                :symptom-type="activeSectionSymptom"
+                :model-scale="1.05"
                 model-horizontal-alignment="left"
                 :show-backdrop="false"
                 :show-loading-indicator="false"
@@ -63,10 +64,13 @@
           <div class="relative z-20 -mt-[100vh]">
             <SymptomsSection
               :title="symptomsMainTitle"
+              :intro-card="symptomsIntroCard"
               :cards="symptomsCards"
               :show-profile-model="true"
               :use-shared-model="true"
               @profile-progress="symptomsProfileProgress = $event"
+              @symptom-change="activeSectionSymptom = $event"
+              @profile-view-change="isSymptomsProfileView = $event"
             />
 
             <SelfExaminationSection
@@ -350,6 +354,7 @@
 </template>
 
 <script setup lang="ts">
+import type { SymptomType } from "~/components/ui/three-bust/symptom-effects";
 import MainLayout from "~/components/layout/MainLayout.vue";
 import LoadingSection from "~/components/sections/LoadingSection.vue";
 import EntrySection from "~/components/sections/EntrySection.vue";
@@ -668,6 +673,7 @@ const {
   screeningContentElements,
   screeningMainTitle,
   symptomsMainTitle,
+  symptomsIntroCard,
   symptomsCards,
   selfExaminationSteps,
   cursorImages,
@@ -730,6 +736,8 @@ const mainLayoutRef = ref(null); // Ref to MainLayout component
 const symptomsAndExaminationContainerRef = ref<HTMLElement | null>(null);
 const sharedProfileModelRef = ref<HTMLElement | null>(null);
 const symptomsProfileProgress = ref(0);
+const activeSectionSymptom = ref<SymptomType>("none");
+const isSymptomsProfileView = ref(true);
 
 let sharedModelAnimation: any = null;
 

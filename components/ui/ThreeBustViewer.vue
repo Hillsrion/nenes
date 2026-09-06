@@ -35,7 +35,10 @@
       v-if="profileLabel && profileContour"
       class="profile-contour-label pointer-events-none absolute inset-0 z-20 h-full w-full overflow-visible text-primary"
       :viewBox="`0 0 ${profileContour.width} ${profileContour.height}`"
-      :style="{ opacity: isLoading || profileLabelProgress <= 0 ? 0 : 1 }"
+      :style="{
+        opacity: isLoading || profileLabelProgress <= 0 ? 0 : profileLabelOpacity,
+        transition: 'opacity 240ms ease-out',
+      }"
       aria-hidden="true"
     >
       <defs><path :id="profileCurveId" :d="profileContour.path" /></defs>
@@ -112,6 +115,7 @@ const materialBackdropClass = computed(() => {
 const containerRef = ref<HTMLDivElement | null>(null);
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 const isLoading = ref(true);
+const profileLabelOpacity = ref(1);
 const profileCurveId = `bust-contour-${useId()}`;
 const profileContour = ref<ReturnType<typeof projectProfileContour>>(null);
 const refreshProfileContour = () => {
@@ -150,6 +154,9 @@ let lastRenderTime = 0;
 let renderUntil = 0;
 let visibilityChangeHandler: (() => void) | null = null;
 let controlsActive = false;
+let modelIsRotating = false;
+let profileTurnTimer = 0;
+let queuedSymptom: SymptomType | null = null;
 
 type PerformanceNavigator = Navigator & {
   deviceMemory?: number;
@@ -168,6 +175,7 @@ const isConstrainedDevice = () => {
 const needsContinuousRendering = () =>
   props.autoRotate ||
   controlsActive ||
+  modelIsRotating ||
   props.symptomType === "nipple" ||
   props.materialStyle === "glow";
 
@@ -543,7 +551,9 @@ const initThree = async () => {
     canvas: canvasRef.value,
     alpha: true,
     antialias: true,
-    powerPreference: props.interactive ? "high-performance" : "low-power",
+    // The symptoms sequence has a short, scripted turn even though it is not
+    // user-interactive. Keep that transition on the dedicated GPU.
+    powerPreference: props.interactive || Boolean(props.profileLabel) ? "high-performance" : "low-power",
   });
   renderer.setSize(width, height, false);
   renderer.setPixelRatio(
@@ -765,7 +775,13 @@ const tick = (timestamp: number) => {
   if (!renderer || !scene || !camera) return;
   if (!isVisible || document.hidden || disposed) return;
 
-  const targetFps = isConstrainedDevice() ? 24 : props.interactive ? 45 : 30;
+  const targetFps = isConstrainedDevice()
+    ? 24
+    : modelIsRotating
+      ? 60
+      : props.interactive
+        ? 45
+        : 30;
   if (timestamp - lastRenderTime < 1000 / targetFps) {
     scheduleRender();
     return;
@@ -832,6 +848,7 @@ onMounted(() => {
 onUnmounted(() => {
   disposed = true;
   window.clearTimeout(initTimer);
+  window.clearTimeout(profileTurnTimer);
   viewportObserver?.disconnect();
   resizeObserver?.disconnect();
   if (visibilityChangeHandler) {
@@ -876,6 +893,7 @@ onUnmounted(() => {
   modelMaterialEntries.length = 0;
 
   symptomEffects.dispose();
+  if (modelGroup) gsap.killTweensOf(modelGroup.rotation);
   
   if (mockBust) {
     mockBust.traverse((child) => {
@@ -921,9 +939,60 @@ watch(
 );
 
 watch(
+  () => props.initialRotationY,
+  (rotationY) => {
+    if (!modelGroup) return;
+    window.clearTimeout(profileTurnTimer);
+    const returnsToProfile = Math.abs(rotationY - Math.PI / 2) < 0.01;
+    modelIsRotating = true;
+
+    const turn = () => {
+      gsap.to(modelGroup!.rotation, {
+        y: rotationY,
+        duration: 0.7,
+        ease: "power2.inOut",
+        overwrite: true,
+        onUpdate: scheduleRender,
+        onComplete: () => {
+          modelIsRotating = false;
+          if (returnsToProfile) {
+            refreshProfileContour();
+            profileLabelOpacity.value = 1;
+          } else if (queuedSymptom) {
+            const symptom = queuedSymptom;
+            queuedSymptom = null;
+            symptomEffects.update(symptom);
+          }
+          scheduleRender(120);
+        },
+      });
+    };
+
+    // The curved label belongs to the profile view. Fade it out completely
+    // before the bust turns so the two motions never compete visually.
+    if (!returnsToProfile && profileLabelOpacity.value > 0) {
+      profileLabelOpacity.value = 0;
+      profileTurnTimer = window.setTimeout(turn, 250);
+    } else {
+      turn();
+    }
+  }
+);
+
+watch(
   () => props.symptomType,
   (newSymptom) => {
-    symptomEffects.update(newSymptom);
+    if (newSymptom === "none") {
+      queuedSymptom = null;
+      symptomEffects.update(newSymptom);
+    } else if (modelIsRotating) {
+      // The card can become active while the label is fading. Keep its visual
+      // effect queued until the bust has completed the profile-to-front turn.
+      queuedSymptom = newSymptom;
+      return;
+    } else {
+      symptomEffects.update(newSymptom);
+    }
     scheduleRender(newSymptom === "nipple" ? 0 : 150);
   }
 );
