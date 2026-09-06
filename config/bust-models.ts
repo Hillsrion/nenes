@@ -64,7 +64,7 @@ export const referenceBustModels = [
     shortLabel: "Référence multivue",
     description: "Reconstruction de référence produite à partir de plusieurs angles cohérents.",
     fileName: defaultBustModel.fileName,
-    badge: "Référence",
+    badge: "Bucket · Multi",
   },
   {
     id: "reference-front-single-v1",
@@ -73,9 +73,34 @@ export const referenceBustModels = [
     description:
       "Même vue de face que la référence multivue, générée avec Hunyuan3D mono-image.",
     fileName: "bust-reference-front-single-symptoms.glb",
-    badge: "Comparaison",
+    badge: "Bucket · Mono",
   },
 ] satisfies readonly BustModelCatalogEntry[];
+
+// Published photo-derived models that must remain visible even when the
+// server-side R2 listing is unavailable in a local or public deployment.
+export const publishedBustModels = [
+  {
+    id: "mathilde-monoview",
+    label: "Mathilde · monovue Hunyuan3D",
+    shortLabel: "Mathilde · monovue",
+    description: "Reconstruction générée à partir d’une vue avec Hunyuan3D.",
+    fileName: "bust-mathilde-monoview.glb",
+    badge: "Bucket · Mono",
+  },
+  {
+    id: "mathilde-multiview",
+    label: "Mathilde · multivue Hunyuan3D",
+    shortLabel: "Mathilde · multivue",
+    description: "Reconstruction générée à partir de quatre vues avec Hunyuan3D.",
+    fileName: "bust-mathilde-multiview.glb",
+    badge: "Bucket · Multi",
+  },
+] satisfies readonly BustModelCatalogEntry[];
+
+export const fixedBustModelFiles = new Set(
+  [...referenceBustModels, ...publishedBustModels].map((model) => model.fileName)
+);
 
 // This legacy GLB remains in R2 for backwards compatibility, but should no
 // longer be offered in the catalogue.

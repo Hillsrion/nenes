@@ -1,4 +1,5 @@
 import {
+  publishedBustModels,
   referenceBustModels,
   type BustModelCatalogEntry,
 } from "~/config/bust-models";
@@ -17,5 +18,11 @@ export const useBustModelCatalog = () => {
     { default: () => [] }
   );
 
-  return computed(() => [...referenceBustModels, ...(publishedModels.value || [])]);
+  return computed(() => {
+    const entries = [...referenceBustModels, ...publishedBustModels, ...(publishedModels.value || [])];
+    return entries.filter(
+      (model, index, allModels) =>
+        allModels.findIndex((candidate) => candidate.fileName === model.fileName) === index
+    );
+  });
 };
