@@ -55,8 +55,8 @@ export const createSymptomEffects = (
 
     modelGroup.updateMatrixWorld(true);
     const raycaster = new THREE.Raycaster(
-      new THREE.Vector3(x, y, 3),
-      new THREE.Vector3(0, 0, -1)
+      modelGroup.localToWorld(new THREE.Vector3(x, y, 3)),
+      new THREE.Vector3(0, 0, -1).transformDirection(modelGroup.matrixWorld)
     );
     const hit = raycaster
       .intersectObject(loadedModel, true)
@@ -197,9 +197,12 @@ export const createSymptomEffects = (
     const bounds = new THREE.Box3().setFromBufferAttribute(positions);
     const center = bounds.getCenter(new THREE.Vector3());
     const half = bounds.getSize(new THREE.Vector3()).multiplyScalar(0.5);
-    const skinCenterX = center.x + half.x * 0.35;
-    const skinCenterY = center.y + half.y * 0.17;
-    const dimpleCenters = [
+    const profile = mesh.userData.symptomProfile;
+    const skinCenterX = center.x + half.x * (profile?.skin?.[0] ?? 0.35);
+    const skinCenterY = center.y + half.y * (profile?.skin?.[1] ?? 0.17);
+    const dimpleCenters: number[][] = profile
+      ? profile.dimples.map(([x, y]: number[]) => [center.x + half.x * x, center.y + half.y * y])
+      : [
       [center.x - half.x * 0.43, center.y + half.y * 0.22],
       [center.x - half.x * 0.3, center.y + half.y * 0.08],
       [center.x - half.x * 0.42, center.y - half.y * 0.04],
@@ -224,7 +227,9 @@ export const createSymptomEffects = (
         Math.sin(skinX * 18.5 + Math.sin(skinY * 3.1) * 0.8) *
         Math.sin(skinY * 20.5 - Math.sin(skinX * 2.7) * 0.7);
       const pore = Math.pow(Math.max(0, cellularWave), 5);
-      const skinBlend = THREE.MathUtils.clamp(skinWeight * (0.18 + pore * 0.62), 0, 0.7);
+      const skinBlend = THREE.MathUtils.clamp(skinWeight * (profile ? 0.32 : 0.18 + pore * 0.62), 0, 0.7);
+      const original = geometry.getAttribute("color");
+      if (original) neutral.setRGB(original.getX(index), original.getY(index), original.getZ(index));
       mixed.lerpColors(neutral, irritatedSkin, skinBlend);
       skinColors[index * 3] = mixed.r;
       skinColors[index * 3 + 1] = mixed.g;
@@ -481,7 +486,19 @@ export const createSymptomEffects = (
     const dimplingLayer = createLayer("dimpling");
     addCrustRelief(dimplingLayer);
     const nippleLayer = createLayer("nipple");
-    addNippleDischarge(nippleLayer, loadedModel, 0.34, 0.26);
+    const calibratedMesh = symptomMorphMeshes.find((mesh) => mesh.userData.symptomProfile?.nipple);
+    if (calibratedMesh) {
+      const bounds = new THREE.Box3().setFromBufferAttribute(calibratedMesh.geometry.getAttribute("position"));
+      const center = bounds.getCenter(new THREE.Vector3());
+      const half = bounds.getSize(new THREE.Vector3()).multiplyScalar(0.5);
+      const [x, y] = calibratedMesh.userData.symptomProfile.nipple;
+      const point = modelGroup.worldToLocal(calibratedMesh.localToWorld(
+        new THREE.Vector3(center.x + half.x * x, center.y + half.y * y, center.z)
+      ));
+      addNippleDischarge(nippleLayer, loadedModel, point.x, point.y);
+    } else {
+      addNippleDischarge(nippleLayer, loadedModel, 0.34, 0.26);
+    }
     update(symptom);
   };
 

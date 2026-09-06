@@ -1,3 +1,4 @@
+import type { SymptomCardData } from "~/types";
 import imageSizes from "~/imageSizes.json";
 
 export const useContent = () => {
@@ -38,30 +39,35 @@ export const useContent = () => {
 
   const symptomsMainTitle = "les symptômes";
 
+  const symptomsIntroCard = {
+    title: "L'observation visuelle",
+    description:
+      "Placez-vous devant un miroir, les bras le long du corps, puis les mains sur les hanches, et enfin les bras levés au-dessus de la tête. Observez vos seins pour détecter tout changement inhabituel.",
+  };
+
   const symptomsCards = [
-    {
-      title: "L'observation visuelle",
-      description:
-        "Placez-vous devant un miroir, les bras le long du corps, puis les mains sur les hanches, et enfin les bras levés au-dessus de la tête. Observez vos seins pour détecter tout changement inhabituel.",
-    },
     {
       title: "Modification de la taille, de la forme ou de la symétrie.",
       image: "/images/symptoms/symptoms-01.avif",
+      symptom: "asymmetry",
     },
     {
       title: "Changement d'aspect de la peau",
       subtitle: `rougeur, aspect de "peau d'orange", plis`,
       image: "/images/symptoms/symptoms-02.avif",
+      symptom: "skin",
     },
     {
       title: "Apparition de fossettes ou de croûtes",
       image: "/images/symptoms/symptoms-03.avif",
+      symptom: "dimpling",
     },
     {
       title: "Écoulement ou modification du mamelon",
       image: "/images/symptoms/symptoms-04.avif",
+      symptom: "nipple",
     },
-  ];
+  ] satisfies SymptomCardData[];
 
   const selfExaminationHeader =
     "L'autopalpation<br>est à réaliser une fois par mois, de préférence quelques jours<br>après la fin de vos règles, lorsque vos seins sont moins sensibles";
@@ -118,6 +124,7 @@ export const useContent = () => {
     screeningContentElements,
     screeningMainTitle,
     symptomsMainTitle,
+    symptomsIntroCard,
     symptomsCards,
     selfExaminationHeader,
     selfExaminationSteps,

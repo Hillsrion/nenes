@@ -2,6 +2,7 @@
   <section
     class="py-16 h-[450svh] relative z-20 sm:-mt-[25svh]"
     ref="sectionRef"
+    :data-active-symptom="activeSymptom"
     :class="[
       useSharedModel ? 'bg-transparent' : 'bg-white',
       { 'opacity-0': !showSymptomsSection }
@@ -15,13 +16,22 @@
         fixed: isIOS,
       }"
     >
-      <div v-if="!showProfileModel" ref="titleWrapperRef">
-        <Title ref="titleRef" :title="title" />
+      <div
+        v-if="introCard"
+        ref="introCardRef"
+        class="relative z-0 mx-auto w-[min(28rem,80vw)] text-left"
+      >
+        <h3 class="text-primary text-2xl font-medium leading-title lg:text-3xl">
+          {{ introCard.title }}
+        </h3>
+        <p class="text-primary text-base leading-normal lg:text-xl mt-4">
+          {{ introCard.description }}
+        </p>
       </div>
       <div
         v-if="showProfileModel && !useSharedModel"
         ref="profileModelRef"
-        class="pointer-events-none absolute bottom-[-15svh] left-0 z-0 mx-0 h-[115svh] w-[min(78vw,42rem)] opacity-0 max-md:w-[95vw]"
+        class="pointer-events-none absolute bottom-[-15svh] left-0 z-0 mx-0 h-[115svh] w-[min(100vw,56rem)] opacity-0 max-md:w-[100vw]"
         aria-hidden="true"
       >
         <ThreeBustViewer
@@ -31,8 +41,9 @@
           :auto-rotate="false"
           :enable-zoom="false"
           :interactive="false"
-          :initial-rotation-y="Math.PI / 2"
-          :model-scale="1.18"
+          :initial-rotation-y="isProfileView ? Math.PI / 2 : 0"
+          :symptom-type="activeSymptom"
+          :model-scale="1.05"
           model-horizontal-alignment="left"
           :show-backdrop="false"
           :show-loading-indicator="false"
@@ -41,8 +52,7 @@
       </div>
       <div
         ref="cardStageRef"
-        class="absolute inset-0"
-        :class="{ 'opacity-0': showProfileModel }"
+        class="absolute inset-0 z-10"
       >
         <div
           v-for="(card, index) in cards"
@@ -68,13 +78,12 @@
 
 <script setup lang="ts">
 import type { PropType } from "vue";
+import type { SymptomType } from "~/components/ui/three-bust/symptom-effects";
 import { useAnimationsStore } from "~/stores";
-import { Card } from "~/types";
-import Title from "~/components/ui/Title.vue";
+import type { SymptomCardData, IntroCard } from "~/types";
 import SymptomCard from "~/components/ui/SymptomCard.vue";
 import ThreeBustViewer from "~/components/ui/ThreeBustViewer.vue";
 import { useIsIOS } from "~/composables/useIsIOS";
-import { useSymptomsTitleAnimation } from "~/composables/symptoms/useSymptomsTitleAnimation";
 import { useSymptomsCarouselAnimation } from "~/composables/symptoms/useSymptomsCarouselAnimation";
 import { useSymptomsProfileModelAnimation } from "~/composables/symptoms/useSymptomsProfileModelAnimation";
 
@@ -85,8 +94,12 @@ const props = defineProps({
     type: String,
     required: true,
   },
+  introCard: {
+    type: Object as PropType<IntroCard>,
+    default: null,
+  },
   cards: {
-    type: Array as PropType<Card[]>,
+    type: Array as PropType<SymptomCardData[]>,
     required: true,
   },
   showProfileModel: {
@@ -105,9 +118,14 @@ const { isIOS } = useIsIOS();
 const { $gsap } = useNuxtApp();
 
 const sectionRef = ref<HTMLElement | null>(null);
-const titleWrapperRef = ref<HTMLElement | null>(null);
-const titleRef = ref<{ titleElement: HTMLElement } | null>(null);
-const emit = defineEmits<{ profileProgress: [progress: number] }>();
+const introCardRef = ref<HTMLElement | null>(null);
+const emit = defineEmits<{
+  profileProgress: [progress: number];
+  symptomChange: [symptom: SymptomType];
+  profileViewChange: [isProfileView: boolean];
+}>();
+const activeSymptom = ref<SymptomType>("none");
+const isProfileView = ref(true);
 const profileLabelProgress = ref(0);
 const cardRefs = ref<(HTMLElement | null)[]>([]);
 const profileModelRef = ref<HTMLElement | null>(null);
@@ -124,21 +142,31 @@ const setCardRef = (el: Element | null, index: number) => {
   }
 };
 
-const { initializeTitleAnimation, cleanupTitleAnimation } =
-  useSymptomsTitleAnimation({
-    $gsap,
-    sectionRef,
-    titleWrapperRef,
-  });
-
 const { initializeCarouselAnimation, cleanupCarouselAnimation } =
   useSymptomsCarouselAnimation({
     $gsap,
     sectionRef,
     cardRefs,
-    titleRef,
+    titleRef: introCardRef,
     cardStageRef,
     showProfileModel: props.showProfileModel,
+    onActiveCardChange: (index) => {
+      activeSymptom.value = props.cards[index]?.symptom ?? "none";
+      isProfileView.value = index < 0;
+      emit("symptomChange", activeSymptom.value);
+      emit("profileViewChange", isProfileView.value);
+    },
+    onSequenceComplete: () => {
+      // The sequence ends on a neutral, front-facing bust rather than
+      // returning to the labelled profile view.
+      isProfileView.value = false;
+      // Notify the parent of the camera state first. Otherwise an existing
+      // profile state can briefly receive the neutral symptom and rotate the
+      // shared bust to profile before the front-facing update arrives.
+      emit("profileViewChange", false);
+      activeSymptom.value = "none";
+      emit("symptomChange", activeSymptom.value);
+    },
   });
 
 const { initializeModelAnimation, cleanupModelAnimation } =
@@ -163,7 +191,6 @@ watch(
         setTimeout(() => {
           requestAnimationFrame(() => {
             requestAnimationFrame(() => {
-              initializeTitleAnimation();
               initializeCarouselAnimation();
               if (props.showProfileModel) initializeModelAnimation();
             });
@@ -175,7 +202,6 @@ watch(
 );
 
 onUnmounted(() => {
-  cleanupTitleAnimation();
   cleanupCarouselAnimation();
   cleanupModelAnimation();
 });
