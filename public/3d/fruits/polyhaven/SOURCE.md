@@ -8,13 +8,10 @@
 
 Included asset IDs:
 
-- `bananas`
 - `food_apple_01`
-- `food_avocado_01`
 - `food_kiwi_01`
 - `food_lime_01`
 - `food_lychee_01`
-- `food_pears_asian_01`
 - `food_pomegranate_01`
 - `lemon`
 
