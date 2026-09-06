@@ -9,8 +9,8 @@
           Catalogue des bustes
         </h1>
         <p class="mt-3 max-w-2xl text-sm leading-6 text-primary/70 md:text-base">
-          Les modèles publiés peuvent être ouverts directement dans le viewer pour être
-          examinés sous tous les angles et avec les différentes matières.
+          Les modèles locaux et publiés peuvent être ouverts directement dans le viewer
+          pour être examinés sous tous les angles et avec les différentes matières.
         </p>
       </div>
 
@@ -78,6 +78,8 @@ const bustModelCatalog = useBustModelCatalog();
 
 const getModelUrl = (fileName: string) => {
   const encodedName = fileName.split("/").map(encodeURIComponent).join("/");
+  if (import.meta.dev) return `/models/${encodedName}`;
+
   return modelsPublicUrl ? `${modelsPublicUrl}/models/${encodedName}` : `/models/${encodedName}`;
 };
 
