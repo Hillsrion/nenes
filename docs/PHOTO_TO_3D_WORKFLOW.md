@@ -144,6 +144,20 @@ trois symptômes ; les morph targets et les couleurs de sommets suffisent. Les
 petites croûtes 3D et les gouttes animées sont ajoutées par le viewer et ne
 créent pas de copie supplémentaire du GLB.
 
+Pour régénérer les symptômes de la référence multivue, utiliser ses repères
+calibrés, enregistrés dans le GLB et relus par le viewer pour les couleurs et
+l'écoulement :
+
+    pnpm model:symptoms -- \
+      public/models/bust-multiview-v2-base.glb \
+      public/models/bust-multiview-v2-symptoms.glb \
+      "Modèle de référence multivue" config/reference-symptoms.json
+
+Conserver auparavant une copie du résultat précédent dans `private-3d-inputs/`.
+Les coordonnées du profil sont relatives au centre et aux demi-dimensions du
+maillage neutre. Ce profil est propre à cette référence : ne pas l'appliquer
+automatiquement à un autre buste.
+
 ## Nommer les variantes de volume par fruit
 
 Le catalogue suivi par Git se trouve dans `config/bust-models.ts`. Les fruits
