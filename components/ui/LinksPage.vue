@@ -95,6 +95,8 @@
 </template>
 
 <script setup lang="ts">
+import { useDemoBustModelUrls } from "~/composables/useDemoBustModelUrls";
+
 type NavLink = {
   label: string;
   href: string;

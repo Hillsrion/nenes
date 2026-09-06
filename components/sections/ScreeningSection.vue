@@ -117,6 +117,7 @@ import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import SplitType from "split-type";
 import ThreeBustViewer from "~/components/ui/ThreeBustViewer.vue";
+import { useDemoBustModelUrls } from "~/composables/useDemoBustModelUrls";
 import { useScreeningWarmup } from "~/composables/screening/useScreeningWarmup";
 import { useAnimationsStore } from "~/stores";
 

@@ -77,6 +77,7 @@
 import { ref, watch, nextTick, onMounted, onUnmounted } from "vue";
 import ExaminationSteps from "~/components/ui/ExaminationSteps.vue";
 import ThreeBustViewer from "~/components/ui/ThreeBustViewer.vue";
+import { useDemoBustModelUrls } from "~/composables/useDemoBustModelUrls";
 import { useAnimationsStore } from "~/stores";
 import { useIsIOS } from "~/composables/useIsIOS";
 

@@ -83,6 +83,7 @@ import { useAnimationsStore } from "~/stores";
 import type { SymptomCardData, IntroCard } from "~/types";
 import SymptomCard from "~/components/ui/SymptomCard.vue";
 import ThreeBustViewer from "~/components/ui/ThreeBustViewer.vue";
+import { useDemoBustModelUrls } from "~/composables/useDemoBustModelUrls";
 import { useIsIOS } from "~/composables/useIsIOS";
 import { useSymptomsCarouselAnimation } from "~/composables/symptoms/useSymptomsCarouselAnimation";
 import { useSymptomsProfileModelAnimation } from "~/composables/symptoms/useSymptomsProfileModelAnimation";
