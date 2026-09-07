@@ -5,7 +5,8 @@
         "origins": [
           "https://nenes.ismaelsebbane.com",
           "https://nenes.netlify.app",
-          "https://main--nenes.netlify.app"
+          "https://main--nenes.netlify.app",
+          "https://develop--nenes.netlify.app"
         ],
         "methods": ["GET", "HEAD", "PUT"],
         "headers": ["content-type"]
