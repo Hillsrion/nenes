@@ -37,11 +37,12 @@
         <ThreeBustViewer
           :profile-label="title"
           :profile-label-progress="profileLabelProgress"
-          :model-url="getModelUrl(multiviewFileName)"
+          :model-url="getModelUrl(palpationFileName)"
+          animation-step="observation"
           :auto-rotate="false"
           :enable-zoom="false"
           :interactive="false"
-          :initial-rotation-y="isProfileView ? Math.PI / 2 : 0"
+          :initial-rotation-y="isProfileView ? -Math.PI / 2 : 0"
           :symptom-type="activeSymptom"
           :model-scale="1.05"
           model-horizontal-alignment="left"
@@ -88,7 +89,7 @@ import { useIsIOS } from "~/composables/useIsIOS";
 import { useSymptomsCarouselAnimation } from "~/composables/symptoms/useSymptomsCarouselAnimation";
 import { useSymptomsProfileModelAnimation } from "~/composables/symptoms/useSymptomsProfileModelAnimation";
 
-const { multiviewFileName, getModelUrl } = useDemoBustModelUrls();
+const { palpationFileName, getModelUrl } = useDemoBustModelUrls();
 
 declare const useNuxtApp: () => { $gsap: any };
 
@@ -160,13 +161,9 @@ const { initializeCarouselAnimation, cleanupCarouselAnimation } =
       emit("profileViewChange", isProfileView.value);
     },
     onSequenceComplete: () => {
-      // The sequence ends on a neutral, front-facing bust rather than
-      // returning to the labelled profile view.
-      isProfileView.value = false;
-      // Notify the parent of the camera state first. Otherwise an existing
-      // profile state can briefly receive the neutral symptom and rotate the
-      // shared bust to profile before the front-facing update arrives.
-      emit("profileViewChange", false);
+      // Finish in the same profile used by the next palpation section.
+      isProfileView.value = true;
+      emit("profileViewChange", true);
       activeSymptom.value = "none";
       emit("symptomChange", activeSymptom.value);
     },

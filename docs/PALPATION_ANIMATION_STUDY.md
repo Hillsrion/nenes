@@ -32,10 +32,24 @@ d'observation devant le miroir avec changements de posture n'est pas animée.
 
 ## Intégration dans le site
 
-La section `#autopalpation` affiche le modèle Zou de face, à gauche des vidéos.
-Le modèle de profil des symptômes s'efface à l'entrée de cette section et
-réapparaît lorsque l'on remonte. Le cadrage et la largeur de la colonne de
-contenu sont adaptés pour garder le geste visible.
+Un seul modèle Zou est utilisé pour les symptômes puis la palpation : le même
+objet Three.js reste monté dans la scène commune. Le passage à `#autopalpation`
+ne change ni son cadrage ni sa vue de profil. Le profil montre le côté palpé ;
+l'étape « autre sein » passe au profil opposé. L'étape d'observation et la
+section symptômes masquent la main. Les trois morphs de symptômes et leurs
+repères sont calibrés pour Zou (`config/zou-symptoms.json`).
+
+Pour produire le fichier partagé après la génération des boucles :
+
+```sh
+node scripts/generate-symptom-model.mjs private-3d-inputs/palpation-study/bust-zou-animation-base.glb private-3d-inputs/palpation-study/zou-symptoms.glb "Zou · symptômes" config/zou-symptoms.json
+node scripts/combine-palpation-symptoms.mjs public/models/bust-zou-full-multiview-hi3d-palpation.glb private-3d-inputs/palpation-study/zou-symptoms.glb private-3d-inputs/palpation-study/zou-shared.glb
+```
+
+Après contrôle, copier la sortie partagée vers le fichier local stable. La
+fusion vérifie les sommets neutres, préserve les 52 morphs de contact et les
+cinq clips, et ajoute trois canaux de symptômes à zéro aux pistes de poids.
+Elle ne remplace pas la géométrie de palpation validée.
 
 `ExaminationSteps` émet son index actif, celui qui sélectionne déjà la vidéo.
 `SelfExaminationSection` transmet l'identifiant correspondant au viewer. Le
