@@ -1,3 +1,4 @@
+import examinationSteps from "~/config/self-examination-steps.json";
 import type { SymptomCardData } from "~/types";
 import imageSizes from "~/imageSizes.json";
 
@@ -78,28 +79,7 @@ export const useContent = () => {
     stepsWithOptimizedVideos: [0, 1, 2, 3, 4], // step-01 to step-05 (indices 0-4)
   };
 
-  const selfExaminationSteps = [
-    {
-      content:
-        "Placez-vous devant un miroir, les bras le long du corps, puis les mains sur les hanches, et enfin les bras levés au-dessus de la tête. Observez vos seins pour détecter tout changement inhabituel.",
-    },
-    {
-      content:
-        "Couvrez l'intégralité du sein, de l'extérieur vers le mamelon, en utilisant différents niveaux de pression (légère, moyenne, forte).",
-    },
-    {
-      content:
-        "N'oubliez pas de palper la zone sous l'aisselle ainsi que l'espace entre le sein et l'aisselle.",
-    },
-    {
-      content:
-        "Terminez en pinçant délicatement le mamelon pour vérifier l'absence d'écoulement anormal.",
-    },
-    {
-      content:
-        "Répétez ces mêmes gestes sur le sein droit avec votre main gauche.",
-    },
-  ];
+  const selfExaminationSteps = examinationSteps;
   const { width, height } = imageSizes.cursor.size;
   const cursorImages = [
     `/images/cursor/0D2A8280-${width}x${height}.avif`,

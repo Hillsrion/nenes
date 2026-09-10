@@ -46,6 +46,25 @@
         <textPath :href="`#${profileCurveId}`" :startOffset="`${100 * (1 - profileLabelProgress)}%`">{{ profileLabel.toLocaleLowerCase('fr-FR') }}</textPath>
       </text>
     </svg>
+    <div v-if="animationDuration > 0 && interactive && !isLoading" class="absolute bottom-12 left-1/2 z-30 w-[min(90%,38rem)] -translate-x-1/2 rounded-2xl bg-white/95 px-4 py-3 text-sm text-[#702741] shadow-lg">
+      <div v-if="animationSteps.length" class="mb-3 border-b border-[#702741]/15 pb-3">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <label class="font-semibold">Étape
+            <select aria-label="Étape de palpation" :value="currentAnimationStep?.id" class="ml-2 max-w-[16rem] rounded-lg border border-[#702741]/20 bg-white px-2 py-1" @change="selectAnimationStep">
+              <option v-for="(step,index) in animationSteps" :key="step.id" :value="step.id">{{ index + 1 }}. {{ step.title }}</option>
+            </select>
+          </label>
+          <span class="text-xs">{{ animationGestureLabel }}</span>
+        </div>
+        <p class="mt-2 text-xs leading-relaxed">{{ currentAnimationStep?.content }}</p>
+        <p v-if="currentAnimationSegment?.kind === 'axilla'" class="mt-1 text-[11px] opacity-75">Zone montrée : pli antérieur de l’aisselle et liaison avec le sein.</p>
+      </div>
+      <div class="flex items-center gap-3">
+      <button type="button" class="shrink-0 font-semibold" @click="toggleAnimation">{{ animationPlaying ? 'Pause' : 'Lire' }}</button>
+      <input aria-label="Progression de l’animation" type="range" min="0" :max="animationDuration" step="0.05" :value="animationTime" class="min-w-0 flex-1 accent-[#a13d62]" @input="seekAnimation" />
+      <span class="shrink-0 tabular-nums">{{ animationTime.toFixed(1) }} s</span>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -133,6 +152,46 @@ let camera: THREE.PerspectiveCamera | null = null;
 let modelGroup: THREE.Group | null = null;
 let mockBust: THREE.Group | null = null;
 let loadedBustModel: THREE.Object3D | null = null;
+let animationMixer: THREE.AnimationMixer | null = null;
+const animationDuration = ref(0);
+const animationTime = ref(0);
+const animationPlaying = ref(false);
+interface AnimationStep { id: string; title: string; content: string; start: number; end: number }
+interface AnimationSegment { kind: string; side: number; start: number; end: number }
+const animationSteps = ref<AnimationStep[]>([]);
+const animationSegments = ref<AnimationSegment[]>([]);
+const currentAnimationStep = computed(() => animationSteps.value.find(step => animationTime.value >= step.start && animationTime.value < step.end) ?? animationSteps.value[0]);
+const currentAnimationSegment = computed(() => animationSegments.value.find(segment => animationTime.value >= segment.start && animationTime.value < segment.end));
+const animationGestureLabel = computed(() => {
+  const segment = currentAnimationSegment.value;
+  if (!segment) return '';
+  const hand = segment.side === 1 ? 'Main droite · sein gauche' : 'Main gauche · sein droit';
+  const phase = animationTime.value - segment.start;
+  const gesture = segment.kind === 'nipple' ? 'Geste au mamelon' : segment.kind === 'axilla' ? 'Aisselle / liaison' : 'Parcours du sein';
+  const pressure = segment.kind === 'nipple' || phase > 2.85 ? '' : ` · pression ${['légère', 'moyenne', 'forte'][Math.min(2, Math.max(0, Math.floor((phase - 0.15) / 0.92)))]}`;
+  return `${hand} · ${gesture}${pressure}`;
+});
+const selectAnimationStep = (event: Event) => {
+  const step = animationSteps.value.find(step => step.id === (event.target as HTMLSelectElement).value);
+  if (!step) return;
+  animationTime.value = step.start;
+  animationMixer?.setTime(step.start);
+  previousAnimationTimestamp = 0;
+  scheduleRender();
+};
+let previousAnimationTimestamp = 0;
+const toggleAnimation = () => {
+  animationPlaying.value = !animationPlaying.value;
+  previousAnimationTimestamp = 0;
+  scheduleRender();
+};
+const seekAnimation = (event: Event) => {
+  animationPlaying.value = false;
+  animationTime.value = Number((event.target as HTMLInputElement).value);
+  animationMixer?.setTime(animationTime.value);
+  previousAnimationTimestamp = 0;
+  scheduleRender();
+};
 const symptomEffects = createSymptomEffects(() => modelGroup);
 const modelMaterialEntries: Array<{
   mesh: THREE.Mesh;
@@ -174,7 +233,8 @@ const isConstrainedDevice = () => {
 };
 
 const needsContinuousRendering = () =>
-  props.autoRotate ||
+  animationPlaying.value ||
+  (props.autoRotate && !animationMixer) ||
   controlsActive ||
   modelIsRotating ||
   symptomEffects.isTransitioning() ||
@@ -628,6 +688,16 @@ const initThree = async () => {
           
           const loadedModel = gltf.scene;
           loadedBustModel = loadedModel;
+          if (gltf.animations.length) {
+            animationMixer = new THREE.AnimationMixer(loadedModel);
+            const clip = gltf.animations[0];
+            animationDuration.value = clip.duration;
+            const study = gltf.parser.json.extras?.palpationStudy;
+            animationSteps.value = study?.steps ?? [];
+            animationSegments.value = study?.segments ?? [];
+            animationMixer.clipAction(clip).play();
+            animationPlaying.value = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+          }
           loadedModel.getObjectByName("SYMPTOM_skin")?.removeFromParent();
           let primarySymptomMesh: THREE.Mesh | null = null;
           let primaryVertexCount = 0;
@@ -660,7 +730,9 @@ const initThree = async () => {
             ...embeddedSymptomMeshes,
             ...(primarySymptomMesh ? [primarySymptomMesh] : []),
           ]).forEach((mesh) => {
-            symptomEffects.registerMesh(mesh, mesh === primarySymptomMesh);
+            // glTF weight tracks address the whole morph array. Appending a
+            // procedural target changes its length and corrupts animation binding.
+            symptomEffects.registerMesh(mesh, mesh === primarySymptomMesh && gltf.animations.length === 0);
           });
 
           registerModelMaterials(loadedModel);
@@ -769,6 +841,12 @@ const tick = (timestamp: number) => {
   lastRenderTime = timestamp;
 
   const elapsedTime = timestamp / 1000;
+  if (animationMixer && animationPlaying.value) {
+    const delta = previousAnimationTimestamp ? Math.min((timestamp - previousAnimationTimestamp) / 1000, 0.1) : 0;
+    animationMixer.update(delta);
+    animationTime.value = animationMixer.time % animationDuration.value;
+  }
+  previousAnimationTimestamp = timestamp;
 
   // Update controls
   if (controls) {
@@ -776,7 +854,7 @@ const tick = (timestamp: number) => {
   }
 
   // Handle auto rotation when not scrolling or user dragging
-  if (modelGroup && props.autoRotate && (!controls || controls.state === -1)) {
+  if (modelGroup && props.autoRotate && !animationMixer && (!controls || controls.state === -1)) {
     // Subtle breathing animation + slow auto spin
     modelGroup.position.y = 0.25 + Math.sin(elapsedTime * 1.5) * 0.05;
     
@@ -826,6 +904,9 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  animationMixer?.stopAllAction();
+  if (animationMixer && loadedBustModel) animationMixer.uncacheRoot(loadedBustModel);
+  animationMixer = null;
   disposed = true;
   window.clearTimeout(initTimer);
   window.clearTimeout(profileTurnTimer);
