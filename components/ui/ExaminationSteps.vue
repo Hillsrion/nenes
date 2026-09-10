@@ -1,5 +1,5 @@
 <template>
-  <div ref="stepsContainerRef" class="relative w-full">
+  <div ref="stepsContainerRef" class="relative w-full" :data-video-step="steps[currentStepIndex]?.id ?? currentStepIndex">
     <!-- Video and Post-It Stage -->
     <div
       ref="stageRef"
@@ -12,6 +12,7 @@
       >
         <video
           ref="videoRef"
+          :src="actualVideoUrl || undefined"
           class="w-full h-full object-cover"
           autoplay
           muted
@@ -95,16 +96,19 @@
 
       <!-- Post-It Cards Deck (Overlapping bottom-left of video) -->
       <div
-        class="relative -mt-16 sm:-mt-22 lg:-mt-26 -ml-2 sm:-ml-6 lg:-ml-10 w-full max-w-[390px] sm:max-w-[450px] lg:max-w-[480px] min-h-[300px] sm:min-h-[340px] lg:min-h-[370px] pointer-events-auto"
+        class="examination-cards relative -mt-16 sm:-mt-22 lg:-mt-26 -ml-2 sm:-ml-6 lg:-ml-10 w-full max-w-[390px] sm:max-w-[450px] lg:max-w-[480px] min-h-[300px] sm:min-h-[340px] lg:min-h-[370px] pointer-events-auto"
       >
         <div
           v-for="(step, index) in steps"
           :key="`card-${index}`"
           :ref="(el) => setCardRef(el, index)"
-          class="absolute top-0 left-0 w-full"
+          class="examination-card absolute top-0 left-0 w-full"
+          :class="{ 'is-active': index === currentStepIndex }"
+          :aria-hidden="index !== currentStepIndex"
           :style="{ zIndex: 10 + index }"
         >
           <ExaminationPostIt
+            :active="index === currentStepIndex"
             :step-number="index + 1"
             :content="step.content"
             :color-scheme="getCardColorScheme(index)"
@@ -125,6 +129,7 @@ import ExaminationPostIt from "./ExaminationPostIt.vue";
 declare const useNuxtApp: () => { $gsap: any };
 
 interface Step {
+  id?: string;
   content: string;
   videoUrl?: string;
   mobileUrl?: string;
@@ -137,6 +142,7 @@ interface Props {
 }
 
 const props = defineProps<Props>();
+const emit = defineEmits<{ (event: "step-change", index: number): void }>();
 
 const { $gsap } = useNuxtApp();
 const store = useAnimationsStore();
@@ -150,6 +156,7 @@ const overlayRef = ref<HTMLDivElement | null>(null);
 const cardRefs = ref<(HTMLElement | null)[]>([]);
 
 const currentStepIndex = ref(0);
+watch(currentStepIndex, index => emit("step-change", index), { immediate: true });
 const fallbackVideoUrl = ref("");
 const isIOSDevice = ref(false);
 
@@ -371,7 +378,7 @@ watch(actualVideoUrl, (newUrl) => {
   if (newUrl && videoRef.value) {
     videoRef.value.load();
   }
-});
+}, { flush: "post" });
 
 onUnmounted(() => {
   scrollTimeline?.scrollTrigger?.kill();
@@ -379,3 +386,7 @@ onUnmounted(() => {
   scrollTimeline = null;
 });
 </script>
+
+<style scoped>
+.examination-card.is-active { opacity: 1 !important; }
+</style>

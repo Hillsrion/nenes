@@ -41,14 +41,8 @@ export function useVideos(options: UseVideosOptions) {
   const isIOS = ref(false);
   const isLargeScreen = ref(false);
 
-  // Debounce helper function
-  const debounce = <T extends (...args: any[]) => void>(func: T, delay: number) => {
-    let timeout: ReturnType<typeof setTimeout>;
-    return (...args: Parameters<T>) => {
-      clearTimeout(timeout);
-      timeout = setTimeout(() => func(...args), delay);
-    };
-  };
+  let transitionVersion = 0;
+  let disposed = false;
 
   // Initialize mobile/tablet detection and first video
   onMounted(() => {
@@ -69,13 +63,15 @@ export function useVideos(options: UseVideosOptions) {
 
       if (firstVideoUrl) {
         actualVideoUrl.value = firstVideoUrl;
-        loadVideo(firstVideoUrl);
+        loadVideo(firstVideoUrl).catch(() => { videoLoading.value = false; });
       }
     }
   });
 
   // Cleanup
   onUnmounted(() => {
+    disposed = true;
+    transitionVersion++;
     loadedVideos.value.clear();
     videoLoading.value = false;
     actualVideoUrl.value = "";
@@ -207,10 +203,11 @@ export function useVideos(options: UseVideosOptions) {
       !overlayRef.value ||
       !videoRef.value ||
       !currentVideoUrl.value ||
-      isTransitioning.value
+      disposed
     )
       return;
 
+    const version = ++transitionVersion;
     const videoUrl = currentVideoUrl.value;
 
     // Set transitioning flag
@@ -224,44 +221,30 @@ export function useVideos(options: UseVideosOptions) {
     // Wait for a short duration for the overlay to be fully opaque (e.g., 300ms, matching the tl.to duration)
     await new Promise((resolve) => setTimeout(resolve, 300));
 
+    if (version !== transitionVersion || disposed) return;
+
     // Load the video if not already loaded (this will happen while the overlay is opaque)
     if (!loadedVideos.value.has(videoUrl)) {
       videoLoading.value = true;
-      await loadVideo(videoUrl);
+      try { await loadVideo(videoUrl); } catch { /* The visible video can retry the source. */ }
       videoLoading.value = false;
     }
+
+    if (version !== transitionVersion || disposed) return;
 
     // Update actualVideoUrl while the overlay is opaque
     actualVideoUrl.value = videoUrl;
 
     // Reset transitioning flag after full transition completes (after overlay fades out)
     setTimeout(() => {
-      isTransitioning.value = false;
+      if (version === transitionVersion && !disposed) isTransitioning.value = false;
     }, 800);
   };
 
-  // Watch for current step index changes and trigger video load/preload
-  const debouncedTransitionToVideo = debounce(transitionToVideo, 100);
-
-  watch(currentStepIndex, (newIndex) => {
-    // Preload videos around this step for better performance immediately
-    preloadUpcomingVideos();
-
-    // If the video for the new step is different from the currently playing one, transition to it.
-    // This check prevents unnecessary transitions if scrolling back to the same video or if the video is already correct.
-    const newVideoUrl = isMobileOrTablet.value
-      ? options.getVideoSource(newIndex, isIOS.value ? "mp4" : "webm", "mobile")
-      : options.getVideoSource(newIndex, isIOS.value ? "mp4" : "webm", "1080p");
-    if (newVideoUrl && actualVideoUrl.value !== newVideoUrl) {
-      debouncedTransitionToVideo();
-    }
-  });
-
-  // Watch for video URL changes and trigger transition
+  // A newer scroll step supersedes an in-flight load, including reverse scroll.
+  watch(currentStepIndex, () => { preloadUpcomingVideos(); });
   watch(currentVideoUrl, (newUrl, oldUrl) => {
-    if (newUrl !== oldUrl && !isTransitioning.value) {
-      transitionToVideo();
-    }
+    if (newUrl !== oldUrl) transitionToVideo();
   });
 
   return {

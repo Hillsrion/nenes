@@ -10,10 +10,15 @@ const hand=gltf.scene.getObjectByName('PalpationHand');
 let bust;gltf.scene.traverse(n=>{if(n.isMesh&&n.morphTargetInfluences)bust=n;});
 if(!hand||!bust||!gltf.animations.length)throw new Error('Missing animated bust or hand');
 const surface=new PalpationSurface(bust.geometry),mixer=new THREE.AnimationMixer(gltf.scene);
-mixer.clipAction(gltf.animations[0]).play();
+
 const parts=[];hand.traverse(n=>{if(n.isMesh)parts.push({node:n,samples:collisionSamples(n.geometry,2)});});
+let totalChecks=0;
+for(const clip of gltf.animations) {
+mixer.stopAllAction();
+mixer.clipAction(clip).play();
+console.log(`Validating ${clip.name}`);
 const worst=new Map(),p=new THREE.Vector3(),inverse=new THREE.Matrix4();
-const duration=gltf.animations[0].duration,fps=Number(sampleRate);let checks=0;
+const duration=clip.duration,fps=Number(sampleRate);let checks=0;
 for(let frame=0;frame<=duration*fps;frame++) {
   const t=frame/fps;mixer.setTime(t);gltf.scene.updateMatrixWorld(true);
   inverse.copy(bust.matrixWorld).invert();surface.update(bust.morphTargetInfluences);
@@ -41,4 +46,7 @@ for(const {gap,time,point} of worst.values()) {
 }
 const result=Object.fromEntries([...worst].map(([name,{gap,time}])=>[name,{gap,time}]));console.log(JSON.stringify({checks,fps,worst:result},null,2));
 if([...worst.values()].some(v=>v.gap < -0.00015))throw new Error('Hand penetrates the deformed bust');
-console.log('PASS: full hand surface clearance across the clip and interpolated frames.');
+totalChecks+=checks;
+console.log(`PASS: ${clip.name}, full hand surface and interpolated frames.`);
+}
+console.log(`PASS: ${gltf.animations.length} clips, ${totalChecks} contact checks.`);

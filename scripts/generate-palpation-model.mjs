@@ -203,12 +203,21 @@ gltf.nodes[hand].children.push(thumbNode);
 ellipsoid('Pouce', [0,0,0.013], [0.012,0.023,0.013],-0.3,thumbNode);
 ellipsoid('Base_pouce',[0.006,-0.025,0.024],[0.013,0.021,0.014],-0.3,thumbNode);
 
+const clearanceMargin=0.0012;
+let largestCollisionCorrection=0;
+const duration=sequenceTime;
+const chapters=siteSteps.slice(1).map(step=>{
+  const indices=stations.flatMap((s,i)=>(step.id==='other-side'?s.side===-1:s.side===1&&s.kind===step.id)?[i]:[]);
+  return {...step,start:stations[indices[0]].start,end:stations[indices.at(-1)].end,clipName:`Palpation · ${step.id}`,indices};
+});
+gltf.animations=[];
+function generateClip(name,indices,initialPose=false) {
+let offset=0;
+const timeline=indices.map(index=>{const s={...stations[index],index,start:offset};offset+=s.duration;return s;});
 const times = [], translations = [], rotations = [], weights = [], scales=[];
 const thumbTranslations=[];
 const fingerTranslations = fingerNodes.map(()=>[]);
-const clearanceMargin=0.0012;
-let largestCollisionCorrection=0;
-const duration = sequenceTime, fps = 30, substeps = 8;
+const duration = offset, fps = 30, substeps = 8;
 const totalFrames=Math.round(duration*fps);
 const tissue=stations.map(()=>({position:0,velocity:0}));
 function pressureAt(phase,station) {
@@ -238,8 +247,8 @@ function collisionCorrection(currentWeights,handPosition,rotation,handScale,loca
   return correction;
 }
 for (let f=0; f<=totalFrames; f++) {
-  const time=f/fps, station=Math.max(0,stations.findLastIndex(s=>time>=s.start-1e-8));
-  const next=(station+1)%stations.length, s=stations[station], phase=time-s.start;
+  const time=f/fps, cursor=Math.max(0,timeline.findLastIndex(s=>time>=s.start-1e-8));
+  const s=timeline[cursor], station=s.index, next=timeline[(cursor+1)%timeline.length].index, phase=time-s.start;
   const pressure=pressureAt(phase,s), liftStart=s.duration-0.6;
   // A damped spring gives the bulk tissue inertia while pad indentation follows
   // the contact constraint immediately. Semi-implicit integration at 240 Hz.
@@ -317,21 +326,26 @@ for(let f=0;f<totalFrames;f++) {
 // Periodic boundary shares the more conservative correction of both ends.
 translations[2]=translations[totalFrames*3+2]=Math.max(translations[2],translations[totalFrames*3+2]);
 // The reduced-motion/static pose must have the same clearance as frame zero.
+if(initialPose) {
 gltf.nodes[hand].translation=translations.slice(0,3);
 gltf.nodes[hand].rotation=rotations.slice(0,4);
 gltf.nodes[hand].scale=scales.slice(0,3);
 gltf.nodes[thumbNode].translation=thumbTranslations.slice(0,3);
 fingerNodes.forEach((node,i)=>{gltf.nodes[node].translation=fingerTranslations[i].slice(0,3);});
+}
 const timeAccessor=accessor(new Float32Array(times),'SCALAR');
-gltf.animations=[{ name:'Palpation · étude de contact', samplers:[
+gltf.animations.push({ name, samplers:[
   { input:timeAccessor, output:accessor(new Float32Array(translations),'VEC3'), interpolation:'LINEAR' },
   { input:timeAccessor, output:accessor(new Float32Array(weights),'SCALAR'), interpolation:'LINEAR' },
   { input:timeAccessor, output:accessor(new Float32Array(rotations),'VEC4'), interpolation:'LINEAR' },
   ...fingerTranslations.map(values=>({input:timeAccessor,output:accessor(new Float32Array(values),'VEC3'),interpolation:'LINEAR'})),
   {input:timeAccessor,output:accessor(new Float32Array(thumbTranslations),'VEC3'),interpolation:'LINEAR'},
   {input:timeAccessor,output:accessor(new Float32Array(scales),'VEC3'),interpolation:'LINEAR'}
-],channels:[{ sampler:0,target:{node:hand,path:'translation'} },{sampler:1,target:{node:2,path:'weights'}},{sampler:2,target:{node:hand,path:'rotation'}},...fingerNodes.map((node,i)=>({sampler:i+3,target:{node,path:'translation'}})),{sampler:6,target:{node:thumbNode,path:'translation'}},{sampler:7,target:{node:hand,path:'scale'}}]}];
-gltf.extras={...gltf.extras, modelLabel:'Zou · essai palpation', palpationStudy:{version:4,duration,steps:siteSteps.slice(1).map(step=>{const matching=stations.filter(s=>step.id==='other-side'?s.side===-1:s.side===1&&s.kind===step.id);return {...step,start:matching[0].start,end:matching.at(-1).end};}),segments:stations.map(s=>({start:s.start,end:s.end,kind:s.kind,side:s.side})),stations:stations.map(s=>s.center.toArray()),source:input.split('/').pop(),clearanceMargin,largestCollisionCorrection,description:'Collision de toute la main contre le maillage déformé, compression locale et redistribution amortie. Approximation visuelle, non biomécanique.'}};
+],channels:[{ sampler:0,target:{node:hand,path:'translation'} },{sampler:1,target:{node:2,path:'weights'}},{sampler:2,target:{node:hand,path:'rotation'}},...fingerNodes.map((node,i)=>({sampler:i+3,target:{node,path:'translation'}})),{sampler:6,target:{node:thumbNode,path:'translation'}},{sampler:7,target:{node:hand,path:'scale'}}]});
+}
+generateClip('Palpation · étude de contact',stations.map((_,i)=>i),true);
+for(const chapter of chapters) generateClip(chapter.clipName,chapter.indices);
+gltf.extras={...gltf.extras, modelLabel:'Zou · essai palpation', palpationStudy:{version:5,duration,steps:chapters.map(({indices,...chapter})=>chapter),segments:stations.map(s=>({start:s.start,end:s.end,kind:s.kind,side:s.side})),stations:stations.map(s=>s.center.toArray()),source:input.split('/').pop(),clearanceMargin,largestCollisionCorrection,description:'Collision de toute la main contre le maillage déformé, compression locale et redistribution amortie. Approximation visuelle, non biomécanique.'}};
 gltf.buffers[0].byteLength=byteLength;
 let json=Buffer.from(JSON.stringify(gltf));
 json=Buffer.concat([json,Buffer.alloc((4-json.length%4)%4,0x20)]);

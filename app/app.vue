@@ -41,7 +41,7 @@
             class="pointer-events-none sticky top-0 z-10 hidden h-0 overflow-visible lg:block"
             aria-hidden="true"
           >
-            <div class="absolute inset-x-0 top-0 h-screen">
+            <div class="absolute inset-x-0 top-0 h-screen" :style="{ opacity: 1 - palpationModelPresence }">
               <ThreeBustJourney
                 :first-model-url="journeyFirstModelUrl"
                 :second-model-url="getModelUrl(multiviewFileName)"
@@ -60,10 +60,11 @@
             :title="screeningMainTitle"
           />
           <div class="relative bg-white" ref="symptomsAndExaminationContainerRef">
-            <!-- Shared 3D Bust Model anchored on left across both Symptoms & Palpation sections.
-                 Desktop reads the journey stage above; this sticky viewer stays for touch layouts. -->
+            <!-- Symptoms model for touch layouts. It yields to the dedicated
+                 palpation model as that section enters the viewport. -->
             <div
               class="pointer-events-none sticky top-0 h-screen w-full z-15 overflow-hidden lg:hidden"
+              :style="{ opacity: 1 - palpationModelPresence }"
               aria-hidden="true"
             >
               <div
@@ -103,6 +104,7 @@
               <SelfExaminationSection
                 :steps="selfExaminationSteps"
                 :use-shared-model="true"
+                @model-presence="palpationModelPresence = $event"
               />
             </div>
           </div>
@@ -759,6 +761,7 @@ const sharedProfileModelRef = ref<HTMLElement | null>(null);
 const journeyTrackRef = ref<HTMLElement | null>(null);
 const journeyStageRef = ref<HTMLElement | null>(null);
 const symptomsProfileProgress = ref(0);
+const palpationModelPresence = ref(0);
 const activeSectionSymptom = ref<SymptomType>("none");
 const isSymptomsProfileView = ref(true);
 
@@ -950,7 +953,7 @@ onMounted(async () => {
   ) return;
 
   scrollTo(0, 0);
-  lenis.value.stop();
+  if (store.sections.loading?.state !== "isComplete") lenis.value?.stop();
 
   if (store.sections.loading?.state === "isComplete") {
     nextTick(() => {
