@@ -20,6 +20,7 @@
     >
       <!-- Dedicated animated bust, driven by the video step. -->
       <div
+        v-if="!useSharedModel"
         ref="profileModelRef"
         class="palpation-model pointer-events-none absolute left-0 z-10"
         aria-hidden="true"
@@ -31,7 +32,7 @@
           :auto-rotate="false"
           :enable-zoom="false"
           :interactive="false"
-          :initial-rotation-y="0"
+          :initial-rotation-y="activeStepId === 'other-side' ? Math.PI / 2 : -Math.PI / 2"
           :model-scale="1.65"
           :model-vertical-offset="-0.48"
           model-horizontal-alignment="center"
@@ -108,9 +109,10 @@ const props = withDefaults(defineProps<Props>(), {
   useSharedModel: false,
 });
 
-const emit = defineEmits<{ (event: "model-presence", progress: number): void }>();
+const emit = defineEmits<{ (event: "model-presence", progress: number): void; (event: "step-change", id: string): void }>();
 const activeStepIndex = ref(0);
 const activeStepId = computed(() => props.steps[activeStepIndex.value]?.id ?? "observation");
+watch(activeStepId, id => emit("step-change", id), { immediate: true });
 const modelPresence = ref(0);
 let modelEntrance: any = null;
 

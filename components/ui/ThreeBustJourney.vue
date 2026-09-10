@@ -1,5 +1,5 @@
 <template>
-  <div ref="containerRef" class="relative h-full w-full">
+  <div ref="containerRef" class="relative h-full w-full" :data-animation-step="animationStep" :data-animation-time="animationTime.toFixed(2)" :data-model-rotation="secondRotationY">
     <canvas
       ref="canvasRef"
       class="relative z-10 block h-full w-full touch-none transition-opacity duration-700"
@@ -25,6 +25,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, useId } from "vue";
+import { createPalpationPlayback } from "./three-bust/palpation-playback";
 import { projectProfileContour } from "./three-bust/profile-contour";
 import { createGeneratedShapeMaterial, createGlassMaterial } from "./three-bust/materials";
 import * as THREE from "three";
@@ -35,6 +36,7 @@ import {
 } from "./three-bust/symptom-effects";
 
 interface Props {
+  animationStep?: string;
   firstModelUrl?: string;
   secondModelUrl?: string;
   /** 0: screening framing on the first bust · 1: locked profile framing on the second. */
@@ -47,6 +49,7 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  animationStep: "observation",
   firstModelUrl: "",
   secondModelUrl: "",
   cameraProgress: 0,
@@ -60,7 +63,7 @@ const props = withDefaults(defineProps<Props>(), {
 // Tuning constants for the scripted camera move. Proportions are derived from
 // each bust's normalized bounds so a new GLB keeps the same framing.
 const FIRST_MODEL_SCALE = 1.15;
-const SECOND_MODEL_SCALE = 1.05;
+const SECOND_MODEL_SCALE = 1.65;
 const BASE_BUST_HEIGHT = 2.8;
 const CAMERA_FOV = 40;
 /** Arrival matches the former sticky viewer: bust center at -0.45 NDC x. */
@@ -93,6 +96,10 @@ let firstRoot: THREE.Object3D | null = null;
 let secondPlacement: THREE.Group | null = null;
 let secondGroup: THREE.Group | null = null;
 let secondRoot: THREE.Object3D | null = null;
+let animationPlayback: ReturnType<typeof createPalpationPlayback> | null = null;
+const animationTime = ref(0);
+let previousAnimationTimestamp = 0;
+let reduceMotion = false;
 let firstBounds = new THREE.Box3();
 let secondLocalBounds = new THREE.Box3();
 const symptomEffects = createSymptomEffects(() => secondGroup);
@@ -148,6 +155,7 @@ const scheduleRender = (duration = 0) => {
 };
 
 const needsContinuousRendering = () =>
+  (animationPlayback?.active && !reduceMotion) ||
   (!props.debugPath && lastCameraProgress < IDLE_SPIN_PROGRESS) ||
   modelIsRotating ||
   symptomEffects.isTransitioning() ||
@@ -189,7 +197,7 @@ const applyClayMaterial = (root: THREE.Object3D) => {
   });
 };
 
-const registerSecondModelSymptoms = (root: THREE.Object3D) => {
+const registerSecondModelSymptoms = (root: THREE.Object3D, animated: boolean) => {
   let primarySymptomMesh: THREE.Mesh | null = null;
   let primaryVertexCount = 0;
   const embeddedSymptomMeshes: THREE.Mesh[] = [];
@@ -210,7 +218,7 @@ const registerSecondModelSymptoms = (root: THREE.Object3D) => {
     ...embeddedSymptomMeshes,
     ...(primarySymptomMesh ? [primarySymptomMesh] : []),
   ]).forEach((mesh) => {
-    symptomEffects.registerMesh(mesh, mesh === primarySymptomMesh);
+    symptomEffects.registerMesh(mesh, mesh === primarySymptomMesh && !animated);
   });
 };
 
@@ -453,14 +461,14 @@ const initThree = async () => {
 
   const loader = new GLTFLoader();
   const loadBust = (url: string) =>
-    new Promise<THREE.Object3D | null>((resolve) => {
+    new Promise<import("three/examples/jsm/loaders/GLTFLoader.js").GLTF | null>((resolve) => {
       if (!url) {
         resolve(null);
         return;
       }
       loader.load(
         url,
-        (gltf) => resolve(gltf.scene),
+        (gltf) => resolve(gltf),
         undefined,
         (error) => {
           console.error("Journey stage: unable to load bust, skipping it.", error);
@@ -469,12 +477,14 @@ const initThree = async () => {
       );
     });
 
-  const [firstScene, secondScene] = await Promise.all([
+  const [firstGLTF, secondGLTF] = await Promise.all([
     loadBust(props.firstModelUrl),
     loadBust(props.secondModelUrl),
   ]);
   if (disposed || !renderer || !scene || !camera) return;
 
+  const firstScene = firstGLTF?.scene;
+  const secondScene = secondGLTF?.scene;
   if (firstScene && firstGroup) {
     firstBounds = normalizeLoadedBust(firstScene, BASE_BUST_HEIGHT * FIRST_MODEL_SCALE);
     applyGlassMaterial(firstScene);
@@ -484,6 +494,7 @@ const initThree = async () => {
 
   if (secondScene && secondGroup) {
     secondLocalBounds = normalizeLoadedBust(secondScene, BASE_BUST_HEIGHT * SECOND_MODEL_SCALE);
+    secondScene.position.y -= 0.48;
     applyClayMaterial(secondScene);
     // Place the second bust deep and left of the first one so the camera can
     // travel over the shoulder before settling in front of it.
@@ -496,7 +507,12 @@ const initThree = async () => {
     secondRoot = secondScene;
     secondGroup.add(secondScene);
     secondGroup.rotation.y = props.secondRotationY;
-    registerSecondModelSymptoms(secondScene);
+    registerSecondModelSymptoms(secondScene, !!secondGLTF?.animations.length);
+    if (secondGLTF?.animations.length) {
+      animationPlayback = createPalpationPlayback(secondScene, secondGLTF.animations, secondGLTF.parser.json.extras?.palpationStudy?.steps ?? []);
+      animationPlayback.selectStep(props.animationStep);
+      reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    }
     symptomEffects.build(secondScene, props.symptomType);
     symptomEffects.applyTint(props.symptomType);
   }
@@ -542,6 +558,11 @@ const tick = (timestamp: number) => {
   lastRenderTime = timestamp;
 
   const elapsedTime = timestamp / 1000;
+  if (animationPlayback?.active && !reduceMotion) {
+    animationPlayback.update(previousAnimationTimestamp ? Math.min((timestamp - previousAnimationTimestamp) / 1000, 0.1) : 0);
+    animationTime.value = animationPlayback.time;
+  }
+  previousAnimationTimestamp = timestamp;
 
   // While the opening framing holds, the first bust keeps the same gentle
   // idle spin and float as the standalone screening viewer. Debug mode freezes
@@ -585,6 +606,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  animationPlayback?.dispose();
   disposed = true;
   window.clearTimeout(profileTurnTimer);
   viewportObserver?.disconnect();
@@ -635,6 +657,13 @@ onUnmounted(() => {
   targetCurve = null;
 });
 
+watch(() => props.animationStep, step => {
+  animationPlayback?.selectStep(step);
+  animationTime.value = animationPlayback?.time ?? 0;
+  previousAnimationTimestamp = 0;
+  scheduleRender();
+});
+
 watch(
   () => props.cameraProgress,
   (progress) => {
@@ -648,7 +677,7 @@ watch(
   (rotationY) => {
     if (!secondGroup) return;
     window.clearTimeout(profileTurnTimer);
-    const returnsToProfile = Math.abs(rotationY - Math.PI / 2) < 0.01;
+    const returnsToProfile = Math.abs(Math.abs(rotationY) - Math.PI / 2) < 0.01;
     modelIsRotating = true;
 
     const turn = () => {

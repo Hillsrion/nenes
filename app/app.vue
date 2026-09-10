@@ -41,15 +41,16 @@
             class="pointer-events-none sticky top-0 z-10 hidden h-0 overflow-visible lg:block"
             aria-hidden="true"
           >
-            <div class="absolute inset-x-0 top-0 h-screen" :style="{ opacity: 1 - palpationModelPresence }">
+            <div class="absolute inset-x-0 top-0 h-screen">
               <ThreeBustJourney
                 :first-model-url="journeyFirstModelUrl"
-                :second-model-url="getModelUrl(multiviewFileName)"
+                :second-model-url="getModelUrl(palpationFileName)"
+                :animation-step="sharedPalpationStep"
                 :camera-progress="journeyCamera.progress"
-                :symptom-type="activeSectionSymptom"
+                :symptom-type="palpationModelPresence > 0 ? 'none' : activeSectionSymptom"
                 :profile-label="symptomsMainTitle"
-                :profile-label-progress="symptomsProfileProgress"
-                :second-rotation-y="isSymptomsProfileView ? Math.PI / 2 : 0"
+                :profile-label-progress="palpationModelPresence > 0 ? 0 : symptomsProfileProgress"
+                :second-rotation-y="sharedModelRotation"
                 :debug-path="isJourneyDebug"
               />
             </div>
@@ -60,11 +61,9 @@
             :title="screeningMainTitle"
           />
           <div class="relative bg-white" ref="symptomsAndExaminationContainerRef">
-            <!-- Symptoms model for touch layouts. It yields to the dedicated
-                 palpation model as that section enters the viewport. -->
+            <!-- One persistent model for symptoms and palpation on touch layouts. -->
             <div
               class="pointer-events-none sticky top-0 h-screen w-full z-15 overflow-hidden lg:hidden"
-              :style="{ opacity: 1 - palpationModelPresence }"
               aria-hidden="true"
             >
               <div
@@ -73,13 +72,14 @@
               >
                 <ThreeBustViewer
                   :profile-label="symptomsMainTitle"
-                  :profile-label-progress="symptomsProfileProgress"
-                  :model-url="getModelUrl(multiviewFileName)"
+                  :profile-label-progress="palpationModelPresence > 0 ? 0 : symptomsProfileProgress"
+                  :model-url="getModelUrl(palpationFileName)"
+                  :animation-step="sharedPalpationStep"
                   :auto-rotate="false"
                   :enable-zoom="false"
                   :interactive="false"
-                  :initial-rotation-y="isSymptomsProfileView ? Math.PI / 2 : 0"
-                  :symptom-type="activeSectionSymptom"
+                  :initial-rotation-y="sharedModelRotation"
+                  :symptom-type="palpationModelPresence > 0 ? 'none' : activeSectionSymptom"
                   :model-scale="1.05"
                   model-horizontal-alignment="left"
                   :show-backdrop="false"
@@ -105,6 +105,7 @@
                 :steps="selfExaminationSteps"
                 :use-shared-model="true"
                 @model-presence="palpationModelPresence = $event"
+                @step-change="palpationStepId = $event"
               />
             </div>
           </div>
@@ -421,7 +422,7 @@ const isThreeDStudio = computed(
   () => route.path === "/studio-3d" || route.query.studio3d === "upload"
 );
 const isThreeDPreview = computed(() => route.query.preview3d === "photo");
-const { monoviewFileName, multiviewFileName, getModelUrl } = useDemoBustModelUrls();
+const { monoviewFileName, multiviewFileName, palpationFileName, getModelUrl } = useDemoBustModelUrls();
 const fallbackPreviewModelName = computed(() => {
   const requestedModel = Array.isArray(route.query.model)
     ? route.query.model[0]
@@ -762,6 +763,12 @@ const journeyTrackRef = ref<HTMLElement | null>(null);
 const journeyStageRef = ref<HTMLElement | null>(null);
 const symptomsProfileProgress = ref(0);
 const palpationModelPresence = ref(0);
+const palpationStepId = ref("observation");
+const sharedPalpationStep = computed(() => palpationModelPresence.value > 0 ? palpationStepId.value : "observation");
+const sharedModelRotation = computed(() => {
+  if (palpationModelPresence.value > 0) return palpationStepId.value === "other-side" ? Math.PI / 2 : -Math.PI / 2;
+  return isSymptomsProfileView.value ? -Math.PI / 2 : 0;
+});
 const activeSectionSymptom = ref<SymptomType>("none");
 const isSymptomsProfileView = ref(true);
 

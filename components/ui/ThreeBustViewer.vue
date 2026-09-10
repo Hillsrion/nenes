@@ -1022,7 +1022,7 @@ watch(
   (rotationY) => {
     if (!modelGroup) return;
     window.clearTimeout(profileTurnTimer);
-    const returnsToProfile = Math.abs(rotationY - Math.PI / 2) < 0.01;
+    const returnsToProfile = Math.abs(Math.abs(rotationY) - Math.PI / 2) < 0.01;
     modelIsRotating = true;
 
     const turn = () => {
