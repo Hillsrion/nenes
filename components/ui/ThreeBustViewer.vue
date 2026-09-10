@@ -2,6 +2,8 @@
   <div
     ref="containerRef"
     class="relative h-full w-full"
+    :data-animation-step="animationStep ?? currentAnimationStep?.id"
+    :data-animation-time="animationTime.toFixed(2)"
     :class="compact ? 'min-h-0' : 'min-h-[350px] md:min-h-[500px]'"
   >
     <div
@@ -70,6 +72,7 @@
 
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted, watch, useId } from "vue";
+import { createPalpationPlayback } from "./three-bust/palpation-playback";
 import { projectProfileContour } from "./three-bust/profile-contour";
 import { createGeneratedShapeMaterial, createGlassMaterial } from "./three-bust/materials";
 import * as THREE from "three";
@@ -82,6 +85,9 @@ import {
 type MaterialStyle = "original" | "glass" | "glow" | "iridescent";
 
 interface Props {
+  animationStep?: string;
+  animationEnabled?: boolean;
+  modelVerticalOffset?: number;
   profileLabel?: string;
   profileLabelProgress?: number;
   modelUrl?: string;
@@ -101,6 +107,8 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  animationEnabled: true,
+  modelVerticalOffset: 0,
   profileLabel: "",
   profileLabelProgress: 0,
   modelUrl: "",
@@ -152,11 +160,11 @@ let camera: THREE.PerspectiveCamera | null = null;
 let modelGroup: THREE.Group | null = null;
 let mockBust: THREE.Group | null = null;
 let loadedBustModel: THREE.Object3D | null = null;
-let animationMixer: THREE.AnimationMixer | null = null;
+let animationPlayback: ReturnType<typeof createPalpationPlayback> | null = null;
 const animationDuration = ref(0);
 const animationTime = ref(0);
 const animationPlaying = ref(false);
-interface AnimationStep { id: string; title: string; content: string; start: number; end: number }
+interface AnimationStep { clipName?: string; id: string; title: string; content: string; start: number; end: number }
 interface AnimationSegment { kind: string; side: number; start: number; end: number }
 const animationSteps = ref<AnimationStep[]>([]);
 const animationSegments = ref<AnimationSegment[]>([]);
@@ -175,7 +183,7 @@ const selectAnimationStep = (event: Event) => {
   const step = animationSteps.value.find(step => step.id === (event.target as HTMLSelectElement).value);
   if (!step) return;
   animationTime.value = step.start;
-  animationMixer?.setTime(step.start);
+  animationPlayback?.selectStep(step.id);
   previousAnimationTimestamp = 0;
   scheduleRender();
 };
@@ -188,7 +196,7 @@ const toggleAnimation = () => {
 const seekAnimation = (event: Event) => {
   animationPlaying.value = false;
   animationTime.value = Number((event.target as HTMLInputElement).value);
-  animationMixer?.setTime(animationTime.value);
+  animationPlayback?.seek(animationTime.value);
   previousAnimationTimestamp = 0;
   scheduleRender();
 };
@@ -233,8 +241,8 @@ const isConstrainedDevice = () => {
 };
 
 const needsContinuousRendering = () =>
-  animationPlaying.value ||
-  (props.autoRotate && !animationMixer) ||
+  (animationPlaying.value && props.animationEnabled && animationPlayback?.active) ||
+  (props.autoRotate && !animationPlayback) ||
   controlsActive ||
   modelIsRotating ||
   symptomEffects.isTransitioning() ||
@@ -689,13 +697,13 @@ const initThree = async () => {
           const loadedModel = gltf.scene;
           loadedBustModel = loadedModel;
           if (gltf.animations.length) {
-            animationMixer = new THREE.AnimationMixer(loadedModel);
             const clip = gltf.animations[0];
             animationDuration.value = clip.duration;
             const study = gltf.parser.json.extras?.palpationStudy;
             animationSteps.value = study?.steps ?? [];
             animationSegments.value = study?.segments ?? [];
-            animationMixer.clipAction(clip).play();
+            animationPlayback = createPalpationPlayback(loadedModel, gltf.animations, animationSteps.value);
+            animationPlayback.selectStep(props.animationStep);
             animationPlaying.value = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
           }
           loadedModel.getObjectByName("SYMPTOM_skin")?.removeFromParent();
@@ -749,7 +757,7 @@ const initThree = async () => {
           loadedModel.scale.set(scale, scale, scale);
           
           loadedModel.position.sub(center.multiplyScalar(scale));
-          loadedModel.position.y += 0.2; // Adjust vertical center
+          loadedModel.position.y += 0.2 + props.modelVerticalOffset; // Adjust vertical center
 
           modelGroup.add(loadedModel);
           modelGroup.rotation.y = props.initialRotationY;
@@ -841,10 +849,10 @@ const tick = (timestamp: number) => {
   lastRenderTime = timestamp;
 
   const elapsedTime = timestamp / 1000;
-  if (animationMixer && animationPlaying.value) {
+  if (animationPlayback && animationPlaying.value && props.animationEnabled) {
     const delta = previousAnimationTimestamp ? Math.min((timestamp - previousAnimationTimestamp) / 1000, 0.1) : 0;
-    animationMixer.update(delta);
-    animationTime.value = animationMixer.time % animationDuration.value;
+    animationPlayback.update(delta);
+    animationTime.value = animationPlayback.time;
   }
   previousAnimationTimestamp = timestamp;
 
@@ -854,7 +862,7 @@ const tick = (timestamp: number) => {
   }
 
   // Handle auto rotation when not scrolling or user dragging
-  if (modelGroup && props.autoRotate && !animationMixer && (!controls || controls.state === -1)) {
+  if (modelGroup && props.autoRotate && !animationPlayback && (!controls || controls.state === -1)) {
     // Subtle breathing animation + slow auto spin
     modelGroup.position.y = 0.25 + Math.sin(elapsedTime * 1.5) * 0.05;
     
@@ -904,9 +912,8 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-  animationMixer?.stopAllAction();
-  if (animationMixer && loadedBustModel) animationMixer.uncacheRoot(loadedBustModel);
-  animationMixer = null;
+  animationPlayback?.dispose();
+  animationPlayback = null;
   disposed = true;
   window.clearTimeout(initTimer);
   window.clearTimeout(profileTurnTimer);
@@ -975,6 +982,17 @@ onUnmounted(() => {
   scene = null;
   camera = null;
   modelGroup = null;
+});
+
+watch(() => props.animationStep, (step) => {
+  animationPlayback?.selectStep(step);
+  animationTime.value = animationPlayback?.time ?? 0;
+  previousAnimationTimestamp = 0;
+  scheduleRender();
+});
+watch(() => props.animationEnabled, () => {
+  previousAnimationTimestamp = 0;
+  scheduleRender();
 });
 
 // Watch shapeType change and animate

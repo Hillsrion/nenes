@@ -183,6 +183,7 @@ export default defineNuxtConfig({
           process.env.NUXT_PUBLIC_3D_MODELS_URL ||
           "https://pub-43370cee5bda403fb0a2206c460fe804.r2.dev",
         demoMonoviewModel: process.env.NUXT_PUBLIC_3D_DEMO_MONOVIEW_MODEL || "",
+        palpationModel: process.env.NUXT_PUBLIC_3D_PALPATION_MODEL || "bust-zou-full-multiview-hi3d-palpation.glb",
         demoMultiviewModel: process.env.NUXT_PUBLIC_3D_DEMO_MULTIVIEW_MODEL || "",
       },
       modelReview: {

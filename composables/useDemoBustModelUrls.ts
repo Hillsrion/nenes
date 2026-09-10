@@ -5,6 +5,7 @@ export const useDemoBustModelUrls = () => {
     ""
   );
   const monoviewFileName = String(runtimeConfig.public.r2.demoMonoviewModel || "");
+  const palpationFileName = String(runtimeConfig.public.r2.palpationModel || "");
   const multiviewFileName = String(runtimeConfig.public.r2.demoMultiviewModel || "");
 
   const getModelUrl = (fileName: string) => {
@@ -17,6 +18,7 @@ export const useDemoBustModelUrls = () => {
   };
 
   return {
+    palpationFileName,
     monoviewFileName,
     multiviewFileName,
     getModelUrl,

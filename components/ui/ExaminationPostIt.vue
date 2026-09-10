@@ -1,6 +1,6 @@
 <template>
   <div
-    class="relative rounded-2xl sm:rounded-3xl border border-black/[0.06] shadow-[0_16px_36px_rgba(36,66,219,0.09),0_3px_8px_rgba(0,0,0,0.04)] overflow-hidden transition-all duration-300 min-h-[260px] sm:min-h-[290px] lg:min-h-[310px] flex flex-col justify-between"
+    class="examination-postit relative rounded-2xl sm:rounded-3xl border border-black/[0.06] shadow-[0_16px_36px_rgba(36,66,219,0.09),0_3px_8px_rgba(0,0,0,0.04)] overflow-hidden transition-all duration-300 min-h-[260px] sm:min-h-[290px] lg:min-h-[310px] flex flex-col justify-between"
     :style="{ backgroundColor: backgroundHex }"
   >
     <!-- Punched binder holes on left margin -->
@@ -16,7 +16,8 @@
     </div>
 
     <!-- Post-it text content -->
-    <div class="pl-10 sm:pl-12 lg:pl-14 pr-7 sm:pr-8 py-7 sm:py-9 my-auto">
+    <div class="postit-content pl-10 sm:pl-12 lg:pl-14 pr-7 sm:pr-8 py-7 sm:py-9 my-auto"
+      :style="{ visibility: active ? 'visible' : 'hidden' }">
       <p
         class="text-primary font-sans font-medium text-base sm:text-lg lg:text-[1.12rem] leading-relaxed sm:leading-loose select-none"
         v-html="renderedContent"
@@ -29,12 +30,14 @@
 import { computed } from "vue";
 
 interface Props {
+  active?: boolean;
   content: string;
   stepNumber?: number;
   colorScheme?: "white" | "grey" | "rose" | "cream" | "blush";
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  active: true,
   stepNumber: 1,
   colorScheme: "white",
 });
