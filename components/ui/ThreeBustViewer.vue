@@ -168,7 +168,12 @@ interface AnimationStep { clipName?: string; id: string; title: string; content:
 interface AnimationSegment { kind: string; side: number; start: number; end: number }
 const animationSteps = ref<AnimationStep[]>([]);
 const animationSegments = ref<AnimationSegment[]>([]);
-const currentAnimationStep = computed(() => animationSteps.value.find(step => animationTime.value >= step.start && animationTime.value < step.end) ?? animationSteps.value[0]);
+const selectedPreviewStep = ref<string>();
+const currentAnimationStep = computed(() =>
+  animationSteps.value.find(step => step.id === (props.animationStep ?? selectedPreviewStep.value))
+  ?? animationSteps.value.find(step => animationTime.value >= step.start && animationTime.value < step.end)
+  ?? animationSteps.value[0]
+);
 const currentAnimationSegment = computed(() => animationSegments.value.find(segment => animationTime.value >= segment.start && animationTime.value < segment.end));
 const animationGestureLabel = computed(() => {
   const segment = currentAnimationSegment.value;
@@ -182,6 +187,7 @@ const animationGestureLabel = computed(() => {
 const selectAnimationStep = (event: Event) => {
   const step = animationSteps.value.find(step => step.id === (event.target as HTMLSelectElement).value);
   if (!step) return;
+  selectedPreviewStep.value = step.id;
   animationTime.value = step.start;
   animationPlayback?.selectStep(step.id);
   previousAnimationTimestamp = 0;
@@ -194,6 +200,7 @@ const toggleAnimation = () => {
   scheduleRender();
 };
 const seekAnimation = (event: Event) => {
+  selectedPreviewStep.value = undefined;
   animationPlaying.value = false;
   animationTime.value = Number((event.target as HTMLInputElement).value);
   animationPlayback?.seek(animationTime.value);
@@ -696,13 +703,14 @@ const initThree = async () => {
           
           const loadedModel = gltf.scene;
           loadedBustModel = loadedModel;
+          selectedPreviewStep.value = undefined;
           if (gltf.animations.length) {
             const clip = gltf.animations[0];
             animationDuration.value = clip.duration;
             const study = gltf.parser.json.extras?.palpationStudy;
             animationSteps.value = study?.steps ?? [];
             animationSegments.value = study?.segments ?? [];
-            animationPlayback = createPalpationPlayback(loadedModel, gltf.animations, animationSteps.value);
+            animationPlayback = createPalpationPlayback(loadedModel, gltf.animations, animationSteps.value, study?.segments ?? []);
             animationPlayback.selectStep(props.animationStep);
             animationPlaying.value = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
           }
@@ -740,7 +748,10 @@ const initThree = async () => {
           ]).forEach((mesh) => {
             // glTF weight tracks address the whole morph array. Appending a
             // procedural target changes its length and corrupts animation binding.
-            symptomEffects.registerMesh(mesh, mesh === primarySymptomMesh && gltf.animations.length === 0);
+            const hasMorphAnimation = gltf.animations.some(clip =>
+              clip.tracks.some(track => track.name.includes("morphTargetInfluences"))
+            );
+            symptomEffects.registerMesh(mesh, mesh === primarySymptomMesh && !hasMorphAnimation);
           });
 
           registerModelMaterials(loadedModel);

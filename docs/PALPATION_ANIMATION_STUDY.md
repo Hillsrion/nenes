@@ -25,10 +25,24 @@ curseur permet de parcourir la séquence complète en pause. Le libellé
 indique le côté, la main et le niveau de pression en cours. Les niveaux sont
 visuels ; ils ne représentent pas des forces mesurées.
 
-Le scan a les bras baissés et ne contient pas de squelette. La séquence axillaire
-montre donc le pli antérieur accessible et sa liaison avec le sein. Elle ne
-simule pas un bras levé ni l'exploration du creux axillaire dégagé. La phase
-d'observation devant le miroir avec changements de posture n'est pas animée.
+Le scan a les bras baissés et ne contient pas de squelette. Un essai côté viewer
+(`palpation-arm.ts`) relève maintenant le bras du côté palpé de 130° environ,
+en 1,2 seconde, pendant les segments axillaires. La pose reste stable pendant
+la boucle du chapitre ; le bras redescend ensuite. Le curseur de l’aperçu
+applique directement la pose correspondant au temps choisi. L’observation
+restaure immédiatement le scan neutre.
+
+Cette articulation est calibrée uniquement pour Zou. Elle déforme une copie
+locale de la géométrie, sans changer les GLB ni la taille des tableaux de morphs.
+Les jonctions du scan entre bras et torse, et entre mains et hanches, sont
+séparées seulement du côté animé ; les triangles d’origine sont restaurés
+au repos. Les surfaces ainsi découvertes restent imparfaites, notamment sur
+la hanche et les doigts : une retopologie et un squelette seront nécessaires
+pour une version finale. La main de démonstration conserve ses stations sur
+le pli antérieur et la liaison avec le sein ; le creux axillaire n’est pas
+reconstruit. Le contrôle historique des collisions du GLB ne valide pas
+cette déformation supplémentaire du viewer. La phase d’observation devant
+le miroir avec changements de posture n’est pas animée.
 
 ## Intégration dans le site
 
@@ -147,3 +161,56 @@ La V2 initiale ne vérifiait que les trois origines des pulpes et laissait passe
 leurs bords, les phalanges et la paume. La V3 de 16 s corrigeait ce défaut ; la
 séquence complète réutilise ce contrôle avec une région couvrant les deux côtés.
 Le viewer émet déjà un avertissement de dépréciation de PCFSoftShadowMap.
+# Étude Anaïs avec squelette — révision du 19 septembre 2026
+
+`scripts/rig-anais-palpation.mjs` produit une variante locale articulée de
+`bust-anais-full-hi3d.glb`. La première version déformait excessivement le
+torse et la main le traversait pendant les transitions. Elle n'est pas une
+base validée pour une publication.
+
+La révision sépare d'abord les surfaces soudées entre bras et torse, avec une
+découpe courbe qui préserve le sein, puis reconstruit une surface continue.
+Le squelette comporte neuf articulations principales et 66 articulations
+auxiliaires qui préservent mieux le volume lors des grandes rotations. Des
+corrections de pose locales lissent l'aisselle et limitent l'étirement des
+arêtes. Elles sont embarquées dans le GLB, sans shader propre au site.
+
+Les sept clips comprennent une séquence complète de 14 s, et pour chaque côté
+une approche de 4 s, une boucle de 6 s et un retrait de 4 s. Le lecteur suit
+ces trajets : une approche interrompue est parcourue en sens inverse ; un
+changement de côté termine d'abord le retrait. Il n'interpole plus directement
+deux positions éloignées de la main à travers le torse. Les meshes skinnés
+restent exclus de l'ancienne déformation directe de Zou.
+
+Le travail de préparation, les références, les rendus et le fichier Blender
+restent dans `private-3d-inputs/anais-rig-study/`. La sortie reste dans
+`public/models/bust-anais-full-hi3d-palpation-rig.glb` (ignoré par Git).
+La pose est réglée d’après les photos/vidéos locales ; ce n’est pas une capture
+automatique du mouvement. Les doigts ne sont pas articulés individuellement
+et la géométrie cachée de l'aisselle est reconstruite, pas mesurée. Le contrôle
+propre à Anaïs (`scripts/validate-anais-rig.mjs`) recharge le GLB exporté et
+échantillonne ses sept clips à 60 Hz, corrections de pose comprises : main et
+avant-bras au-dessus de la taille contre le buste et le bras opposé, sommets,
+milieux d'arêtes et centres des triangles. Il vérifie aussi le retour au repos,
+l'immobilité du centre du torse et les étirements excessifs de l'épaule. Il ne
+constitue pas une simulation d'auto-collision complète ni une validation
+biomécanique ; le contact fin des doigts reste approximatif.
+Les clips sein/mamelon de Zou ne sont pas transférés : ces étapes affichent
+Anaïs au repos. Le GLB historique reste disponible pour revoir ces animations.
+
+Ordre de fabrication, sur de nouveaux chemins ignorés à chaque itération :
+
+```sh
+blender -b --python scripts/prepare-anais-rig.py -- private-3d-inputs/anais-rig-study/animation-base.glb private-3d-inputs/anais-rig-study/repaired.glb
+node scripts/prepare-palpation-mesh.mjs private-3d-inputs/anais-rig-study/repaired.glb private-3d-inputs/anais-rig-study/repaired-small.glb
+node scripts/generate-symptom-model.mjs private-3d-inputs/anais-rig-study/repaired-small.glb private-3d-inputs/anais-rig-study/repaired-symptoms.glb "Anaïs · base articulée"
+node scripts/rig-anais-palpation.mjs private-3d-inputs/anais-rig-study/repaired-symptoms.glb private-3d-inputs/anais-rig-study/review.glb
+node scripts/validate-anais-rig.mjs private-3d-inputs/anais-rig-study/review.glb 60 private-3d-inputs/anais-rig-study/validation.json
+node --import tsx --test components/ui/three-bust/palpation-playback.test.ts
+```
+
+Les trois morphs de symptômes restent embarqués avant les corrections
+d'aisselle pour ne pas perdre leur disponibilité au repos. Après contrôle
+visuel des poses intermédiaires, de face et de profil, conserver l'ancienne
+sortie privée puis remplacer le fichier local stable. Aucun de ces scripts
+ne téléverse les références ou les modèles.

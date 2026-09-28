@@ -766,6 +766,8 @@ const palpationModelPresence = ref(0);
 const palpationStepId = ref("observation");
 const sharedPalpationStep = computed(() => palpationModelPresence.value > 0 ? palpationStepId.value : "observation");
 const sharedModelRotation = computed(() => {
+  // Keep the raised arm and opposite hand visible together for the rig study.
+  if (palpationModelPresence.value > 0 && palpationStepId.value === "axilla") return -0.35;
   if (palpationModelPresence.value > 0) return palpationStepId.value === "other-side" ? Math.PI / 2 : -Math.PI / 2;
   return isSymptomsProfileView.value ? -Math.PI / 2 : 0;
 });

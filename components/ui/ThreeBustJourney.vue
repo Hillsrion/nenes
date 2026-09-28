@@ -507,9 +507,11 @@ const initThree = async () => {
     secondRoot = secondScene;
     secondGroup.add(secondScene);
     secondGroup.rotation.y = props.secondRotationY;
-    registerSecondModelSymptoms(secondScene, !!secondGLTF?.animations.length);
+    registerSecondModelSymptoms(secondScene, !!secondGLTF?.animations.some(clip =>
+      clip.tracks.some(track => track.name.includes("morphTargetInfluences"))
+    ));
     if (secondGLTF?.animations.length) {
-      animationPlayback = createPalpationPlayback(secondScene, secondGLTF.animations, secondGLTF.parser.json.extras?.palpationStudy?.steps ?? []);
+      animationPlayback = createPalpationPlayback(secondScene, secondGLTF.animations, secondGLTF.parser.json.extras?.palpationStudy?.steps ?? [], secondGLTF.parser.json.extras?.palpationStudy?.segments ?? []);
       animationPlayback.selectStep(props.animationStep);
       reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     }
