@@ -81,7 +81,11 @@
         ref="contentStageRef"
         class="sticky top-0 h-[100svh] w-full overflow-hidden bg-white"
       >
-        <ThreeFruitPile v-if="fruitRainStarted" :active="true" />
+        <ThreeFruitPile
+          v-if="fruitRainStarted"
+          :active="true"
+          variant="entry"
+        />
 
         <div
           class="absolute right-[7vw] top-[18vh] z-20 flex w-[min(48rem,56vw)] flex-col gap-6 max-md:left-6 max-md:right-6 max-md:w-auto"
