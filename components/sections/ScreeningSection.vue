@@ -1,15 +1,18 @@
 <template>
   <div ref="trackRef" class="relative lg:h-[470svh]">
+    <!-- Keep the background below the shared canvas and the editorial content above it. -->
+    <div
+      class="pointer-events-none sticky top-0 z-0 hidden h-0 lg:block"
+      aria-hidden="true"
+    >
+      <div class="absolute inset-x-0 top-0 h-[100svh] overflow-hidden rounded-t-4xl bg-white">
+        <div ref="backgroundRef" class="absolute inset-0 bg-primary" />
+      </div>
+    </div>
     <section
       ref="sectionRef"
-      class="relative z-30 overflow-hidden rounded-t-4xl bg-white text-primary lg:sticky lg:top-0 lg:z-auto lg:h-[100svh]"
+      class="relative z-30 overflow-hidden rounded-t-4xl bg-primary text-primary lg:sticky lg:top-0 lg:h-[100svh] lg:bg-transparent"
     >
-      <div
-        ref="backgroundRef"
-        aria-hidden="true"
-        class="absolute inset-0 z-0 bg-primary opacity-100"
-      />
-
       <div
         class="relative z-10 mx-auto min-h-[100svh] max-w-[1366px] px-5 py-24 sm:px-10 lg:h-full lg:px-12 lg:py-0"
       >
@@ -221,14 +224,13 @@ const initializeScrollSequence = () => {
   const titleWords = titleSplit.words ?? [];
 
   gsap.set(model, { autoAlpha: 0, y: 0, scale: 1 });
-  gsap.set(paper, { autoAlpha: 0, y: "110vh" });
+  gsap.set(paper, { autoAlpha: 0, y: 0 });
   gsap.set(titleWords, { opacity: 0.14 });
-  // Each sheet enters a little looser than its final resting angle. The two
-  // stacks intentionally do not mirror each other, as in frame V2-44.
-  gsap.set(screeningPolaroid, { rotation: -14, transformOrigin: "50% 70%" });
-  gsap.set(screeningNote, { rotation: 8, transformOrigin: "50% 70%" });
-  gsap.set(selfExamPolaroid, { rotation: 16, transformOrigin: "50% 70%" });
-  gsap.set(selfExamNote, { rotation: -13, transformOrigin: "50% 70%" });
+  // Fade each sheet in at its resting position, without travelling up from below.
+  gsap.set(screeningPolaroid, { rotation: -6, transformOrigin: "50% 70%" });
+  gsap.set(screeningNote, { rotation: 1.5, transformOrigin: "50% 70%" });
+  gsap.set(selfExamPolaroid, { rotation: 7, transformOrigin: "50% 70%" });
+  gsap.set(selfExamNote, { rotation: -4, transformOrigin: "50% 70%" });
 
   gsap.set(background, { opacity: 1 });
   gsap.set(title, { color: "white" });
@@ -256,20 +258,20 @@ const initializeScrollSequence = () => {
     .to(model, { autoAlpha: 1, duration: 0.2 }, 0.14)
     .to(
       screeningPolaroid,
-      { autoAlpha: 1, y: 0, rotation: -6, duration: 0.22 },
+      { autoAlpha: 1, duration: 0.22 },
       0.64
     )
     .to(
       screeningNote,
-      { autoAlpha: 1, y: 0, rotation: 1.5, duration: 0.2 },
+      { autoAlpha: 1, duration: 0.2 },
       0.7
     )
     .to(
       selfExamPolaroid,
-      { autoAlpha: 1, y: 0, rotation: 7, duration: 0.22 },
+      { autoAlpha: 1, duration: 0.22 },
       0.78
     )
-    .to(selfExamNote, { autoAlpha: 1, y: 0, rotation: -4, duration: 0.2 }, 0.84)
+    .to(selfExamNote, { autoAlpha: 1, duration: 0.2 }, 0.84)
     // The loose notes leave first, then their Polaroids, the main copy, and finally the bust.
     .to(notes, { autoAlpha: 0, y: "-24vh", duration: 0.16 }, 1.16)
     .to(polaroids, { autoAlpha: 0, y: "-18vh", duration: 0.14 }, 1.22)

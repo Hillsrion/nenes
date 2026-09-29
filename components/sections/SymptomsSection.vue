@@ -19,7 +19,7 @@
       <div
         v-if="introCard"
         ref="introCardRef"
-        class="relative z-0 mx-auto w-[min(28rem,80vw)] text-left"
+        class="relative z-30 mx-auto w-[min(28rem,80vw)] text-left"
       >
         <h3 class="text-primary text-2xl font-medium leading-title lg:text-3xl">
           {{ introCard.title }}
@@ -53,7 +53,7 @@
       </div>
       <div
         ref="cardStageRef"
-        class="absolute inset-0 z-10"
+        class="absolute inset-0 z-50"
       >
         <div
           v-for="(card, index) in cards"

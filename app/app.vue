@@ -888,9 +888,8 @@ const initializeSharedModelAnimation = () => {
 
   sharedModelAnimation = $gsap.fromTo(
     sharedProfileModelRef.value,
-    { yPercent: 118, opacity: 0 },
+    { opacity: 0 },
     {
-      yPercent: 0,
       opacity: 1,
       ease: "none",
       scrollTrigger: {

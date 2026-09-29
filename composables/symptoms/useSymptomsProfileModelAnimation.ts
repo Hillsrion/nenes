@@ -33,9 +33,8 @@ export const useSymptomsProfileModelAnimation = ({
     if (modelRef?.value) {
       modelAnimation = $gsap.fromTo(
         modelRef.value,
-        { yPercent: 118, opacity: 0 },
+        { opacity: 0 },
         {
-          yPercent: 0,
           opacity: 1,
           ease: "none",
           scrollTrigger: {

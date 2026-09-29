@@ -33,8 +33,23 @@ export const useSymptomsCarouselAnimation = ({
     onActiveCardChange?.(index);
   };
 
+  const updateCardOpacities = () => {
+    cardRefs.value.forEach((card) => {
+      const bounds = card?.firstElementChild?.getBoundingClientRect();
+      if (!card || !bounds) return;
+
+      // Finish the fade as soon as the card enters the viewport, so its
+      // opaque paper covers the 3D bust while the carousel keeps turning.
+      const fadeDistance = Math.max(1, bounds.width * 0.15);
+      $gsap.set(card, {
+        opacity: Math.max(0, Math.min(1, (window.innerWidth - bounds.left) / fadeDistance)),
+      });
+    });
+  };
+
   // Follow the rendered cards, including stagger, easing and reverse scrolling.
   const updateActiveCard = () => {
+    updateCardOpacities();
     const section = sectionRef.value?.getBoundingClientRect();
     if (!section || section.top > 0 ||
       (cardStageRef?.value && Number($gsap.getProperty(cardStageRef.value, "opacity")) < 0.05)) {
@@ -69,6 +84,7 @@ export const useSymptomsCarouselAnimation = ({
     );
 
     carouselMatchMedia?.revert?.();
+    $gsap.set(validRefs, { opacity: 0 });
     carouselMatchMedia = $gsap.matchMedia();
 
     carouselMatchMedia.add(
