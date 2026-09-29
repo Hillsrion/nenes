@@ -213,6 +213,12 @@ const initializeScrollSequence = () => {
   ];
   const notes = [screeningNote, selfExamNote];
   const polaroids = [screeningPolaroid, selfExamPolaroid];
+  const paperRestingRotations = new Map<HTMLElement, number>([
+    [screeningPolaroid, -6],
+    [screeningNote, 1.5],
+    [selfExamPolaroid, 7],
+    [selfExamNote, -4],
+  ]);
   const blue = "#335ede";
 
   titleSplit?.revert();
@@ -224,13 +230,14 @@ const initializeScrollSequence = () => {
   const titleWords = titleSplit.words ?? [];
 
   gsap.set(model, { autoAlpha: 0, y: 0, scale: 1 });
-  gsap.set(paper, { autoAlpha: 0, y: 0 });
+  gsap.set(paper, { autoAlpha: 0, y: 45, scale: 0.95 });
   gsap.set(titleWords, { opacity: 0.14 });
-  // Fade each sheet in at its resting position, without travelling up from below.
-  gsap.set(screeningPolaroid, { rotation: -6, transformOrigin: "50% 70%" });
-  gsap.set(screeningNote, { rotation: 1.5, transformOrigin: "50% 70%" });
-  gsap.set(selfExamPolaroid, { rotation: 7, transformOrigin: "50% 70%" });
-  gsap.set(selfExamNote, { rotation: -4, transformOrigin: "50% 70%" });
+  paperRestingRotations.forEach((rotation, element) => {
+    gsap.set(element, {
+      rotation: rotation + 2.5,
+      transformOrigin: "50% 70%",
+    });
+  });
 
   gsap.set(background, { opacity: 1 });
   gsap.set(title, { color: "white" });
@@ -258,20 +265,52 @@ const initializeScrollSequence = () => {
     .to(model, { autoAlpha: 1, duration: 0.2 }, 0.14)
     .to(
       screeningPolaroid,
-      { autoAlpha: 1, duration: 0.22 },
+      {
+        autoAlpha: 1,
+        y: 0,
+        scale: 1,
+        rotation: paperRestingRotations.get(screeningPolaroid),
+        duration: 0.22,
+        ease: "power2.out",
+      },
       0.64
     )
     .to(
       screeningNote,
-      { autoAlpha: 1, duration: 0.2 },
+      {
+        autoAlpha: 1,
+        y: 0,
+        scale: 1,
+        rotation: paperRestingRotations.get(screeningNote),
+        duration: 0.2,
+        ease: "power2.out",
+      },
       0.7
     )
     .to(
       selfExamPolaroid,
-      { autoAlpha: 1, duration: 0.22 },
+      {
+        autoAlpha: 1,
+        y: 0,
+        scale: 1,
+        rotation: paperRestingRotations.get(selfExamPolaroid),
+        duration: 0.22,
+        ease: "power2.out",
+      },
       0.78
     )
-    .to(selfExamNote, { autoAlpha: 1, duration: 0.2 }, 0.84)
+    .to(
+      selfExamNote,
+      {
+        autoAlpha: 1,
+        y: 0,
+        scale: 1,
+        rotation: paperRestingRotations.get(selfExamNote),
+        duration: 0.2,
+        ease: "power2.out",
+      },
+      0.84
+    )
     // The loose notes leave first, then their Polaroids, the main copy, and finally the bust.
     .to(notes, { autoAlpha: 0, y: "-24vh", duration: 0.16 }, 1.16)
     .to(polaroids, { autoAlpha: 0, y: "-18vh", duration: 0.14 }, 1.22)
