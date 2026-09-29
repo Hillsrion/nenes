@@ -4,7 +4,6 @@
     :class="{ 'rounded-t-4xl': !isAtTop, '-mt-4': isIOS }"
     ref="sectionRef"
   >
-    <ThreeFruitPile v-if="avalancheStarted" :active="true" entrance="right" />
     <div
       class="container relative z-20 mx-auto px-6 xl:px-8 h-full flex flex-col ju stify-between"
     >
@@ -89,14 +88,11 @@
 <script setup lang="ts">
 import { useAnimationsStore } from "../../stores";
 import ImageSequenceAnimator from "~/components/ui/ImageSequenceAnimator.vue";
-import ThreeFruitPile from "~/components/ui/ThreeFruitPile.vue";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useIsIOS } from "~/composables/useIsIOS";
 import { useResourcesAnimations } from "~/composables/resources/useResourcesAnimations";
 // Animation store
 const store = useAnimationsStore();
-const avalancheStarted = ref(false);
-let avalancheObserver: IntersectionObserver | null = null;
 
 // Check if iOS
 const { isIOS } = useIsIOS();
@@ -106,16 +102,6 @@ const illustrationProgress = ref(0);
 
 // Track if section is at top (sticky)
 const isAtTop = ref(false);
-
-onMounted(() => {
-  if (!sectionRef.value) return;
-  avalancheObserver = new IntersectionObserver(([entry]) => {
-    if (!entry.isIntersecting) return;
-    avalancheStarted.value = true;
-    avalancheObserver?.disconnect();
-  }, { rootMargin: "0px 0px -25% 0px", threshold: 0 });
-  avalancheObserver.observe(sectionRef.value);
-});
 
 const {
   initializeTopTracking,
@@ -152,7 +138,6 @@ watch(
 
 // Cleanup on unmount
 onUnmounted(() => {
-  avalancheObserver?.disconnect();
   cleanupResourcesAnimations();
 });
 
