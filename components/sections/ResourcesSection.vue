@@ -8,7 +8,7 @@
       class="container relative z-20 mx-auto px-6 xl:px-8 h-full flex flex-col ju stify-between"
     >
       <div
-        class="flex flex-wrap items-center justify-between flex-1 lg:pt-15 md:pt-10 sm:pt-6 pt-4"
+        class="flex flex-wrap items-center justify-between flex-1 lg:pt-15 md:flex-nowrap md:pt-10 sm:pt-6 pt-4"
       >
         <div class="flex flex-col md:w-3/5 w-full">
           <h2
@@ -60,9 +60,17 @@
           </div>
         </div>
         <div
-          class="md:w-auto sm:w-3/5 w-2/5 mx-auto my-8 md:mx-0 md:my-0 lg:h-auto h-20"
+          class="md:ml-auto md:w-2/5 md:max-w-[572px] md:aspect-[1.55] md:h-auto sm:w-3/5 w-2/5 mx-auto my-8 md:mr-0 md:my-0 h-20"
         >
-          <ImageSequenceAnimator :progress="illustrationProgress" />
+          <div class="flex h-full items-center justify-center">
+            <div class="aspect-square h-full">
+              <ThreeFruitLoadingAnimator
+                :progress="illustrationProgress"
+                :pair="true"
+                :randomize="false"
+              />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -87,7 +95,7 @@
 
 <script setup lang="ts">
 import { useAnimationsStore } from "../../stores";
-import ImageSequenceAnimator from "~/components/ui/ImageSequenceAnimator.vue";
+import ThreeFruitLoadingAnimator from "~/components/ui/ThreeFruitLoadingAnimator.vue";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useIsIOS } from "~/composables/useIsIOS";
 import { useResourcesAnimations } from "~/composables/resources/useResourcesAnimations";
