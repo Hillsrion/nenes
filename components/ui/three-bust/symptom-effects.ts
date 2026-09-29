@@ -34,6 +34,7 @@ export interface SymptomEffectsController {
   registerMesh: (mesh: THREE.Mesh, ensureSkinRelief?: boolean) => void;
   tick: (elapsedTime: number) => void;
   isTransitioning: () => boolean;
+  setGlobalOpacity: (opacity: number) => void;
   update: (symptom: SymptomType) => void;
 }
 
@@ -51,6 +52,7 @@ export const createSymptomEffects = (
   let targetSymptom: SymptomType = "none";
   let transitionStart = 0;
   let transitioning = false;
+  let globalOpacity = 1;
   const transitionDuration = 0.75;
   const layerMaterials = new Map<SymptomType, Map<THREE.Material, number>>();
   const prefersReducedMotion = () =>
@@ -481,7 +483,7 @@ export const createSymptomEffects = (
       const weight = type === "none" ? 0 : weights[type];
       layer.visible = weight > 0;
       layerMaterials.get(type)?.forEach((opacity, material) => {
-        material.opacity = opacity * weight;
+        material.opacity = opacity * weight * globalOpacity;
       });
     });
     if (updateColors) applyTint(targetSymptom);
@@ -511,6 +513,11 @@ export const createSymptomEffects = (
     transitionStart = now;
     transitioning = true;
     if (prefersReducedMotion()) advanceTransition(now);
+  };
+
+  const setGlobalOpacity = (opacity: number) => {
+    globalOpacity = THREE.MathUtils.clamp(opacity, 0, 1);
+    applyWeights(false);
   };
 
   const build = (loadedModel: THREE.Object3D, symptom: SymptomType) => {
@@ -626,5 +633,5 @@ export const createSymptomEffects = (
     createColorState(mesh);
   };
 
-  return { applyTint, build, dispose, registerMesh, tick, update, isTransitioning: () => transitioning };
+  return { applyTint, build, dispose, registerMesh, tick, update, setGlobalOpacity, isTransitioning: () => transitioning };
 };

@@ -47,6 +47,7 @@
                 :second-model-url="getModelUrl(palpationFileName)"
                 :animation-step="sharedPalpationStep"
                 :camera-progress="journeyCamera.progress"
+                :second-model-opacity="screeningSecondModelOpacity"
                 :symptom-type="palpationModelPresence > 0 ? 'none' : activeSectionSymptom"
                 :profile-label="symptomsMainTitle"
                 :profile-label-progress="palpationModelPresence > 0 ? 0 : symptomsProfileProgress"
@@ -59,6 +60,7 @@
           <ScreeningSection
             :sidebar-elements="screeningContentElements"
             :title="screeningMainTitle"
+            @second-model-opacity-change="screeningSecondModelOpacity = $event"
           />
           <div class="relative bg-white" ref="symptomsAndExaminationContainerRef">
             <!-- One persistent model for symptoms and palpation on touch layouts. -->
@@ -67,7 +69,6 @@
               aria-hidden="true"
             >
               <div
-                ref="sharedProfileModelRef"
                 class="absolute bottom-[-15svh] left-0 z-10 mx-0 h-[115svh] w-[min(100vw,56rem)] max-md:w-[100vw]"
               >
                 <ThreeBustViewer
@@ -758,10 +759,10 @@ const { $gsap } = useNuxtApp();
 const globalContainer = ref(null);
 const mainLayoutRef = ref(null); // Ref to MainLayout component
 const symptomsAndExaminationContainerRef = ref<HTMLElement | null>(null);
-const sharedProfileModelRef = ref<HTMLElement | null>(null);
 const journeyTrackRef = ref<HTMLElement | null>(null);
 const journeyStageRef = ref<HTMLElement | null>(null);
 const symptomsProfileProgress = ref(0);
+const screeningSecondModelOpacity = ref(0);
 const palpationModelPresence = ref(0);
 const palpationStepId = ref("observation");
 const sharedPalpationStep = computed(() => palpationModelPresence.value > 0 ? palpationStepId.value : "observation");
@@ -878,30 +879,6 @@ const scheduleJourneyStageMount = () => {
   }, 1100);
 };
 
-let sharedModelAnimation: any = null;
-
-const initializeSharedModelAnimation = () => {
-  if (!symptomsAndExaminationContainerRef.value || !sharedProfileModelRef.value) return;
-
-  sharedModelAnimation?.scrollTrigger?.kill();
-  sharedModelAnimation?.kill();
-
-  sharedModelAnimation = $gsap.fromTo(
-    sharedProfileModelRef.value,
-    { opacity: 0 },
-    {
-      opacity: 1,
-      ease: "none",
-      scrollTrigger: {
-        trigger: symptomsAndExaminationContainerRef.value,
-        start: "top bottom",
-        end: "top top",
-        scrub: 1,
-      },
-    }
-  );
-};
-
 // Computed logo color based on store state
 const logoColor = computed(() => {
   return store.getLogoState ? "var(--color-primary)" : "var(--color-secondary)";
@@ -932,7 +909,6 @@ watch(
       nextTick(() => {
         setTimeout(() => {
           requestAnimationFrame(() => {
-            initializeSharedModelAnimation();
             scheduleJourneyStageMount();
           });
         }, 120);
@@ -943,9 +919,6 @@ watch(
 );
 
 onUnmounted(() => {
-  sharedModelAnimation?.scrollTrigger?.kill();
-  sharedModelAnimation?.kill();
-  sharedModelAnimation = null;
   killJourneyAnimations();
   if (journeyStageReadyTimer) window.clearTimeout(journeyStageReadyTimer);
 });
@@ -967,7 +940,6 @@ onMounted(async () => {
     nextTick(() => {
       setTimeout(() => {
         requestAnimationFrame(() => {
-          initializeSharedModelAnimation();
           scheduleJourneyStageMount();
         });
       }, 150);

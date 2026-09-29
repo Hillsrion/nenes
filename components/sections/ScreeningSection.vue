@@ -34,7 +34,7 @@
           <ThreeBustViewer
             :model-url="monoviewModelUrl"
             material-style="glass"
-            :auto-rotate="true"
+            :auto-rotate="false"
             :interactive="false"
             :compact="true"
             :model-scale="2.2"
@@ -140,6 +140,10 @@ const props = withDefaults(defineProps<Props>(), {
   title: "",
 });
 
+const emit = defineEmits<{
+  secondModelOpacityChange: [opacity: number];
+}>();
+
 const store = useAnimationsStore();
 const { monoviewFileName, getModelUrl } = useDemoBustModelUrls();
 const monoviewModelUrl = computed(() => getModelUrl(monoviewFileName));
@@ -241,8 +245,10 @@ const initializeScrollSequence = () => {
 
   gsap.set(background, { opacity: 1 });
   gsap.set(title, { color: "white" });
+  emit("secondModelOpacityChange", 0);
 
   scrollTimeline = gsap.timeline({ defaults: { ease: "power2.inOut" } });
+  const secondModelReveal = { opacity: 0 };
 
   // Keep the full blue background while the bust fades in. Only once it is
   // fully present do we fade that single blue layer away to stable white.
@@ -311,6 +317,12 @@ const initializeScrollSequence = () => {
       },
       0.84
     )
+    .to(secondModelReveal, {
+      opacity: 1,
+      duration: 0.2,
+      ease: "power2.out",
+      onUpdate: () => emit("secondModelOpacityChange", secondModelReveal.opacity),
+    }, 0.84)
     // The loose notes leave first, then their Polaroids, the main copy, and finally the bust.
     .to(notes, { autoAlpha: 0, y: "-24vh", duration: 0.16 }, 1.16)
     .to(polaroids, { autoAlpha: 0, y: "-18vh", duration: 0.14 }, 1.22)

@@ -10,7 +10,7 @@
       class="profile-contour-label pointer-events-none absolute inset-0 z-20 h-full w-full overflow-visible text-primary"
       :viewBox="`0 0 ${profileContour.width} ${profileContour.height}`"
       :style="{
-        opacity: isLoading || profileLabelProgress <= 0 ? 0 : profileLabelOpacity,
+        opacity: isLoading || profileLabelProgress <= 0 ? 0 : profileLabelOpacity * secondModelOpacity,
         transition: 'opacity 240ms ease-out',
       }"
       aria-hidden="true"
@@ -41,6 +41,7 @@ interface Props {
   secondModelUrl?: string;
   /** 0: screening framing on the first bust · 1: locked profile framing on the second. */
   cameraProgress?: number;
+  secondModelOpacity?: number;
   symptomType?: SymptomType;
   profileLabel?: string;
   profileLabelProgress?: number;
@@ -53,6 +54,7 @@ const props = withDefaults(defineProps<Props>(), {
   firstModelUrl: "",
   secondModelUrl: "",
   cameraProgress: 0,
+  secondModelOpacity: 1,
   symptomType: "none",
   profileLabel: "",
   profileLabelProgress: 0,
@@ -72,8 +74,6 @@ const ARRIVAL_CENTER_NDC_X = -0.45;
 const ARRIVAL_DISTANCE = 6;
 /** First bust fills ~135% of the viewport height, as in the screening cut. */
 const START_FILL = 1.35;
-/** Below this camera progress the first bust keeps its gentle idle spin. */
-const IDLE_SPIN_PROGRESS = 0.02;
 
 const containerRef = ref<HTMLDivElement | null>(null);
 const canvasRef = ref<HTMLCanvasElement | null>(null);
@@ -96,17 +96,17 @@ let firstRoot: THREE.Object3D | null = null;
 let secondPlacement: THREE.Group | null = null;
 let secondGroup: THREE.Group | null = null;
 let secondRoot: THREE.Object3D | null = null;
+const secondBaseMaterials = new Map<THREE.Material, { opacity: number; transparent: boolean; depthWrite: boolean }>();
 let animationPlayback: ReturnType<typeof createPalpationPlayback> | null = null;
 const animationTime = ref(0);
 let previousAnimationTimestamp = 0;
 let reduceMotion = false;
 let firstBounds = new THREE.Box3();
-let secondLocalBounds = new THREE.Box3();
 const symptomEffects = createSymptomEffects(() => secondGroup);
 const glassMaterial = createGlassMaterial();
 const clayMaterial = createGeneratedShapeMaterial();
-let positionCurve: THREE.CatmullRomCurve3 | null = null;
-let targetCurve: THREE.CatmullRomCurve3 | null = null;
+let positionCurve: THREE.CubicBezierCurve3 | null = null;
+let targetCurve: THREE.CubicBezierCurve3 | null = null;
 const tmpTarget = new THREE.Vector3();
 let lastCameraProgress = -1;
 let environmentTexture: THREE.Texture | null = null;
@@ -156,7 +156,6 @@ const scheduleRender = (duration = 0) => {
 
 const needsContinuousRendering = () =>
   (animationPlayback?.active && !reduceMotion) ||
-  (!props.debugPath && lastCameraProgress < IDLE_SPIN_PROGRESS) ||
   modelIsRotating ||
   symptomEffects.isTransitioning() ||
   props.symptomType === "nipple";
@@ -222,10 +221,28 @@ const registerSecondModelSymptoms = (root: THREE.Object3D, animated: boolean) =>
   });
 };
 
+const updateSecondModelOpacity = (opacity: number) => {
+  const alpha = THREE.MathUtils.clamp(opacity, 0, 1);
+  if (secondPlacement) secondPlacement.visible = alpha > 0;
+  secondBaseMaterials.forEach((original, material) => {
+    const fading = alpha < 1;
+    const transparent = original.transparent || fading;
+    const depthWrite = original.depthWrite && !fading;
+    if (material.transparent !== transparent || material.depthWrite !== depthWrite) {
+      material.transparent = transparent;
+      material.depthWrite = depthWrite;
+      material.needsUpdate = true;
+    }
+    material.opacity = original.opacity * alpha;
+  });
+  symptomEffects.setGlobalOpacity(alpha);
+  scheduleRender(120);
+};
+
 /**
- * Camera choreography. The move rides two Catmull-Rom splines (eye + look-at)
- * through four beats: screening framing, wide orbit on the first bust's right,
- * over-the-shoulder pass, then the arrival pose locked on the second bust.
+ * Camera choreography. Matched eye and look-at curves travel directly past
+ * the first bust's screen-right shoulder toward the second bust, without reversing
+ * horizontal direction.
  * The arrival beat reproduces the former sticky viewer pose (same distance,
  * same left-edge bleed) so the symptoms sequence starts pixel-identical.
  */
@@ -236,7 +253,6 @@ const buildCameraPath = () => {
 
   const firstSize = firstBounds.getSize(new THREE.Vector3());
   const firstCenter = firstBounds.getCenter(new THREE.Vector3());
-  const secondSize = secondLocalBounds.getSize(new THREE.Vector3());
   const secondCenterWorld = secondPlacement.position.clone();
   secondCenterWorld.y += 0.2;
 
@@ -254,94 +270,45 @@ const buildCameraPath = () => {
     firstCenter.z
   );
 
-  // Beat 3 — over the right shoulder: the camera grazes the shoulder from the
-  // front-right along the shoulder->second-bust axis, so the shoulder stays in
-  // the near-field left of frame while the second bust appears ahead.
-  const shoulderY = firstBounds.max.y - 0.18 * firstSize.y;
-  const shoulderPoint = new THREE.Vector3(
-    firstBounds.max.x * 0.85,
-    shoulderY,
-    firstCenter.z - 0.1 * firstSize.z
-  );
-  const secondChest = new THREE.Vector3(
-    secondCenterWorld.x,
-    secondCenterWorld.y + 0.22 * secondSize.y,
-    secondCenterWorld.z
-  );
-  const p2 = new THREE.Vector3(
-    shoulderPoint.x + 0.28 * firstSize.y,
-    shoulderPoint.y + 0.05 * firstSize.y,
-    shoulderPoint.z + 0.28 * firstSize.y
-  );
-  const t2 = shoulderPoint
-    .clone()
-    .lerp(secondChest, 0.9)
-    .add(new THREE.Vector3(0.06 * firstSize.y, 0, 0));
-
-  // Beat 2 — wide orbit keeping the first bust in frame while swinging right.
-  const p1 = new THREE.Vector3(
-    Math.max(p0.x, p2.x) + 0.3 * firstSize.x,
-    THREE.MathUtils.lerp(p0.y, p2.y, 0.55) + 0.04 * firstSize.y,
-    THREE.MathUtils.lerp(p0.z, p2.z, 0.55)
-  );
-  const t1 = new THREE.Vector3(
-    firstCenter.x - 0.15 * firstSize.x,
-    firstCenter.y + 0.1 * firstSize.y,
-    firstCenter.z - 0.6 * firstSize.z
-  );
-
-  // Beat 4 — arrival, locked on the second bust in profile. The lateral
+  // Arrival, locked on the second bust in profile. The lateral
   // offset derives from the half-width at the true camera-to-subject distance
   // so the bust center lands exactly at the target NDC x (left edge bleed,
   // matching the former sticky viewer proportions).
   const arrivalHalfWidth = Math.tan(halfFov) * ARRIVAL_DISTANCE * aspect;
   const arrivalOffsetX = -ARRIVAL_CENTER_NDC_X * arrivalHalfWidth;
-  const p3 = new THREE.Vector3(
+  const arrival = new THREE.Vector3(
     secondCenterWorld.x + arrivalOffsetX,
     secondCenterWorld.y + 0.6,
     secondCenterWorld.z + ARRIVAL_DISTANCE
   );
-  const t3 = new THREE.Vector3(
+  const arrivalTarget = new THREE.Vector3(
     secondCenterWorld.x + arrivalOffsetX,
     secondCenterWorld.y - 0.2,
     secondCenterWorld.z
   );
 
-  // Beats 4a/4b — exit the shoulder wide right, clear the first bust's back
-  // plane, then dive left-down toward the arrival pose.
-  const p2b = new THREE.Vector3(
-    Math.max(p2.x - 0.15 * firstSize.y, firstBounds.max.x + 0.12 * firstSize.y),
-    THREE.MathUtils.lerp(p2.y, p3.y, 0.35),
-    firstBounds.min.z - 0.11 * firstSize.y
-  );
-  const p2c = new THREE.Vector3(
-    THREE.MathUtils.lerp(p2b.x, p3.x, 0.6),
-    THREE.MathUtils.lerp(p2b.y, p3.y, 0.75),
-    THREE.MathUtils.lerp(p2b.z, p3.z, 0.5)
-  );
-  const t2b = t2.clone().lerp(t3, 0.55);
+  const shoulderX = firstBounds.max.x + 0.18 * firstSize.x;
+  const eye1 = p0.clone().lerp(arrival, 0.3);
+  eye1.x = Math.min(arrival.x, Math.max(eye1.x, shoulderX));
+  eye1.y = firstBounds.max.y - 0.15 * firstSize.y;
+  const eye2 = p0.clone().lerp(arrival, 0.72);
+  eye2.x = Math.min(arrival.x, Math.max(eye2.x, eye1.x));
 
-  positionCurve = new THREE.CatmullRomCurve3(
-    [p0, p1, p2, p2b, p2c, p3],
-    false,
-    "centripetal"
-  );
-  targetCurve = new THREE.CatmullRomCurve3(
-    [t0, t1, t2, t2b, t3],
-    false,
-    "centripetal"
-  );
+  const look1 = t0.clone().lerp(arrivalTarget, 0.25);
+  const look2 = t0.clone().lerp(arrivalTarget, 0.78);
+  positionCurve = new THREE.CubicBezierCurve3(p0, eye1, eye2, arrival);
+  targetCurve = new THREE.CubicBezierCurve3(t0, look1, look2, arrivalTarget);
 
   if (props.debugPath && scene) {
     scene.getObjectByName("journey-debug")?.removeFromParent();
     const debugGroup = new THREE.Group();
     debugGroup.name = "journey-debug";
-    const addCurve = (curve: THREE.CatmullRomCurve3, color: number) => {
+    const addCurve = (curve: THREE.CubicBezierCurve3, color: number) => {
       debugGroup.add(new THREE.Line(
         new THREE.BufferGeometry().setFromPoints(curve.getPoints(120)),
         new THREE.LineBasicMaterial({ color })
       ));
-      curve.points.forEach((point) => {
+      [curve.v0, curve.v1, curve.v2, curve.v3].forEach((point) => {
         const marker = new THREE.Mesh(
           new THREE.SphereGeometry(0.08, 12, 12),
           new THREE.MeshBasicMaterial({ color })
@@ -493,14 +460,14 @@ const initThree = async () => {
   }
 
   if (secondScene && secondGroup) {
-    secondLocalBounds = normalizeLoadedBust(secondScene, BASE_BUST_HEIGHT * SECOND_MODEL_SCALE);
+    normalizeLoadedBust(secondScene, BASE_BUST_HEIGHT * SECOND_MODEL_SCALE);
     secondScene.position.y -= 0.48;
     applyClayMaterial(secondScene);
-    // Place the second bust deep and left of the first one so the camera can
-    // travel over the shoulder before settling in front of it.
+    // Place the second bust deep and to screen right, along the camera's
+    // shoulder pass, while preserving the final framing around that bust.
     const firstSize = firstBounds.getSize(new THREE.Vector3());
     secondPlacement.position.set(
-      -(firstSize.x * 0.75 + 1.4),
+      firstSize.x * 1.15 + 2.2,
       0,
       -(firstSize.y * 1.55 + 3.4)
     );
@@ -517,6 +484,19 @@ const initThree = async () => {
     }
     symptomEffects.build(secondScene, props.symptomType);
     symptomEffects.applyTint(props.symptomType);
+    secondScene.traverse((child) => {
+      if (!(child instanceof THREE.Mesh)) return;
+      (Array.isArray(child.material) ? child.material : [child.material]).forEach((material) => {
+        if (!secondBaseMaterials.has(material)) {
+          secondBaseMaterials.set(material, {
+            opacity: material.opacity,
+            transparent: material.transparent,
+            depthWrite: material.depthWrite,
+          });
+        }
+      });
+    });
+    updateSecondModelOpacity(props.secondModelOpacity);
   }
 
   buildCameraPath();
@@ -565,15 +545,6 @@ const tick = (timestamp: number) => {
     animationTime.value = animationPlayback.time;
   }
   previousAnimationTimestamp = timestamp;
-
-  // While the opening framing holds, the first bust keeps the same gentle
-  // idle spin and float as the standalone screening viewer. Debug mode freezes
-  // it so the camera path can be inspected frame by frame.
-  if (firstGroup && firstRoot && !props.debugPath && lastCameraProgress < IDLE_SPIN_PROGRESS) {
-    firstRoot.rotation.y += 0.0028;
-    firstGroup.position.y = Math.sin(elapsedTime * 1.5) * 0.05;
-    scheduleRender();
-  }
 
   symptomEffects.tick(elapsedTime);
   renderer.render(scene, camera);
@@ -633,6 +604,7 @@ onUnmounted(() => {
     });
   });
   symptomEffects.dispose();
+  secondBaseMaterials.clear();
   if (secondGroup) gsap.killTweensOf(secondGroup.rotation);
 
   if (scene) {
@@ -673,6 +645,8 @@ watch(
     scheduleRender(400);
   }
 );
+
+watch(() => props.secondModelOpacity, updateSecondModelOpacity);
 
 watch(
   () => props.secondRotationY,
