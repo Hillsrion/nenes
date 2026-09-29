@@ -231,15 +231,15 @@ const initializeAnimations = () => {
 
   const totalSteps = props.steps.length;
 
-  // Set initial state for Card 0 (resting at base offset)
+  // Keep the first card hidden until the video has entered.
   if (cardRefs.value[0]) {
     const o0 = restingOffsets[0];
     $gsap.set(cardRefs.value[0], {
-      opacity: 1,
+      opacity: 0,
       x: o0.x,
-      y: o0.y,
+      y: o0.y + 45,
       rotation: o0.rotate,
-      scale: 1,
+      scale: 0.95,
     });
   }
 
@@ -276,17 +276,17 @@ const initializeAnimations = () => {
           return;
         }
 
-        // 0 to 0.20 is Step 0 (during paragraph reveal & stage entrance)
-        if (progress < 0.20) {
+        // Step 0 includes the video entrance and the first card entrance.
+        if (progress < 0.50) {
           if (currentStepIndex.value !== 0) currentStepIndex.value = 0;
           return;
         }
 
-        // Remaining steps 1..totalSteps-1 distributed over 0.20 to 0.90
-        const stepSpan = 0.70 / (totalSteps - 1);
+        // Remaining steps 1..totalSteps-1 follow the first card entrance.
+        const stepSpan = 0.40 / (totalSteps - 1);
         const stepIdx = Math.min(
           totalSteps - 1,
-          1 + Math.floor((progress - 0.20) / stepSpan)
+          1 + Math.floor((progress - 0.50) / stepSpan)
         );
 
         if (currentStepIndex.value !== stepIdx) {
@@ -296,7 +296,7 @@ const initializeAnimations = () => {
     },
   });
 
-  // 1. Entrance of the stage (video + base card 0)
+  // 1. Entrance of the stage and video.
   tl.to(
     stageRef.value,
     {
@@ -308,16 +308,34 @@ const initializeAnimations = () => {
     0.08
   );
 
-  // 2. Sequential stacking animations for cards 1..N-1
+  // 2. Reveal the first card only after the video entrance completes.
+  if (cardRefs.value[0]) {
+    const o0 = restingOffsets[0];
+    tl.to(
+      cardRefs.value[0],
+      {
+        opacity: 1,
+        x: o0.x,
+        y: o0.y,
+        rotation: o0.rotate,
+        scale: 1,
+        duration: 0.10,
+        ease: "power2.out",
+      },
+      0.30
+    );
+  }
+
+  // 3. Sequential stacking animations for cards 1..N-1
   if (totalSteps > 1) {
-    const stepDuration = 0.70 / (totalSteps - 1);
+    const stepDuration = 0.40 / (totalSteps - 1);
 
     for (let i = 1; i < totalSteps; i++) {
       const card = cardRefs.value[i];
       if (!card) continue;
 
       const o = restingOffsets[i % restingOffsets.length];
-      const startTime = 0.20 + (i - 1) * stepDuration;
+      const startTime = 0.50 + (i - 1) * stepDuration;
 
       tl.to(
         card,
@@ -335,8 +353,8 @@ const initializeAnimations = () => {
     }
   }
 
-  // Hold briefly at end
-  tl.to({}, { duration: 0.08 });
+  // Keep the timeline duration fixed so scroll progress matches the card timings.
+  tl.to({}, { duration: 0.08 }, 0.92);
 
   scrollTimeline = tl;
 };
@@ -386,7 +404,3 @@ onUnmounted(() => {
   scrollTimeline = null;
 });
 </script>
-
-<style scoped>
-.examination-card.is-active { opacity: 1 !important; }
-</style>
