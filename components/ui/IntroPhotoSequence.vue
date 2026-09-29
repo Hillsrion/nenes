@@ -34,8 +34,6 @@ let material: ShaderMaterial | undefined;
 let geometry: PlaneGeometry | undefined;
 let textures: Texture[] = [];
 let resizeObserver: ResizeObserver | undefined;
-let intersectionObserver: IntersectionObserver | undefined;
-let isInView = true;
 let paintedPosition = Number.NaN;
 let frame = 0;
 let disposed = false;
@@ -59,7 +57,6 @@ uniform float uToAnchor;
 uniform float uPixel;
 uniform float uAspect;
 uniform float uSeed;
-uniform float uTime;
 float hash(float x) { return fract(sin(x * 127.1 + 311.7) * 43758.5453); }
 float noise(float x) {
   float i = floor(x), f = fract(x);
@@ -82,27 +79,37 @@ vec2 crop(vec2 uv, float anchor) {
   return vec2(uv.x * uCrop.x + (1.0 - uCrop.x) * anchor,
               uv.y * uCrop.y + (1.0 - uCrop.y) * 0.5);
 }
-float tornEdge(float x, float seed) {
-  // The noise evolves through time, so the edge changes shape at rest too.
-  // Fine angular cuts sit on broader, slowly changing folds.
-  float bend = (surfaceNoise(vec2(x * 4.2 + seed, uTime * 0.38 + seed)) - 0.5) * 0.075;
-  float tears = (surfaceNoise(vec2(x * 17.0 + seed * 2.3, uTime * 0.55)) - 0.5) * 0.025;
-  float cuts = (noise(x * 67.0 + seed + sin(uTime * 0.7) * 0.65) - 0.5) * 0.008;
-  float fibres = (noise(x * 193.0 + seed * 4.1 + sin(uTime * 0.9) * 0.4) - 0.5) * 0.003;
+float tornProfile(float x, float seed) {
+  float bend = (surfaceNoise(vec2(x * 3.2 + seed, seed * 1.7)) - 0.5) * 0.19;
+  float tears = (surfaceNoise(vec2(x * 15.0 + seed * 2.3, seed)) - 0.5) * 0.034;
+  float cuts = (noise(x * 67.0 + seed) - 0.5) * 0.009;
+  float fibres = (noise(x * 193.0 + seed * 4.1) - 0.5) * 0.003;
   return bend + tears + cuts + fibres;
+}
+float tornEdge(float x, float seed, float travel) {
+  // Three morphs keep a distinct change of shape with a gentler acceleration.
+  // Adjacent segments share a silhouette, keeping forward/reverse motion continuous.
+  float phase = travel * 3.0;
+  float segment = min(floor(phase), 2.0);
+  float morph = smoothstep(0.06, 0.94, phase - segment);
+  float first = tornProfile(x, seed + segment * 9.3);
+  float next = tornProfile(x, seed + (segment + 1.0) * 9.3);
+  return mix(first, next, morph);
 }
 void main() {
   float p = uProgress;
   if (p <= 0.0) { gl_FragColor = texture2D(uFrom, crop(vUv, uFromAnchor)); return; }
   if (p >= 1.0) { gl_FragColor = texture2D(uTo, crop(vUv, uToAnchor)); return; }
 
-  float paperTravel = smoothstep(0.0, 0.76, p);
-  float photoTravel = smoothstep(0.25, 1.0, p);
-  float paperHead = mix(-0.14, 1.14, paperTravel);
-  float photoHead = mix(-0.14, 1.14, photoTravel);
+  // Keep almost a full viewport of paper between the two torn edges.
+  float paperTravel = smoothstep(0.0, 0.65, p);
+  float photoTravel = smoothstep(0.35, 1.0, p);
+  // Clearance exceeds the largest tear, so each pass starts/ends offscreen.
+  float paperHead = mix(-0.18, 1.18, paperTravel);
+  float photoHead = mix(-0.18, 1.18, photoTravel);
   float edgeX = vUv.x * clamp(uAspect, 0.8, 2.0);
-  float paperDistance = vUv.y - paperHead - tornEdge(edgeX, uSeed);
-  float photoDistance = vUv.y - photoHead - tornEdge(edgeX, uSeed + 13.7);
+  float paperDistance = vUv.y - paperHead - tornEdge(edgeX, uSeed, paperTravel);
+  float photoDistance = vUv.y - photoHead - tornEdge(edgeX, uSeed + 13.7, photoTravel);
   float softness = max(uPixel, 0.0007);
   float paperMask = 1.0 - smoothstep(-softness, softness, paperDistance);
   float photoMask = 1.0 - smoothstep(-softness, softness, photoDistance);
@@ -133,7 +140,7 @@ void main() {
   gl_FragColor = vec4(color, 1.0);
 }`;
 
-function paint(now = performance.now()) {
+function paint() {
   frame = 0;
   if (disposed) return;
   const state = getIntroState(position);
@@ -160,11 +167,8 @@ function paint(now = performance.now()) {
     material.uniforms.uFromAnchor!.value = anchors[state.from];
     material.uniforms.uToAnchor!.value = anchors[state.to];
     material.uniforms.uSeed!.value = seed;
-    material.uniforms.uTime!.value = now / 1000;
     renderScene?.();
   }
-  // Keep only a visible, unfinished curtain alive between scroll events.
-  if (webglReady.value && isInView && state.progress > 0 && state.progress < 1) schedulePaint();
 }
 function schedulePaint() {
   if (!frame && !disposed && !document.hidden) frame = requestAnimationFrame(paint);
@@ -198,11 +202,6 @@ onMounted(async () => {
   paint();
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   document.addEventListener('visibilitychange', onVisibilityChange);
-  intersectionObserver = new IntersectionObserver(([entry]) => {
-    isInView = entry?.isIntersecting ?? false;
-    if (isInView) schedulePaint();
-  });
-  intersectionObserver.observe(root.value);
   try {
     const THREE = await import('three');
     if (disposed) return;
@@ -217,7 +216,7 @@ onMounted(async () => {
         uFrom: { value: null }, uTo: { value: null }, uProgress: { value: 0 },
         uCrop: { value: new THREE.Vector2(1, 1) },
         uFromAnchor: { value: 0.5 }, uToAnchor: { value: 0.5 }, uPixel: { value: 0.001 },
-        uAspect: { value: 1 }, uSeed: { value: curtainSeeds[0] }, uTime: { value: 0 },
+        uAspect: { value: 1 }, uSeed: { value: curtainSeeds[0] },
       },
       vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
       fragmentShader,
@@ -267,7 +266,6 @@ onBeforeUnmount(() => {
   disposed = true;
   cancelAnimationFrame(frame);
   resizeObserver?.disconnect();
-  intersectionObserver?.disconnect();
   document.removeEventListener('visibilitychange', onVisibilityChange);
   canvas.value?.removeEventListener('webglcontextlost', onContextLost);
   canvas.value?.removeEventListener('webglcontextrestored', onContextRestored);
