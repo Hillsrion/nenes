@@ -34,6 +34,9 @@ let material: ShaderMaterial | undefined;
 let geometry: PlaneGeometry | undefined;
 let textures: Texture[] = [];
 let resizeObserver: ResizeObserver | undefined;
+let intersectionObserver: IntersectionObserver | undefined;
+let isInView = true;
+let paintedPosition = Number.NaN;
 let frame = 0;
 let disposed = false;
 let renderScene: (() => void) | undefined;
@@ -42,7 +45,7 @@ let height = 1;
 
 const curtainSeeds = [2.4, 8.7, 15.2] as const;
 
-// Two staggered torn-paper edges cross the photo from left to right. The first
+// Two staggered torn-paper edges rise from the bottom. The first
 // reveals the paper; the second reveals the next image. Cutouts stay crisp.
 const fragmentShader = `
 precision highp float;
@@ -56,10 +59,11 @@ uniform float uToAnchor;
 uniform float uPixel;
 uniform float uAspect;
 uniform float uSeed;
+uniform float uTime;
 float hash(float x) { return fract(sin(x * 127.1 + 311.7) * 43758.5453); }
 float noise(float x) {
   float i = floor(x), f = fract(x);
-  return mix(hash(i), hash(i + 1.0), f * f * (3.0 - 2.0 * f));
+  return mix(hash(i), hash(i + 1.0), f);
 }
 float hash2(vec2 point) {
   return fract(sin(dot(point, vec2(41.37, 289.11))) * 45758.5453);
@@ -78,13 +82,14 @@ vec2 crop(vec2 uv, float anchor) {
   return vec2(uv.x * uCrop.x + (1.0 - uCrop.x) * anchor,
               uv.y * uCrop.y + (1.0 - uCrop.y) * 0.5);
 }
-float tornEdge(float y, float seed, float time) {
-  float bend = (noise(y * 5.5 + seed) - 0.5) * 0.065;
-  float tears = (noise(y * 23.0 + seed * 2.3) - 0.5) * 0.031;
-  float fibres = (noise(y * 112.0 + seed * 4.1) - 0.5) * 0.009;
-  float movement = sin(y * 11.0 + time * 7.0 + seed) * 0.009
-                 + sin(y * 31.0 - time * 11.0 + seed * 1.7) * 0.003;
-  return bend + tears + fibres + movement;
+float tornEdge(float x, float seed) {
+  // The noise evolves through time, so the edge changes shape at rest too.
+  // Fine angular cuts sit on broader, slowly changing folds.
+  float bend = (surfaceNoise(vec2(x * 4.2 + seed, uTime * 0.38 + seed)) - 0.5) * 0.075;
+  float tears = (surfaceNoise(vec2(x * 17.0 + seed * 2.3, uTime * 0.55)) - 0.5) * 0.025;
+  float cuts = (noise(x * 67.0 + seed + sin(uTime * 0.7) * 0.65) - 0.5) * 0.008;
+  float fibres = (noise(x * 193.0 + seed * 4.1 + sin(uTime * 0.9) * 0.4) - 0.5) * 0.003;
+  return bend + tears + cuts + fibres;
 }
 void main() {
   float p = uProgress;
@@ -95,9 +100,10 @@ void main() {
   float photoTravel = smoothstep(0.25, 1.0, p);
   float paperHead = mix(-0.14, 1.14, paperTravel);
   float photoHead = mix(-0.14, 1.14, photoTravel);
-  float paperDistance = vUv.x - paperHead - tornEdge(vUv.y, uSeed, p);
-  float photoDistance = vUv.x - photoHead - tornEdge(vUv.y, uSeed + 13.7, p + 0.28);
-  float softness = max(uPixel * 1.5 / max(uAspect, 0.6), 0.0012);
+  float edgeX = vUv.x * clamp(uAspect, 0.8, 2.0);
+  float paperDistance = vUv.y - paperHead - tornEdge(edgeX, uSeed);
+  float photoDistance = vUv.y - photoHead - tornEdge(edgeX, uSeed + 13.7);
+  float softness = max(uPixel, 0.0007);
   float paperMask = 1.0 - smoothstep(-softness, softness, paperDistance);
   float photoMask = 1.0 - smoothstep(-softness, softness, photoDistance);
 
@@ -111,32 +117,41 @@ void main() {
   vec3 paper = vec3(0.965, 0.925, 0.895);
   paper *= 0.94 + broadGrain * 0.095 + fineGrain * 0.025;
   paper += vec3(0.018, 0.009, 0.004) * smoothstep(0.7, 1.0, fibres);
-  float paperShadow = exp(-abs(paperDistance) / 0.012) * paperMask;
-  float photoRim = exp(-abs(photoDistance) / 0.008) * (1.0 - photoMask) * paperMask;
-  paper *= 1.0 - paperShadow * 0.065;
-  paper += vec3(0.045, 0.030, 0.021) * photoRim;
-
+  // Each exposed edge has its own uneven inner tear, like separated fibres.
+  float paperLip = 0.005 + noise(edgeX * 26.0 + uSeed) * 0.009;
+  float photoLip = 0.005 + noise(edgeX * 31.0 + uSeed + 7.0) * 0.009;
+  float paperRim = smoothstep(-paperLip - softness, -paperLip + softness, paperDistance) * paperMask;
+  float photoRim = smoothstep(-photoLip - softness, -photoLip + softness, photoDistance) * photoMask;
+  float paperShadow = exp(-max(paperDistance, 0.0) / 0.009) * (1.0 - paperMask);
+  float photoShadow = exp(-max(photoDistance, 0.0) / 0.009) * (1.0 - photoMask);
+  departing *= 1.0 - paperShadow * 0.16;
   vec3 color = mix(departing, paper, paperMask);
+  color *= 1.0 - photoShadow * paperMask * 0.14;
   color = mix(color, arriving, photoMask);
+  vec3 exposedFibres = vec3(0.995, 0.978, 0.950) * (0.975 + fineGrain * 0.025);
+  color = mix(color, exposedFibres, max(paperRim * (1.0 - photoMask), photoRim));
   gl_FragColor = vec4(color, 1.0);
 }`;
 
-function paint() {
+function paint(now = performance.now()) {
   frame = 0;
   if (disposed) return;
   const state = getIntroState(position);
-  backgrounds.forEach((image, index) => {
-    image.style.opacity = index === state.from ? '1' : index === state.to ? String(state.progress) : '0';
-  });
-  state.cutouts.forEach(({ visible, arrival }, index) => {
-    const image = cutouts[index];
-    if (!image) return;
-    const eased = 1 - Math.pow(1 - arrival, 3);
-    image.style.visibility = visible ? 'visible' : 'hidden';
-    image.style.opacity = String(Math.min(1, arrival * 4));
-    image.style.transform = `translate3d(0, ${(1 - eased) * 105}%, 0)`;
-  });
-  if (material && textures.length === 4) {
+  if (position !== paintedPosition) {
+    paintedPosition = position;
+    backgrounds.forEach((image, index) => {
+      image.style.opacity = index === state.from ? '1' : index === state.to ? String(state.progress) : '0';
+    });
+    state.cutouts.forEach(({ visible, arrival }, index) => {
+      const image = cutouts[index];
+      if (!image) return;
+      const eased = 1 - Math.pow(1 - arrival, 3);
+      image.style.visibility = visible ? 'visible' : 'hidden';
+      image.style.opacity = String(Math.min(1, arrival * 4));
+      image.style.transform = `translate3d(0, ${(1 - eased) * 105}%, 0)`;
+    });
+  }
+  if (material && textures.length === 4 && !renderer?.getContext().isContextLost()) {
     const anchors = width <= 768 ? [0.55, 0.60, 0.50, 0.30] : [0.5, 0.5, 0.5, 0.5];
     const seed = curtainSeeds[Math.min(state.from, curtainSeeds.length - 1)]!;
     material.uniforms.uFrom!.value = textures[state.from];
@@ -145,11 +160,14 @@ function paint() {
     material.uniforms.uFromAnchor!.value = anchors[state.from];
     material.uniforms.uToAnchor!.value = anchors[state.to];
     material.uniforms.uSeed!.value = seed;
+    material.uniforms.uTime!.value = now / 1000;
     renderScene?.();
   }
+  // Keep only a visible, unfinished curtain alive between scroll events.
+  if (webglReady.value && isInView && state.progress > 0 && state.progress < 1) schedulePaint();
 }
 function schedulePaint() {
-  if (!frame && !disposed) frame = requestAnimationFrame(paint);
+  if (!frame && !disposed && !document.hidden) frame = requestAnimationFrame(paint);
 }
 function setProgress(value: number) {
   position = value;
@@ -158,6 +176,16 @@ function setProgress(value: number) {
 function onContextLost(event: Event) {
   event.preventDefault();
   webglReady.value = false;
+  cancelAnimationFrame(frame);
+  frame = 0;
+}
+function onVisibilityChange() {
+  if (document.hidden) {
+    cancelAnimationFrame(frame);
+    frame = 0;
+  } else {
+    schedulePaint();
+  }
 }
 function onContextRestored() {
   webglReady.value = true;
@@ -169,6 +197,12 @@ onMounted(async () => {
   if (!root.value || !canvas.value) return;
   paint();
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  document.addEventListener('visibilitychange', onVisibilityChange);
+  intersectionObserver = new IntersectionObserver(([entry]) => {
+    isInView = entry?.isIntersecting ?? false;
+    if (isInView) schedulePaint();
+  });
+  intersectionObserver.observe(root.value);
   try {
     const THREE = await import('three');
     if (disposed) return;
@@ -183,7 +217,7 @@ onMounted(async () => {
         uFrom: { value: null }, uTo: { value: null }, uProgress: { value: 0 },
         uCrop: { value: new THREE.Vector2(1, 1) },
         uFromAnchor: { value: 0.5 }, uToAnchor: { value: 0.5 }, uPixel: { value: 0.001 },
-        uAspect: { value: 1 }, uSeed: { value: curtainSeeds[0] },
+        uAspect: { value: 1 }, uSeed: { value: curtainSeeds[0] }, uTime: { value: 0 },
       },
       vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
       fragmentShader,
@@ -217,8 +251,8 @@ onMounted(async () => {
       texture.magFilter = THREE.LinearFilter;
       texture.generateMipmaps = false;
     });
-    paint();
     webglReady.value = true;
+    schedulePaint();
     canvas.value?.addEventListener('webglcontextlost', onContextLost);
     canvas.value?.addEventListener('webglcontextrestored', onContextRestored);
   } catch (error) {
@@ -233,6 +267,8 @@ onBeforeUnmount(() => {
   disposed = true;
   cancelAnimationFrame(frame);
   resizeObserver?.disconnect();
+  intersectionObserver?.disconnect();
+  document.removeEventListener('visibilitychange', onVisibilityChange);
   canvas.value?.removeEventListener('webglcontextlost', onContextLost);
   canvas.value?.removeEventListener('webglcontextrestored', onContextRestored);
   textures.forEach(texture => texture.dispose());
