@@ -40,15 +40,10 @@ let renderScene: (() => void) | undefined;
 let width = 1;
 let height = 1;
 
-const strokePersonalities = [
-  { reverse: 0, seed: 2.4 },
-  { reverse: 1, seed: 8.7 },
-  { reverse: 0, seed: 15.2 },
-] as const;
+const curtainSeeds = [2.4, 8.7, 15.2] as const;
 
-// A stack of alternating eraser strokes travels from the bottom to the top.
-// Each stroke uncovers fibrous paper first; the next photograph is drawn into
-// that trail a moment later. Foreground cutouts remain perfectly crisp.
+// Two staggered torn-paper edges cross the photo from left to right. The first
+// reveals the paper; the second reveals the next image. Cutouts stay crisp.
 const fragmentShader = `
 precision highp float;
 varying vec2 vUv;
@@ -61,7 +56,6 @@ uniform float uToAnchor;
 uniform float uPixel;
 uniform float uAspect;
 uniform float uSeed;
-uniform float uReverse;
 float hash(float x) { return fract(sin(x * 127.1 + 311.7) * 43758.5453); }
 float noise(float x) {
   float i = floor(x), f = fract(x);
@@ -84,64 +78,45 @@ vec2 crop(vec2 uv, float anchor) {
   return vec2(uv.x * uCrop.x + (1.0 - uCrop.x) * anchor,
               uv.y * uCrop.y + (1.0 - uCrop.y) * 0.5);
 }
+float tornEdge(float y, float seed, float time) {
+  float bend = (noise(y * 5.5 + seed) - 0.5) * 0.065;
+  float tears = (noise(y * 23.0 + seed * 2.3) - 0.5) * 0.031;
+  float fibres = (noise(y * 112.0 + seed * 4.1) - 0.5) * 0.009;
+  float movement = sin(y * 11.0 + time * 7.0 + seed) * 0.009
+                 + sin(y * 31.0 - time * 11.0 + seed * 1.7) * 0.003;
+  return bend + tears + fibres + movement;
+}
 void main() {
   float p = uProgress;
   if (p <= 0.0) { gl_FragColor = texture2D(uFrom, crop(vUv, uFromAnchor)); return; }
   if (p >= 1.0) { gl_FragColor = texture2D(uTo, crop(vUv, uToAnchor)); return; }
 
-  const float STROKES = 18.0;
-  const float STROKE_INTERVAL = 0.72;
-  const float STROKE_DURATION = 2.35;
-  const float PHOTO_DELAY = 0.28;
-  const float TOTAL_DURATION = 14.87;
-
-  float pathWave = (noise(vUv.x * 5.0 + uSeed) - 0.5) * 0.014
-                   + sin(vUv.x * 17.0 + uSeed) * 0.0035;
-  float warpedY = clamp(vUv.y + pathWave, 0.0, 0.9999);
-  float row = floor(warpedY * STROKES);
-  float rowPosition = fract(warpedY * STROKES);
-  float rowClock = p * TOTAL_DURATION - row * STROKE_INTERVAL;
-
-  float eraseTravel = clamp(rowClock / STROKE_DURATION, 0.0, 1.0);
-  float photoTravel = clamp((rowClock - PHOTO_DELAY) / STROKE_DURATION, 0.0, 1.0);
-  float eraseHead = mix(-0.14, 1.14, eraseTravel);
+  float paperTravel = smoothstep(0.0, 0.76, p);
+  float photoTravel = smoothstep(0.25, 1.0, p);
+  float paperHead = mix(-0.14, 1.14, paperTravel);
   float photoHead = mix(-0.14, 1.14, photoTravel);
-
-  float reverseStroke = step(0.5, mod(row + uReverse, 2.0));
-  float strokeX = mix(vUv.x, 1.0 - vUv.x, reverseStroke);
-  float rowSeed = uSeed + row * 7.31;
-  float bristles = (noise(rowPosition * 7.0 + rowSeed) - 0.5) * 0.052
-                   + (noise(rowPosition * 31.0 + rowSeed * 1.7) - 0.5) * 0.016;
-  float eraseCoordinate = strokeX + bristles;
+  float paperDistance = vUv.x - paperHead - tornEdge(vUv.y, uSeed, p);
+  float photoDistance = vUv.x - photoHead - tornEdge(vUv.y, uSeed + 13.7, p + 0.28);
+  float softness = max(uPixel * 1.5 / max(uAspect, 0.6), 0.0012);
+  float paperMask = 1.0 - smoothstep(-softness, softness, paperDistance);
+  float photoMask = 1.0 - smoothstep(-softness, softness, photoDistance);
 
   vec2 paperUv = vec2(vUv.x * min(uAspect, 1.8), vUv.y);
   float broadGrain = surfaceNoise(paperUv * 28.0 + uSeed);
   float fineGrain = surfaceNoise(paperUv * 190.0 + uSeed * 2.7);
   float fibres = surfaceNoise(vec2(paperUv.x * 13.0, paperUv.y * 430.0) + uSeed);
-  float drawJitter = (surfaceNoise(vec2(strokeX * 73.0, warpedY * 97.0) + rowSeed) - 0.5)
-                     * 0.034;
-  float softness = max(uPixel * 2.5, 0.0035);
-
-  float eraseMask = 1.0 - smoothstep(eraseHead - softness,
-                                     eraseHead + softness,
-                                     eraseCoordinate);
-  float photoMask = 1.0 - smoothstep(photoHead - softness * 2.0,
-                                     photoHead + softness * 3.5,
-                                     eraseCoordinate + drawJitter);
-  photoMask = min(photoMask, eraseMask);
 
   vec3 departing = texture2D(uFrom, crop(vUv, uFromAnchor)).rgb;
   vec3 arriving = texture2D(uTo, crop(vUv, uToAnchor)).rgb;
   vec3 paper = vec3(0.965, 0.925, 0.895);
   paper *= 0.94 + broadGrain * 0.095 + fineGrain * 0.025;
   paper += vec3(0.018, 0.009, 0.004) * smoothstep(0.7, 1.0, fibres);
+  float paperShadow = exp(-abs(paperDistance) / 0.012) * paperMask;
+  float photoRim = exp(-abs(photoDistance) / 0.008) * (1.0 - photoMask) * paperMask;
+  paper *= 1.0 - paperShadow * 0.065;
+  paper += vec3(0.045, 0.030, 0.021) * photoRim;
 
-  float eraserDust = exp(-abs(eraseCoordinate - eraseHead) / 0.026)
-                     * (0.35 + fineGrain * 0.65) * eraseMask;
-  paper = mix(paper, vec3(0.985, 0.955, 0.935), eraserDust * 0.28);
-  arriving *= 0.965 + fineGrain * 0.035;
-
-  vec3 color = mix(departing, paper, eraseMask);
+  vec3 color = mix(departing, paper, paperMask);
   color = mix(color, arriving, photoMask);
   gl_FragColor = vec4(color, 1.0);
 }`;
@@ -163,14 +138,13 @@ function paint() {
   });
   if (material && textures.length === 4) {
     const anchors = width <= 768 ? [0.55, 0.60, 0.50, 0.30] : [0.5, 0.5, 0.5, 0.5];
-    const strokes = strokePersonalities[Math.min(state.from, strokePersonalities.length - 1)]!;
+    const seed = curtainSeeds[Math.min(state.from, curtainSeeds.length - 1)]!;
     material.uniforms.uFrom!.value = textures[state.from];
     material.uniforms.uTo!.value = textures[state.to];
     material.uniforms.uProgress!.value = state.progress;
     material.uniforms.uFromAnchor!.value = anchors[state.from];
     material.uniforms.uToAnchor!.value = anchors[state.to];
-    material.uniforms.uReverse!.value = strokes.reverse;
-    material.uniforms.uSeed!.value = strokes.seed;
+    material.uniforms.uSeed!.value = seed;
     renderScene?.();
   }
 }
@@ -209,7 +183,7 @@ onMounted(async () => {
         uFrom: { value: null }, uTo: { value: null }, uProgress: { value: 0 },
         uCrop: { value: new THREE.Vector2(1, 1) },
         uFromAnchor: { value: 0.5 }, uToAnchor: { value: 0.5 }, uPixel: { value: 0.001 },
-        uAspect: { value: 1 }, uSeed: { value: strokePersonalities[0].seed }, uReverse: { value: strokePersonalities[0].reverse },
+        uAspect: { value: 1 }, uSeed: { value: curtainSeeds[0] },
       },
       vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
       fragmentShader,
