@@ -74,7 +74,7 @@
 import { computed, ref, onMounted, onUnmounted, watch, useId } from "vue";
 import { createPalpationPlayback } from "./three-bust/palpation-playback";
 import { projectProfileContour } from "./three-bust/profile-contour";
-import { createGeneratedShapeMaterial, createGlassMaterial } from "./three-bust/materials";
+import { createGeneratedShapeMaterial, createGlassMaterial, createIridescentMaterial } from "./three-bust/materials";
 import * as THREE from "three";
 import { gsap } from "gsap";
 import {
@@ -97,6 +97,7 @@ interface Props {
   interactive?: boolean;
   compact?: boolean;
   modelScale?: number;
+  focusSymptoms?: boolean;
   showBackdrop?: boolean;
   showLoadingIndicator?: boolean;
   initialRotationY?: number;
@@ -118,6 +119,7 @@ const props = withDefaults(defineProps<Props>(), {
   interactive: true,
   compact: false,
   modelScale: 1,
+  focusSymptoms: false,
   showBackdrop: true,
   showLoadingIndicator: true,
   initialRotationY: 0,
@@ -232,6 +234,7 @@ let controlsActive = false;
 let modelIsRotating = false;
 let profileTurnTimer = 0;
 let queuedSymptom: SymptomType | null = null;
+const symptomFraming = { progress: props.focusSymptoms ? 1 : 0 };
 
 type PerformanceNavigator = Navigator & {
   deviceMemory?: number;
@@ -286,11 +289,25 @@ const alignModelHorizontally = () => {
   const halfFrustumWidth =
     Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) *
     nearestDepth *
-    camera.aspect;
+    camera.aspect / camera.zoom;
   const edgeBleed = Math.max(0.04, halfFrustumWidth * 0.085);
 
   modelGroup.position.x = -halfFrustumWidth - bounds.min.x - edgeBleed;
+  // Narrow screens need both breasts inside the close-up, rather than a left bleed.
+  if (camera.aspect < 1) modelGroup.position.x *= 1 - symptomFraming.progress;
   modelGroup.updateMatrixWorld(true);
+};
+
+const updateSymptomFraming = () => {
+  if (!camera || !controls) return;
+  const focus = symptomFraming.progress;
+  camera.zoom = THREE.MathUtils.lerp(1, 1.75, focus);
+  camera.position.y = 0.8 + 0.08 * props.modelScale * focus;
+  controls.target.y = 0.08 * props.modelScale * focus;
+  camera.updateProjectionMatrix();
+  controls.update();
+  alignModelHorizontally();
+  scheduleRender();
 };
 
 // Individual meshes for shape morphing
@@ -333,23 +350,7 @@ const glowMaterial = new THREE.MeshPhysicalMaterial({
   clearcoatRoughness: 0.28,
 });
 
-const iridescentMaterial = new THREE.MeshPhysicalMaterial({
-  color: 0xbba7e8,
-  roughness: 0.22,
-  metalness: 0.18,
-  transmission: 0.08,
-  thickness: 0.6,
-  ior: 1.34,
-  envMapIntensity: 0.75,
-  clearcoat: 0.78,
-  clearcoatRoughness: 0.12,
-  iridescence: 1,
-  iridescenceIOR: 1.45,
-  iridescenceThicknessRange: [160, 680],
-  sheen: 0.9,
-  sheenColor: new THREE.Color(0x69f3e5),
-  sheenRoughness: 0.28,
-});
+const iridescentMaterial = createIridescentMaterial();
 
 const materialForStyle = (style: MaterialStyle) => {
   if (style === "glass") return glassMaterial;
@@ -380,7 +381,7 @@ const applyMaterialStyle = (style: MaterialStyle) => {
   });
 
   if (bloomPass) {
-    bloomPass.strength = style === "glow" ? 0.68 : style === "iridescent" ? 0.12 : 0;
+    bloomPass.strength = style === "glow" ? 0.68 : 0;
     bloomPass.radius = style === "glow" ? 0.46 : 0.2;
     bloomPass.threshold = style === "glow" ? 0.58 : 0.78;
   }
@@ -648,6 +649,7 @@ const initThree = async () => {
   controls.enablePan = false;
   controls.minPolarAngle = Math.PI / 3; // Keep rotation bounded vertically
   controls.maxPolarAngle = Math.PI / 1.7;
+  updateSymptomFraming();
   controls.addEventListener("start", () => {
     controlsActive = true;
     scheduleRender();
@@ -928,6 +930,7 @@ onUnmounted(() => {
   disposed = true;
   window.clearTimeout(initTimer);
   window.clearTimeout(profileTurnTimer);
+  gsap.killTweensOf(symptomFraming);
   viewportObserver?.disconnect();
   resizeObserver?.disconnect();
   if (visibilityChangeHandler) {
@@ -1004,6 +1007,17 @@ watch(() => props.animationStep, (step) => {
 watch(() => props.animationEnabled, () => {
   previousAnimationTimestamp = 0;
   scheduleRender();
+});
+
+watch(() => props.focusSymptoms, (focused) => {
+  gsap.to(symptomFraming, {
+    progress: focused ? 1 : 0,
+    duration: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 0.9,
+    ease: "power2.inOut",
+    overwrite: true,
+    onUpdate: updateSymptomFraming,
+    onComplete: refreshProfileContour,
+  });
 });
 
 // Watch shapeType change and animate

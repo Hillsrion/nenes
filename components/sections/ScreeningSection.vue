@@ -33,7 +33,7 @@
         >
           <ThreeBustViewer
             :model-url="monoviewModelUrl"
-            material-style="glass"
+            material-style="iridescent"
             :auto-rotate="false"
             :interactive="false"
             :compact="true"

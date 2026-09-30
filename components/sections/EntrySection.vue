@@ -6,7 +6,11 @@
     >
       <div
         ref="revealStageRef"
-        class="sticky top-0 h-[100svh] w-full overflow-hidden rounded-t-4xl bg-white"
+        class="sticky top-0 h-[100svh] w-full overflow-hidden bg-white transition-[border-radius] duration-500 ease-out"
+        :style="{
+          borderTopLeftRadius: `${animationsStore.cover.cornerRadius}px`,
+          borderTopRightRadius: `${animationsStore.cover.cornerRadius}px`,
+        }"
       >
         <div ref="entryCoverRef" class="absolute inset-0 z-0 h-full w-full">
           <IntroPhotoSequence ref="photoSequenceRef" />
@@ -193,6 +197,7 @@ const setContentRef = (element, index) => {
 const {
   prepareInitialState,
   initializeAnimation: initializeEntryRevealAnimation,
+  animatePhotoArrivalComplete,
   cleanup: cleanupEntryRevealAnimation,
 } = useEntryRevealAnimation({
   revealTrackRef,
@@ -233,6 +238,7 @@ watch(
     }
 
     if (loadingState === "isComplete" && !animationsInitialized) {
+      animatePhotoArrivalComplete();
       nextTick(() => {
         initializeEntryRevealAnimation();
         initializeContentElementsAnimation();

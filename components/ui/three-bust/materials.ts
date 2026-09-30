@@ -30,3 +30,24 @@ export const createGlassMaterial = () =>
     opacity: 0.94,
     side: THREE.DoubleSide,
   });
+
+// Satin pearl shared by the material preview and the home busts. Broader,
+// softer highlights retain the iridescence without a polished glass finish.
+export const createIridescentMaterial = () =>
+  new THREE.MeshPhysicalMaterial({
+    color: 0xbba7e8,
+    roughness: 0.42,
+    metalness: 0.1,
+    transmission: 0.08,
+    thickness: 0.6,
+    ior: 1.34,
+    envMapIntensity: 0.5,
+    clearcoat: 0.3,
+    clearcoatRoughness: 0.4,
+    iridescence: 1,
+    iridescenceIOR: 1.45,
+    iridescenceThicknessRange: [160, 680],
+    sheen: 0.65,
+    sheenColor: new THREE.Color(0x69f3e5),
+    sheenRoughness: 0.5,
+  });

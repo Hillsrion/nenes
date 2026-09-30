@@ -20,8 +20,9 @@
         }"
       >
         <Logo
-          class="fixed top-8 left-1/2 -translate-x-1/2 z-150"
+          class="fixed top-8 left-1/2 -translate-x-1/2 z-150 transition-opacity duration-500 ease-out"
           :color="logoColor"
+          :style="{ opacity: store.logo.opacity }"
         />
 
         <!-- Unified Statistics and Content Section -->
@@ -47,6 +48,7 @@
                 :second-model-url="getModelUrl(palpationFileName)"
                 :animation-step="sharedPalpationStep"
                 :camera-progress="journeyCamera.progress"
+                :focus-symptoms="sharedSymptomsFocus"
                 :second-model-opacity="screeningSecondModelOpacity"
                 :symptom-type="palpationModelPresence > 0 ? 'none' : activeSectionSymptom"
                 :profile-label="symptomsMainTitle"
@@ -72,6 +74,7 @@
                 class="absolute bottom-[-15svh] left-0 z-10 mx-0 h-[115svh] w-[min(100vw,56rem)] max-md:w-[100vw]"
               >
                 <ThreeBustViewer
+                  material-style="iridescent"
                   :profile-label="symptomsMainTitle"
                   :profile-label-progress="sharedProfileLabelProgress"
                   :model-url="getModelUrl(palpationFileName)"
@@ -80,6 +83,7 @@
                   :enable-zoom="false"
                   :interactive="false"
                   :initial-rotation-y="sharedModelRotation"
+                  :focus-symptoms="sharedSymptomsFocus"
                   :symptom-type="palpationModelPresence > 0 ? 'none' : activeSectionSymptom"
                   :model-scale="1.05"
                   model-horizontal-alignment="left"
@@ -772,6 +776,10 @@ const sharedModelRotation = computed(() => {
 });
 const activeSectionSymptom = ref<SymptomType>("none");
 const isSymptomsProfileView = ref(true);
+// Keep the close-up between cards; restore the full bust for palpation.
+const sharedSymptomsFocus = computed(() =>
+  !isSymptomsProfileView.value && palpationModelPresence.value <= 0
+);
 const sharedProfileLabelProgress = computed(() =>
   isSymptomsProfileView.value && palpationModelPresence.value <= 0
     ? symptomsProfileProgress.value

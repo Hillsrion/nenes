@@ -26,11 +26,13 @@ const sections: Record<TSection, { state: TSectionAnimationState }> = {
 // Logo state
 interface LogoState {
   isPrimary: boolean;
+  opacity: number;
 }
 
 // Cover scaling state
 interface CoverState {
   isScaling: boolean;
+  cornerRadius: number;
 }
 
 export const useAnimationsStore = defineStore("animations", {
@@ -38,9 +40,11 @@ export const useAnimationsStore = defineStore("animations", {
     sections: sections || {},
     logo: {
       isPrimary: true,
+      opacity: 1,
     },
     cover: {
       isScaling: false,
+      cornerRadius: 32,
     },
   }),
   actions: {
@@ -54,9 +58,19 @@ export const useAnimationsStore = defineStore("animations", {
         this.logo.isPrimary = isPrimary;
       }
     },
+    updateLogoOpacity(opacity: number) {
+      if (this.logo) {
+        this.logo.opacity = Math.max(0, Math.min(1, opacity));
+      }
+    },
     updateCoverScaling(isScaling: boolean) {
       if (this.cover) {
         this.cover.isScaling = isScaling;
+      }
+    },
+    updateCoverCornerRadius(cornerRadius: number) {
+      if (this.cover) {
+        this.cover.cornerRadius = Math.max(0, Math.min(32, cornerRadius));
       }
     },
   },

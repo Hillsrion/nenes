@@ -26,6 +26,7 @@
         aria-hidden="true"
       >
         <ThreeBustViewer
+          material-style="iridescent"
           :model-url="getModelUrl(palpationFileName)"
           :animation-step="activeStepId"
           :animation-enabled="modelPresence > 0"

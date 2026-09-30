@@ -35,6 +35,7 @@
         aria-hidden="true"
       >
         <ThreeBustViewer
+          material-style="iridescent"
           :profile-label="title"
           :profile-label-progress="isProfileView ? profileLabelProgress : 0"
           :model-url="getModelUrl(palpationFileName)"
@@ -43,6 +44,7 @@
           :enable-zoom="false"
           :interactive="false"
           :initial-rotation-y="isProfileView ? -Math.PI / 2 : 0"
+          :focus-symptoms="!isProfileView"
           :symptom-type="activeSymptom"
           :model-scale="1.05"
           model-horizontal-alignment="left"

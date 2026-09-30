@@ -33,6 +33,10 @@ export const useEntryRevealAnimation = ({
   let timeline: any = null;
   let logoIsPrimary: boolean | null = null;
   let scrollIndicatorIsHidden: boolean | null = null;
+  const smoothStep = (start: number, end: number, value: number) => {
+    const amount = Math.max(0, Math.min(1, (value - start) / (end - start)));
+    return amount * amount * (3 - 2 * amount);
+  };
 
   const getNumberLayers = () =>
     [numberWhiteRef.value, numberBlueRef.value].filter(
@@ -41,8 +45,14 @@ export const useEntryRevealAnimation = ({
 
   const updateGlobalState = (progress: number) => {
     const statisticsProgress = (progress * (INTRO_TIMELINE_DURATION + 1.2) - INTRO_TIMELINE_DURATION) / 1.2;
+    const timelinePosition = progress * (INTRO_TIMELINE_DURATION + 1.2);
+    const fadeIn = smoothStep(3.72, 4.12, timelinePosition);
     const shouldUsePrimaryLogo = statisticsProgress >= 0.57;
     const shouldHideScrollIndicator = progress > 0.015;
+
+    // The arrival animation hides the logo and squares the photo stage. Keep
+    // both states while the photos scroll; only bring the logo back over 60000.
+    if (fadeIn > 0) animationsStore.updateLogoOpacity(fadeIn);
 
     if (logoIsPrimary !== shouldUsePrimaryLogo) {
       animationsStore.updateLogoColor(shouldUsePrimaryLogo);
@@ -53,6 +63,11 @@ export const useEntryRevealAnimation = ({
       animationsStore.updateCoverScaling(shouldHideScrollIndicator);
       scrollIndicatorIsHidden = shouldHideScrollIndicator;
     }
+  };
+
+  const animatePhotoArrivalComplete = () => {
+    animationsStore.updateLogoOpacity(0);
+    animationsStore.updateCoverCornerRadius(0);
   };
 
   const getTargetTransform = () => {
@@ -268,6 +283,8 @@ export const useEntryRevealAnimation = ({
     timeline = null;
 
     animationsStore.updateLogoColor(true);
+    animationsStore.updateLogoOpacity(1);
+    animationsStore.updateCoverCornerRadius(32);
     animationsStore.updateCoverScaling(false);
     logoIsPrimary = null;
     scrollIndicatorIsHidden = null;
@@ -276,6 +293,7 @@ export const useEntryRevealAnimation = ({
   return {
     prepareInitialState,
     initializeAnimation,
+    animatePhotoArrivalComplete,
     cleanup,
   };
 };

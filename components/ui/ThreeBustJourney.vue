@@ -27,7 +27,7 @@
 import { ref, onMounted, onUnmounted, watch, useId } from "vue";
 import { createPalpationPlayback } from "./three-bust/palpation-playback";
 import { projectProfileContour } from "./three-bust/profile-contour";
-import { createGeneratedShapeMaterial, createGlassMaterial } from "./three-bust/materials";
+import { createIridescentMaterial } from "./three-bust/materials";
 import * as THREE from "three";
 import { gsap } from "gsap";
 import {
@@ -41,6 +41,7 @@ interface Props {
   secondModelUrl?: string;
   /** 0: screening framing on the first bust · 1: locked profile framing on the second. */
   cameraProgress?: number;
+  focusSymptoms?: boolean;
   secondModelOpacity?: number;
   symptomType?: SymptomType;
   profileLabel?: string;
@@ -54,6 +55,7 @@ const props = withDefaults(defineProps<Props>(), {
   firstModelUrl: "",
   secondModelUrl: "",
   cameraProgress: 0,
+  focusSymptoms: false,
   secondModelOpacity: 1,
   symptomType: "none",
   profileLabel: "",
@@ -74,6 +76,7 @@ const ARRIVAL_CENTER_NDC_X = -0.52;
 const ARRIVAL_DISTANCE = 6;
 /** First bust fills ~135% of the viewport height, as in the screening cut. */
 const START_FILL = 1.35;
+const SYMPTOMS_ZOOM = 1.75;
 
 const containerRef = ref<HTMLDivElement | null>(null);
 const canvasRef = ref<HTMLCanvasElement | null>(null);
@@ -103,12 +106,14 @@ let previousAnimationTimestamp = 0;
 let reduceMotion = false;
 let firstBounds = new THREE.Box3();
 const symptomEffects = createSymptomEffects(() => secondGroup);
-const glassMaterial = createGlassMaterial();
-const clayMaterial = createGeneratedShapeMaterial();
+// Separate instances keep the second bust's fade and symptom tint independent.
+const firstMaterial = createIridescentMaterial();
+const secondMaterial = createIridescentMaterial();
 let positionCurve: THREE.CubicBezierCurve3 | null = null;
 let targetCurve: THREE.CubicBezierCurve3 | null = null;
 const tmpTarget = new THREE.Vector3();
 let lastCameraProgress = -1;
+const symptomFraming = { progress: props.focusSymptoms ? 1 : 0 };
 let environmentTexture: THREE.Texture | null = null;
 let animationFrameId = 0;
 let viewportObserver: IntersectionObserver | null = null;
@@ -180,18 +185,10 @@ const normalizeLoadedBust = (root: THREE.Object3D, targetHeight: number) => {
   return new THREE.Box3().setFromObject(root);
 };
 
-const applyGlassMaterial = (root: THREE.Object3D) => {
+const applyBustMaterial = (root: THREE.Object3D, material: THREE.Material) => {
   root.traverse((child) => {
     if (!(child instanceof THREE.Mesh) || child.userData.preserveMaterial) return;
-    child.material = glassMaterial;
-    child.material.needsUpdate = true;
-  });
-};
-
-const applyClayMaterial = (root: THREE.Object3D) => {
-  root.traverse((child) => {
-    if (!(child instanceof THREE.Mesh) || child.userData.preserveMaterial) return;
-    child.material = clayMaterial;
+    child.material = material;
     child.material.needsUpdate = true;
   });
 };
@@ -328,6 +325,17 @@ const updateCameraForProgress = (progress: number) => {
   const clamped = THREE.MathUtils.clamp(progress, 0, 1);
   positionCurve.getPoint(clamped, camera.position);
   targetCurve.getPoint(clamped, tmpTarget);
+  // Tighten only the symptoms framing, keeping the chest in the same left
+  // column as the profile while moving the vertical focus down from the head.
+  const focus = symptomFraming.progress * clamped;
+  camera.zoom = THREE.MathUtils.lerp(1, SYMPTOMS_ZOOM, focus);
+  const offsetX = -ARRIVAL_CENTER_NDC_X * Math.tan(THREE.MathUtils.degToRad(CAMERA_FOV) / 2) * ARRIVAL_DISTANCE * camera.aspect;
+  const correctionX = offsetX * (1 - 1 / camera.zoom);
+  camera.position.x -= correctionX;
+  tmpTarget.x -= correctionX;
+  camera.position.y -= 0.2 * focus;
+  tmpTarget.y -= 0.2 * focus;
+  camera.updateProjectionMatrix();
   camera.lookAt(tmpTarget);
   camera.updateMatrixWorld();
   if (props.debugPath) {
@@ -390,7 +398,7 @@ const initThree = async () => {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, constrainedDevice ? 1 : 1.25));
   renderer.setClearColor(0x000000, 0);
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.15;
+  renderer.toneMappingExposure = 0.9;
 
   const [{ RoomEnvironment }, { GLTFLoader }] = await Promise.all([
     import("three/examples/jsm/environments/RoomEnvironment.js"),
@@ -454,7 +462,7 @@ const initThree = async () => {
   const secondScene = secondGLTF?.scene;
   if (firstScene && firstGroup) {
     firstBounds = normalizeLoadedBust(firstScene, BASE_BUST_HEIGHT * FIRST_MODEL_SCALE);
-    applyGlassMaterial(firstScene);
+    applyBustMaterial(firstScene, firstMaterial);
     firstRoot = firstScene;
     firstGroup.add(firstScene);
   }
@@ -462,7 +470,7 @@ const initThree = async () => {
   if (secondScene && secondGroup) {
     normalizeLoadedBust(secondScene, BASE_BUST_HEIGHT * SECOND_MODEL_SCALE);
     secondScene.position.y -= 0.48;
-    applyClayMaterial(secondScene);
+    applyBustMaterial(secondScene, secondMaterial);
     // Place the second bust deep and to screen right, along the camera's
     // shoulder pass, while preserving the final framing around that bust.
     const firstSize = firstBounds.getSize(new THREE.Vector3());
@@ -582,6 +590,7 @@ onUnmounted(() => {
   animationPlayback?.dispose();
   disposed = true;
   window.clearTimeout(profileTurnTimer);
+  gsap.killTweensOf(symptomFraming);
   viewportObserver?.disconnect();
   resizeObserver?.disconnect();
   if (visibilityChangeHandler) {
@@ -593,8 +602,8 @@ onUnmounted(() => {
     renderer.forceContextLoss();
   }
   environmentTexture?.dispose();
-  glassMaterial.dispose();
-  clayMaterial.dispose();
+  firstMaterial.dispose();
+  secondMaterial.dispose();
 
   [firstRoot, secondRoot].forEach((root) => {
     root?.traverse((child) => {
@@ -613,7 +622,7 @@ onUnmounted(() => {
         child.geometry?.dispose();
         const materials = Array.isArray(child.material) ? child.material : [child.material];
         materials.forEach((material) => {
-          if (material !== glassMaterial && material !== clayMaterial) material?.dispose();
+          if (material !== firstMaterial && material !== secondMaterial) material?.dispose();
         });
       }
     });
@@ -645,6 +654,20 @@ watch(
     scheduleRender(400);
   }
 );
+
+watch(() => props.focusSymptoms, (focused) => {
+  gsap.to(symptomFraming, {
+    progress: focused ? 1 : 0,
+    duration: reduceMotion ? 0 : 0.9,
+    ease: "power2.inOut",
+    overwrite: true,
+    onUpdate: () => {
+      updateCameraForProgress(props.cameraProgress);
+      scheduleRender();
+    },
+    onComplete: refreshProfileContour,
+  });
+});
 
 watch(() => props.secondModelOpacity, updateSecondModelOpacity);
 
