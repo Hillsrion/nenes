@@ -68,8 +68,8 @@ const FIRST_MODEL_SCALE = 1.15;
 const SECOND_MODEL_SCALE = 1.65;
 const BASE_BUST_HEIGHT = 2.8;
 const CAMERA_FOV = 40;
-/** Arrival matches the former sticky viewer: bust center at -0.45 NDC x. */
-const ARRIVAL_CENTER_NDC_X = -0.45;
+/** Keep the symptoms bust slightly left of center to clear the cards. */
+const ARRIVAL_CENTER_NDC_X = -0.52;
 /** Camera distance on arrival, identical to the sticky viewer. */
 const ARRIVAL_DISTANCE = 6;
 /** First bust fills ~135% of the viewport height, as in the screening cut. */
@@ -243,8 +243,8 @@ const updateSecondModelOpacity = (opacity: number) => {
  * Camera choreography. Matched eye and look-at curves travel directly past
  * the first bust's screen-right shoulder toward the second bust, without reversing
  * horizontal direction.
- * The arrival beat reproduces the former sticky viewer pose (same distance,
- * same left-edge bleed) so the symptoms sequence starts pixel-identical.
+ * The arrival beat keeps the symptoms bust near the left edge as the
+ * screening camera hands off to this shared scene.
  */
 const buildCameraPath = () => {
   if (!camera || !firstGroup || !secondPlacement) return;
@@ -478,7 +478,7 @@ const initThree = async () => {
       clip.tracks.some(track => track.name.includes("morphTargetInfluences"))
     ));
     if (secondGLTF?.animations.length) {
-      animationPlayback = createPalpationPlayback(secondScene, secondGLTF.animations, secondGLTF.parser.json.extras?.palpationStudy?.steps ?? [], secondGLTF.parser.json.extras?.palpationStudy?.segments ?? []);
+      animationPlayback = createPalpationPlayback(secondScene, secondGLTF.animations, secondGLTF.parser.json.extras?.palpationStudy?.steps ?? []);
       animationPlayback.selectStep(props.animationStep);
       reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     }

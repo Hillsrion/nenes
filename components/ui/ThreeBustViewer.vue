@@ -287,7 +287,7 @@ const alignModelHorizontally = () => {
     Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) *
     nearestDepth *
     camera.aspect;
-  const edgeBleed = Math.max(0.04, halfFrustumWidth * 0.035);
+  const edgeBleed = Math.max(0.04, halfFrustumWidth * 0.085);
 
   modelGroup.position.x = -halfFrustumWidth - bounds.min.x - edgeBleed;
   modelGroup.updateMatrixWorld(true);
@@ -710,7 +710,7 @@ const initThree = async () => {
             const study = gltf.parser.json.extras?.palpationStudy;
             animationSteps.value = study?.steps ?? [];
             animationSegments.value = study?.segments ?? [];
-            animationPlayback = createPalpationPlayback(loadedModel, gltf.animations, animationSteps.value, study?.segments ?? []);
+            animationPlayback = createPalpationPlayback(loadedModel, gltf.animations, animationSteps.value);
             animationPlayback.selectStep(props.animationStep);
             animationPlaying.value = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
           }

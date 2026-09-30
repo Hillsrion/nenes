@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { createPalpationArm, type PalpationSegment } from './palpation-arm';
 
 export interface PalpationStep {
   id: string;
@@ -15,12 +14,10 @@ export function createPalpationPlayback(
   root: THREE.Object3D,
   clips: THREE.AnimationClip[],
   steps: PalpationStep[],
-  segments: PalpationSegment[] = [],
 ) {
   if (steps.some(step => step.entryClipName && step.exitClipName)) {
     return createAuthoredPlayback(root, clips, steps);
   }
-  const arm = createPalpationArm(root, segments);
   const mixer = new THREE.AnimationMixer(root);
   const hand = root.getObjectByName('PalpationHand');
   let skeletal = false;
@@ -43,8 +40,6 @@ export function createPalpationPlayback(
     action = clip ? mixer.clipAction(clip).reset().setLoop(THREE.LoopRepeat, Infinity).play() : null;
     if (skeletal && action && id !== undefined) action.fadeIn(1.2);
     offset = step?.start ?? 0;
-    // Observation restores the neutral scan immediately.
-    if (!action) arm.reset();
     if (hand) hand.visible = !!action;
     mixer.update(0);
   }
@@ -57,7 +52,6 @@ export function createPalpationPlayback(
       if (retiring && (fadeRemaining -= delta) <= 0) {
         retiring.stop(); retiring = null;
       }
-      arm.update(offset + (action?.time ?? 0), delta, !!action);
     },
     seek(time: number) {
       selectStep();
@@ -65,11 +59,10 @@ export function createPalpationPlayback(
       if (action) action.stopFading().setEffectiveWeight(1);
       if (action) action.time = THREE.MathUtils.clamp(time, 0, clips[0]?.duration ?? 0);
       mixer.update(0);
-      arm.update(action?.time ?? 0, 0, !!action, true);
     },
     get time() { return offset + (action?.time ?? 0); },
     get active() { return !!action || !!retiring; },
-    dispose() { arm.reset(); mixer.stopAllAction(); mixer.uncacheRoot(root); },
+    dispose() { mixer.stopAllAction(); mixer.uncacheRoot(root); },
   };
 }
 

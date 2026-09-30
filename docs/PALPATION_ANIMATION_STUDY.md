@@ -25,24 +25,11 @@ curseur permet de parcourir la séquence complète en pause. Le libellé
 indique le côté, la main et le niveau de pression en cours. Les niveaux sont
 visuels ; ils ne représentent pas des forces mesurées.
 
-Le scan a les bras baissés et ne contient pas de squelette. Un essai côté viewer
-(`palpation-arm.ts`) relève maintenant le bras du côté palpé de 130° environ,
-en 1,2 seconde, pendant les segments axillaires. La pose reste stable pendant
-la boucle du chapitre ; le bras redescend ensuite. Le curseur de l’aperçu
-applique directement la pose correspondant au temps choisi. L’observation
-restaure immédiatement le scan neutre.
-
-Cette articulation est calibrée uniquement pour Zou. Elle déforme une copie
-locale de la géométrie, sans changer les GLB ni la taille des tableaux de morphs.
-Les jonctions du scan entre bras et torse, et entre mains et hanches, sont
-séparées seulement du côté animé ; les triangles d’origine sont restaurés
-au repos. Les surfaces ainsi découvertes restent imparfaites, notamment sur
-la hanche et les doigts : une retopologie et un squelette seront nécessaires
-pour une version finale. La main de démonstration conserve ses stations sur
-le pli antérieur et la liaison avec le sein ; le creux axillaire n’est pas
-reconstruit. Le contrôle historique des collisions du GLB ne valide pas
-cette déformation supplémentaire du viewer. La phase d’observation devant
-le miroir avec changements de posture n’est pas animée.
+Le scan a les bras baissés et ne contient pas de squelette. L’essai de levée
+du bras dans `palpation-arm.ts` n’est plus appelé par le lecteur : les bras
+gardent la pose du scan pendant les clips. La main de démonstration, les
+contacts et les déformations locales du sein restent animés. La phase
+d’observation devant le miroir avec changements de posture n’est pas animée.
 
 ## Intégration dans le site
 

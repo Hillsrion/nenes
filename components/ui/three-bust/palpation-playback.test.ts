@@ -125,7 +125,7 @@ test('observation and missing clips hide the hand and restore a neutral scan', (
   playback.dispose();
 });
 
-test('the axillary arm raises, holds across loops, switches sides and restores the original scan', () => {
+test('the axillary clip leaves the scanned arms in their original pose', () => {
   const root = new THREE.Group();
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.Float32BufferAttribute([
@@ -141,26 +141,13 @@ test('the axillary arm raises, holds across loops, switches sides and restores t
   const source = Array.from(geometry.getAttribute('position').array);
   const playback = createPalpationPlayback(root, [
     new THREE.AnimationClip('full', 12, []), new THREE.AnimationClip('axilla', 3, []),
-  ], [{ id: 'axilla', start: 2, end: 5, clipName: 'axilla' }], [
-    { start: 2, end: 5, kind: 'axilla', side: 1 },
-    { start: 8, end: 11, kind: 'axilla', side: -1 },
-  ]);
+  ], [{ id: 'axilla', start: 2, end: 5, clipName: 'axilla' }]);
   playback.selectStep('axilla');
-  playback.update(0.6);
-  const halfway = mesh.geometry.getAttribute('position').getY(0);
-  playback.update(0.6);
-  const raised = mesh.geometry.getAttribute('position').getY(0);
-  assert.ok(raised > halfway && halfway > 0);
-  playback.update(3);
-  assert.equal(mesh.geometry.getAttribute('position').getY(0), raised);
-  assert.deepEqual(Array.from(geometry.getAttribute('position').array), source, 'cached geometry is untouched');
-  assert.equal(mesh.geometry.getAttribute('position').getY(3), 0, 'opposite arm stays down');
-  assert.equal(mesh.geometry.getAttribute('position').getX(6), 0, 'chest stays anchored');
+  playback.update(4.2);
   playback.seek(9);
-  assert.equal(mesh.geometry.getAttribute('position').getY(0), 0);
-  assert.ok(mesh.geometry.getAttribute('position').getY(3) > 0);
   playback.selectStep('observation');
   assert.deepEqual(Array.from(mesh.geometry.getAttribute('position').array), source);
+  assert.equal(mesh.geometry, geometry, 'the viewer does not clone or reshape the scan');
   assert.deepEqual(Array.from(mesh.geometry.getIndex()!.array), Array.from(geometry.getIndex()!.array));
   playback.dispose();
 });
