@@ -50,7 +50,7 @@
                 :second-model-opacity="screeningSecondModelOpacity"
                 :symptom-type="palpationModelPresence > 0 ? 'none' : activeSectionSymptom"
                 :profile-label="symptomsMainTitle"
-                :profile-label-progress="palpationModelPresence > 0 ? 0 : symptomsProfileProgress"
+                :profile-label-progress="sharedProfileLabelProgress"
                 :second-rotation-y="sharedModelRotation"
                 :debug-path="isJourneyDebug"
               />
@@ -73,7 +73,7 @@
               >
                 <ThreeBustViewer
                   :profile-label="symptomsMainTitle"
-                  :profile-label-progress="palpationModelPresence > 0 ? 0 : symptomsProfileProgress"
+                  :profile-label-progress="sharedProfileLabelProgress"
                   :model-url="getModelUrl(palpationFileName)"
                   :animation-step="sharedPalpationStep"
                   :auto-rotate="false"
@@ -767,13 +767,16 @@ const palpationModelPresence = ref(0);
 const palpationStepId = ref("observation");
 const sharedPalpationStep = computed(() => palpationModelPresence.value > 0 ? palpationStepId.value : "observation");
 const sharedModelRotation = computed(() => {
-  // Keep the raised arm and opposite hand visible together for the rig study.
-  if (palpationModelPresence.value > 0 && palpationStepId.value === "axilla") return -0.35;
-  if (palpationModelPresence.value > 0) return palpationStepId.value === "other-side" ? Math.PI / 2 : -Math.PI / 2;
+  if (palpationModelPresence.value > 0) return 0;
   return isSymptomsProfileView.value ? -Math.PI / 2 : 0;
 });
 const activeSectionSymptom = ref<SymptomType>("none");
 const isSymptomsProfileView = ref(true);
+const sharedProfileLabelProgress = computed(() =>
+  isSymptomsProfileView.value && palpationModelPresence.value <= 0
+    ? symptomsProfileProgress.value
+    : 0
+);
 
 // Journey stage: one scene with the screening bust and the symptoms bust. The
 // ScrollTrigger below scrubs the camera from the screening framing, over the

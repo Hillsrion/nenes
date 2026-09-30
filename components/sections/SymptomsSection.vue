@@ -36,7 +36,7 @@
       >
         <ThreeBustViewer
           :profile-label="title"
-          :profile-label-progress="profileLabelProgress"
+          :profile-label-progress="isProfileView ? profileLabelProgress : 0"
           :model-url="getModelUrl(palpationFileName)"
           animation-step="observation"
           :auto-rotate="false"
@@ -156,16 +156,18 @@ const { initializeCarouselAnimation, cleanupCarouselAnimation } =
     showProfileModel: props.showProfileModel,
     onActiveCardChange: (index) => {
       activeSymptom.value = props.cards[index]?.symptom ?? "none";
-      isProfileView.value = index < 0;
+      // Gaps between cards must not turn the bust back to profile.
+      if (index >= 0) isProfileView.value = false;
       emit("symptomChange", activeSymptom.value);
       emit("profileViewChange", isProfileView.value);
     },
     onSequenceComplete: () => {
-      // Finish in the same profile used by the next palpation section.
-      isProfileView.value = true;
-      emit("profileViewChange", true);
       activeSymptom.value = "none";
       emit("symptomChange", activeSymptom.value);
+    },
+    onSequenceReset: () => {
+      isProfileView.value = true;
+      emit("profileViewChange", true);
     },
   });
 

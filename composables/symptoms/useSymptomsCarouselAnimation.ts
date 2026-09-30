@@ -9,6 +9,7 @@ interface UseSymptomsCarouselAnimationOptions {
   showProfileModel?: boolean;
   onActiveCardChange?: (index: number) => void;
   onSequenceComplete?: () => void;
+  onSequenceReset?: () => void;
 }
 
 export const useSymptomsCarouselAnimation = ({
@@ -20,6 +21,7 @@ export const useSymptomsCarouselAnimation = ({
   showProfileModel = false,
   onActiveCardChange,
   onSequenceComplete,
+  onSequenceReset,
 }: UseSymptomsCarouselAnimationOptions) => {
   let carouselAnimation: any = null;
   let titleHideAnimation: any = null;
@@ -56,8 +58,8 @@ export const useSymptomsCarouselAnimation = ({
       setActiveCard(-1);
       return;
     }
-    // At the bottom of the sequence, retain the last symptom and the front
-    // view. Only scrolling back above the section resets the profile state.
+    // At the bottom of the sequence, keep the current card state. Only
+    // scrolling back before the carousel resets the profile view.
     if (section.bottom <= window.innerHeight) return;
     let closestIndex = -1;
     let closestDistance = Infinity;
@@ -163,7 +165,10 @@ export const useSymptomsCarouselAnimation = ({
               scrub: true,
               onRefresh: updateActiveCard,
               onLeave: () => onSequenceComplete?.(),
-              onLeaveBack: () => setActiveCard(-1),
+              onLeaveBack: () => {
+                setActiveCard(-1);
+                onSequenceReset?.();
+              },
             },
           }
         );

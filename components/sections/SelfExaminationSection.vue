@@ -32,7 +32,7 @@
           :auto-rotate="false"
           :enable-zoom="false"
           :interactive="false"
-          :initial-rotation-y="activeStepId === 'other-side' ? Math.PI / 2 : -Math.PI / 2"
+          :initial-rotation-y="0"
           :model-scale="1.65"
           :model-vertical-offset="-0.48"
           model-horizontal-alignment="center"
