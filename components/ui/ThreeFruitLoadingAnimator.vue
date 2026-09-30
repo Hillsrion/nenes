@@ -2,6 +2,7 @@
   <div
     ref="containerRef"
     class="relative h-full w-full"
+    :class="{ 'fruit-pair-canvas': props.pair }"
     role="img"
     :aria-label="`${currentFruit.name}, modèle 3D de chargement`"
   >
@@ -150,10 +151,10 @@ const transitionToFruit = async (index: number, immediate = false) => {
     if (props.pair) {
       const secondModel = model.clone(true);
       const fruitPair = new THREE.Group();
-      model.position.x = -0.62;
-      secondModel.position.x = 0.62;
+      model.position.x = -0.88;
+      secondModel.position.x = 0.88;
       fruitPair.add(model, secondModel);
-      fruitPair.scale.setScalar(0.78);
+      fruitPair.scale.setScalar(0.76);
       presentationGroup.add(fruitPair);
     } else {
       presentationGroup.add(model);
@@ -319,6 +320,11 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+.fruit-pair-canvas {
+  width: 130%;
+  margin-left: -15%;
+}
+
 .fruit-fallback {
   position: absolute;
   inset: 12%;
