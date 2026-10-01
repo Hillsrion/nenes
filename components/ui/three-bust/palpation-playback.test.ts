@@ -86,6 +86,7 @@ function fixture() {
     { id: 'breast', start: 0, end: 3, clipName: 'breast-loop' },
     { id: 'nipple', start: 10, end: 12, clipName: 'nipple-loop' },
   ]);
+  playback.selectStep('observation');
   return { playback, hand };
 }
 
@@ -98,11 +99,72 @@ test('a video step loops indefinitely without advancing to the next maneuver', (
   playback.selectStep('breast');
   assert.equal(playback.time, 1, 'an unchanged step must not restart');
   playback.selectStep('nipple');
-  playback.update(9);
+  playback.update(10.2);
   assert.equal(playback.time, 11);
   assert.equal(hand.position.x, 21);
   playback.selectStep('breast');
   assert.equal(playback.time, 0, 'reverse scrolling returns to the selected chapter');
+  playback.dispose();
+});
+
+test('gesture changes start from the displayed pose, including rapid reversals', () => {
+  const { playback, hand } = fixture();
+  playback.selectStep('breast');
+  playback.update(1);
+  const before = hand.position.x;
+  playback.selectStep('nipple');
+  assert.ok(Math.abs(hand.position.x - before) < 1e-6, 'selection must not teleport');
+  playback.update(0.6);
+  assert.ok(hand.position.x > before && hand.position.x < 20, 'travel gradually towards the new zone');
+  const interrupted = hand.position.x;
+  playback.selectStep('breast');
+  assert.ok(Math.abs(hand.position.x - interrupted) < 1e-6, 'reverse from the intermediate pose');
+  playback.update(1.2);
+  assert.equal(hand.position.x, 10, 'join the first frame of the requested loop');
+  playback.update(1.5);
+  assert.equal(hand.position.x, 11, 'resume the selected gesture after travel');
+  playback.seek(5);
+  assert.equal(hand.position.x, 0.5, 'scrubbing immediately replaces a transition');
+  playback.dispose();
+});
+
+test('the hand withdraws before moving, turning and changing finger poses', () => {
+  const root = new THREE.Group();
+  const hand = new THREE.Group(); hand.name = 'PalpationHand'; root.add(hand);
+  const finger = new THREE.Group(); finger.name = 'Finger'; hand.add(finger);
+  hand.add(new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.16, 0.04)));
+  root.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 0.4)));
+  const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
+  const clip = (name: string, side: number) => new THREE.AnimationClip(name, 2, [
+    new THREE.VectorKeyframeTrack('PalpationHand.position', [0, 2], [side * 0.3, 0, 0.25, side * 0.3, 0, 0.25]),
+    new THREE.QuaternionKeyframeTrack('PalpationHand.quaternion', [0, 2], side === 1 ? [0,0,0,1,0,0,0,1] : [...q.toArray(), ...q.toArray()]),
+    new THREE.VectorKeyframeTrack('PalpationHand.scale', [0, 2], [side,1,1,side,1,1]),
+    new THREE.VectorKeyframeTrack('Finger.position', [0, 2], [0, side * 0.03, 0, 0, side * 0.03, 0]),
+  ]);
+  const playback = createPalpationPlayback(root, [clip('right', 1), clip('left', -1)], [
+    { id: 'right', start: 0, end: 2, clipName: 'right' },
+    { id: 'left', start: 2, end: 4, clipName: 'left' },
+  ]);
+  const source = hand.position.clone();
+  playback.selectStep('left');
+  assert.ok(hand.position.distanceTo(source) < 1e-6);
+  playback.update(0.3);
+  assert.ok(Math.abs(hand.position.x - source.x) < 1e-6, 'withdraw without crossing the chest');
+  assert.ok(hand.position.z > 0.3, 'clear the bust before lateral movement');
+  assert.ok(hand.quaternion.angleTo(new THREE.Quaternion()) < 1e-6);
+  playback.update(0.3);
+  assert.ok(Math.abs(hand.position.x) < 1e-6);
+  assert.ok(hand.position.z > 0.3);
+  assert.ok(Math.abs(finger.position.y) < 1e-6);
+  assert.ok(Math.abs(hand.rotation.y - Math.PI / 4) < 1e-6);
+  const turningPose = hand.position.clone();
+  playback.selectStep('right');
+  assert.ok(hand.position.distanceTo(turningPose) < 1e-6, 'interrupt a mirrored pose without jumping');
+  playback.update(1.2);
+  assert.ok(hand.position.distanceTo(source) < 1e-6);
+  assert.ok(hand.quaternion.angleTo(new THREE.Quaternion()) < 1e-6);
+  assert.equal(hand.scale.x, 1);
+  assert.ok(Math.abs(finger.position.y - 0.03) < 1e-6);
   playback.dispose();
 });
 

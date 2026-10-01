@@ -7,6 +7,7 @@ interface UseSymptomsCarouselAnimationOptions {
   titleRef: Ref<HTMLElement | null>;
   cardStageRef?: Ref<HTMLElement | null>;
   showProfileModel?: boolean;
+  onEntranceStart?: () => void;
   onActiveCardChange?: (index: number) => void;
   onSequenceComplete?: () => void;
   onSequenceReset?: () => void;
@@ -19,6 +20,7 @@ export const useSymptomsCarouselAnimation = ({
   titleRef,
   cardStageRef,
   showProfileModel = false,
+  onEntranceStart,
   onActiveCardChange,
   onSequenceComplete,
   onSequenceReset,
@@ -26,7 +28,15 @@ export const useSymptomsCarouselAnimation = ({
   let carouselAnimation: any = null;
   let titleHideAnimation: any = null;
   let carouselMatchMedia: any = null;
-  let cardStageAnimation: any = null;
+  let entranceAnimation: any = null;
+  let carouselScrollAnimation: any = null;
+  let cardsReady = !showProfileModel;
+  let renderCarousel: () => void = () => {};
+
+  const releaseCards = () => {
+    cardsReady = true;
+    renderCarousel();
+  };
   let activeCardIndex = -1;
 
   const setActiveCard = (index: number) => {
@@ -51,6 +61,7 @@ export const useSymptomsCarouselAnimation = ({
 
   // Follow the rendered cards, including stagger, easing and reverse scrolling.
   const updateActiveCard = () => {
+    if (!cardsReady) return;
     updateCardOpacities();
     const section = sectionRef.value?.getBoundingClientRect();
     if (!section || section.top > 0 ||
@@ -98,12 +109,12 @@ export const useSymptomsCarouselAnimation = ({
         const { isMobile, isDesktop } = context.conditions;
         const mobileRotation = 40;
         const mobileStagger = 0.12;
-        // Leave the profile label enough scroll distance to finish drawing and
-        // exit before the first card can select a symptom.
+        // Give the face/zoom and the first symptom their own beats before cards.
+        // Completion signals also keep this order when the reader scrolls fast.
         const carouselStart = showProfileModel
           ? isMobile
-            ? "38% top"
-            : "36% top"
+            ? "50% top"
+            : "48% top"
           : isMobile
             ? "35% top"
             : "top top";
@@ -130,48 +141,67 @@ export const useSymptomsCarouselAnimation = ({
           return `${startPct + 3}% top`;
         })();
 
-        if (showProfileModel && cardStageRef?.value) {
-          cardStageAnimation = $gsap.fromTo(
-            cardStageRef.value,
-            { opacity: 0 },
-            {
-              opacity: 1,
-              ease: "none",
-              onUpdate: updateActiveCard,
-              scrollTrigger: {
-                trigger: sectionRef.value,
-                start: carouselStart,
-                end: isMobile ? "42% top" : "40% top",
-                scrub: 1,
-              },
-            }
-          );
-        }
-
+        const scrollState = { progress: 0 };
+        if (showProfileModel && cardStageRef?.value) $gsap.set(cardStageRef.value, { opacity: 0 });
         carouselAnimation = $gsap.fromTo(
           validRefs,
-          {
-            rotation: isMobile ? mobileRotation : 30,
-          },
+          { rotation: isMobile ? mobileRotation : 30 },
           {
             rotation: isMobile ? -mobileRotation : isDesktop ? -45 : -30,
             ease: "power1.inOut",
             stagger: isMobile ? mobileStagger : isDesktop ? 0.12 : 0.09,
+            paused: true,
             onUpdate: updateActiveCard,
-            scrollTrigger: {
-              trigger: sectionRef.value,
-              start: carouselStart,
-              end: "bottom bottom",
-              scrub: true,
-              onRefresh: updateActiveCard,
-              onLeave: () => onSequenceComplete?.(),
-              onLeaveBack: () => {
-                setActiveCard(-1);
-                onSequenceReset?.();
-              },
-            },
           }
         );
+        renderCarousel = () => {
+          carouselAnimation?.progress(cardsReady ? scrollState.progress : 0);
+          if (showProfileModel && cardStageRef?.value) {
+            $gsap.set(cardStageRef.value, { opacity: cardsReady ? 1 : 0 });
+          }
+          if (cardsReady) updateActiveCard();
+          else $gsap.set(validRefs, { opacity: 0 });
+        };
+        const resetEntrance = () => {
+          cardsReady = !showProfileModel;
+          setActiveCard(-1);
+          onSequenceReset?.();
+          renderCarousel();
+        };
+        if (showProfileModel) {
+          entranceAnimation = $gsap.to({}, {
+            scrollTrigger: {
+              trigger: sectionRef.value,
+              start: "34% top",
+              end: "bottom bottom",
+              onEnter: () => {
+                onEntranceStart?.();
+                renderCarousel();
+              },
+              onEnterBack: updateActiveCard,
+              onLeaveBack: resetEntrance,
+            },
+          });
+        }
+        carouselScrollAnimation = $gsap.to(scrollState, {
+          progress: 1,
+          ease: "none",
+          onUpdate: renderCarousel,
+          scrollTrigger: {
+            trigger: sectionRef.value,
+            start: carouselStart,
+            end: "bottom bottom",
+            scrub: true,
+            onRefresh: renderCarousel,
+            onEnterBack: updateActiveCard,
+            onLeave: () => onSequenceComplete?.(),
+            onLeaveBack: () => {
+              setActiveCard(-1);
+              if (!showProfileModel) onSequenceReset?.();
+            },
+          },
+        });
+        renderCarousel();
 
         if (titleRef.value) {
           $gsap.set(titleRef.value, { opacity: 0, y: 16 });
@@ -227,14 +257,18 @@ export const useSymptomsCarouselAnimation = ({
     setActiveCard(-1);
     titleHideAnimation?.scrollTrigger?.kill?.();
     titleHideAnimation?.kill?.();
-    cardStageAnimation?.scrollTrigger?.kill?.();
-    cardStageAnimation?.kill?.();
+    entranceAnimation?.scrollTrigger?.kill?.();
+    entranceAnimation?.kill?.();
+    carouselScrollAnimation?.scrollTrigger?.kill?.();
+    carouselScrollAnimation?.kill?.();
     carouselAnimation?.scrollTrigger?.kill?.();
     carouselAnimation?.kill?.();
     carouselMatchMedia?.revert?.();
 
     titleHideAnimation = null;
-    cardStageAnimation = null;
+    entranceAnimation = null;
+    carouselScrollAnimation = null;
+    renderCarousel = () => {};
     carouselAnimation = null;
     carouselMatchMedia = null;
   };
@@ -242,5 +276,6 @@ export const useSymptomsCarouselAnimation = ({
   return {
     initializeCarouselAnimation,
     cleanupCarouselAnimation,
+    releaseCards,
   };
 };

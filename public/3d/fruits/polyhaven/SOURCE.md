@@ -15,4 +15,13 @@ Included asset IDs:
 - `food_pomegranate_01`
 - `lemon`
 
+Added on 2026-09-30 through the official Poly Haven API:
+
+- `food_pears_asian_01` — https://polyhaven.com/a/food_pears_asian_01
+- `food_avocado_01` — https://polyhaven.com/a/food_avocado_01
+
+The loader uses the single pear node `food_pears_asian_01_e` from the pear set.
+Apple and pomegranate files are retained locally but excluded from the active
+catalog and download script.
+
 Poly Haven license details: https://polyhaven.com/license

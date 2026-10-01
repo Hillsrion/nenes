@@ -3,13 +3,19 @@ import path from "node:path";
 import sharp from "sharp";
 
 const assetIds = [
-  "food_apple_01",
+  "food_avocado_01",
   "food_kiwi_01",
   "food_lime_01",
   "food_lychee_01",
-  "food_pomegranate_01",
+  "food_pears_asian_01",
   "lemon",
 ];
+
+const requestedAssetIds = process.argv.slice(2);
+for (const assetId of requestedAssetIds) {
+  if (!assetIds.includes(assetId)) throw new Error(`Unknown fruit asset: ${assetId}`);
+}
+const selectedAssetIds = requestedAssetIds.length ? requestedAssetIds : assetIds;
 
 const outputRoot = path.resolve("public/3d/fruits/polyhaven");
 const requestHeaders = { "User-Agent": "NenesAssetPipeline/1.0" };
@@ -28,7 +34,7 @@ const optimizeTexture = async (filePath, contents) => {
     .toBuffer();
 };
 
-for (const assetId of assetIds) {
+for (const assetId of selectedAssetIds) {
   const filesResponse = await fetch(`https://api.polyhaven.com/files/${assetId}`, {
     headers: requestHeaders,
   });

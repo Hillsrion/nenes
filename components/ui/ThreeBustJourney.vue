@@ -42,6 +42,8 @@ interface Props {
   /** 0: screening framing on the first bust · 1: locked profile framing on the second. */
   cameraProgress?: number;
   focusSymptoms?: boolean;
+  /** Scroll progress between symptoms and the closer palpation framing. */
+  palpationProgress?: number;
   secondModelOpacity?: number;
   symptomType?: SymptomType;
   profileLabel?: string;
@@ -50,12 +52,18 @@ interface Props {
   debugPath?: boolean;
 }
 
+const emit = defineEmits<{
+  framingReady: [];
+  symptomReady: [symptom: SymptomType];
+}>();
+
 const props = withDefaults(defineProps<Props>(), {
   animationStep: "observation",
   firstModelUrl: "",
   secondModelUrl: "",
   cameraProgress: 0,
   focusSymptoms: false,
+  palpationProgress: 0,
   secondModelOpacity: 1,
   symptomType: "none",
   profileLabel: "",
@@ -76,7 +84,8 @@ const ARRIVAL_CENTER_NDC_X = -0.52;
 const ARRIVAL_DISTANCE = 6;
 /** First bust fills ~135% of the viewport height, as in the screening cut. */
 const START_FILL = 1.35;
-const SYMPTOMS_ZOOM = 1.75;
+const SYMPTOMS_ZOOM = 1.9;
+const PALPATION_ZOOM = 1.65;
 
 const containerRef = ref<HTMLDivElement | null>(null);
 const canvasRef = ref<HTMLCanvasElement | null>(null);
@@ -113,7 +122,16 @@ let positionCurve: THREE.CubicBezierCurve3 | null = null;
 let targetCurve: THREE.CubicBezierCurve3 | null = null;
 const tmpTarget = new THREE.Vector3();
 let lastCameraProgress = -1;
-const symptomFraming = { progress: props.focusSymptoms ? 1 : 0 };
+const symptomFraming = { progress: props.focusSymptoms || props.palpationProgress > 0 ? 1 : 0 };
+let lastSettledSymptom: SymptomType = "none";
+let framingNotified = false;
+const notifyFramingReady = () => {
+  if (!framingNotified && isVisible && props.focusSymptoms && symptomFraming.progress >= 0.999 &&
+    !modelIsRotating && secondGroup && Math.abs(secondGroup.rotation.y) < 0.001) {
+    framingNotified = true;
+    emit("framingReady");
+  }
+};
 let environmentTexture: THREE.Texture | null = null;
 let animationFrameId = 0;
 let viewportObserver: IntersectionObserver | null = null;
@@ -325,10 +343,12 @@ const updateCameraForProgress = (progress: number) => {
   const clamped = THREE.MathUtils.clamp(progress, 0, 1);
   positionCurve.getPoint(clamped, camera.position);
   targetCurve.getPoint(clamped, tmpTarget);
-  // Tighten only the symptoms framing, keeping the chest in the same left
-  // column as the profile while moving the vertical focus down from the head.
+  // Keep the chest in the same left column through symptoms and palpation.
   const focus = symptomFraming.progress * clamped;
-  camera.zoom = THREE.MathUtils.lerp(1, SYMPTOMS_ZOOM, focus);
+  const palpation = THREE.MathUtils.clamp(props.palpationProgress, 0, 1) * clamped;
+  camera.zoom = THREE.MathUtils.lerp(
+    THREE.MathUtils.lerp(1, SYMPTOMS_ZOOM, focus), PALPATION_ZOOM, palpation
+  );
   const offsetX = -ARRIVAL_CENTER_NDC_X * Math.tan(THREE.MathUtils.degToRad(CAMERA_FOV) / 2) * ARRIVAL_DISTANCE * camera.aspect;
   const correctionX = offsetX * (1 - 1 / camera.zoom);
   camera.position.x -= correctionX;
@@ -555,6 +575,12 @@ const tick = (timestamp: number) => {
   previousAnimationTimestamp = timestamp;
 
   symptomEffects.tick(elapsedTime);
+  notifyFramingReady();
+  if (!symptomEffects.isTransitioning() && !modelIsRotating && !queuedSymptom &&
+    lastSettledSymptom !== props.symptomType) {
+    lastSettledSymptom = props.symptomType;
+    if (props.symptomType !== "none") emit("symptomReady", props.symptomType);
+  }
   renderer.render(scene, camera);
   if (needsContinuousRendering() || timestamp < renderUntil) scheduleRender();
 };
@@ -655,9 +681,10 @@ watch(
   }
 );
 
-watch(() => props.focusSymptoms, (focused) => {
+watch([() => props.focusSymptoms, () => props.palpationProgress > 0], ([focused, palpating]) => {
+  framingNotified = false;
   gsap.to(symptomFraming, {
-    progress: focused ? 1 : 0,
+    progress: focused || palpating ? 1 : 0,
     duration: reduceMotion ? 0 : 0.9,
     ease: "power2.inOut",
     overwrite: true,
@@ -665,8 +692,16 @@ watch(() => props.focusSymptoms, (focused) => {
       updateCameraForProgress(props.cameraProgress);
       scheduleRender();
     },
-    onComplete: refreshProfileContour,
+    onComplete: () => {
+      refreshProfileContour();
+      notifyFramingReady();
+    },
   });
+});
+
+watch(() => props.palpationProgress, () => {
+  updateCameraForProgress(props.cameraProgress);
+  scheduleRender();
 });
 
 watch(() => props.secondModelOpacity, updateSecondModelOpacity);
@@ -715,6 +750,7 @@ watch(
 watch(
   () => props.symptomType,
   (newSymptom) => {
+    lastSettledSymptom = "none";
     if (newSymptom === "none") {
       queuedSymptom = null;
       symptomEffects.update(newSymptom);

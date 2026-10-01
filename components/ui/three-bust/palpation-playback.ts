@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { createPalpationTransition } from './palpation-transition';
 
 export interface PalpationStep {
   id: string;
@@ -18,10 +19,11 @@ export function createPalpationPlayback(
   if (steps.some(step => step.entryClipName && step.exitClipName)) {
     return createAuthoredPlayback(root, clips, steps);
   }
-  const mixer = new THREE.AnimationMixer(root);
   const hand = root.getObjectByName('PalpationHand');
   let skeletal = false;
   root.traverse(object => { if (object instanceof THREE.SkinnedMesh) skeletal = true; });
+  if (hand && !skeletal) return createHandPlayback(root, hand, clips, steps);
+  const mixer = new THREE.AnimationMixer(root);
   let action: THREE.AnimationAction | null = null;
   let retiring: THREE.AnimationAction | null = null;
   let fadeRemaining = 0;
@@ -63,6 +65,72 @@ export function createPalpationPlayback(
     get time() { return offset + (action?.time ?? 0); },
     get active() { return !!action || !!retiring; },
     dispose() { mixer.stopAllAction(); mixer.uncacheRoot(root); },
+  };
+}
+
+function createHandPlayback(root: THREE.Object3D, hand: THREE.Object3D, clips: THREE.AnimationClip[], steps: PalpationStep[]) {
+  const transition = createPalpationTransition(root, hand, clips);
+  const mixer = new THREE.AnimationMixer(root);
+  let action: THREE.AnimationAction | null = null;
+  let transitionClip: THREE.AnimationClip | null = null;
+  let destination: THREE.AnimationClip | undefined;
+  let selected: string | undefined;
+  let offset = 0;
+
+  function stop() {
+    mixer.stopAllAction();
+    if (transitionClip) mixer.uncacheClip(transitionClip);
+    transitionClip = null;
+    action = null;
+  }
+  function play(clip: THREE.AnimationClip | undefined, once = false) {
+    action = clip ? mixer.clipAction(clip).reset().setEffectiveWeight(1).setEffectiveTimeScale(1) : null;
+    if (action) {
+      action.setLoop(once ? THREE.LoopOnce : THREE.LoopRepeat, Infinity);
+      action.clampWhenFinished = once;
+      action.play();
+    }
+    hand.visible = !!action;
+    mixer.update(0);
+  }
+  function selectStep(id?: string) {
+    if (id === selected && action) return;
+    const step = steps.find(step => step.id === id);
+    destination = id === undefined ? clips[0] : clips.find(clip => clip.name === step?.clipName);
+    // Sample before stopping the mixer, which restores the neutral pose.
+    const nextTransition = action && hand.visible && destination ? transition.between(destination) : null;
+    selected = id;
+    offset = step?.start ?? 0;
+    stop();
+    transitionClip = nextTransition;
+    play(transitionClip ?? destination, !!transitionClip);
+  }
+  selectStep();
+  return {
+    selectStep,
+    update(delta: number) {
+      let remaining = Math.max(0, delta);
+      if (action && transitionClip) {
+        const toBoundary = transitionClip.duration - action.time;
+        const tick = Math.min(remaining, Math.max(0, toBoundary));
+        mixer.update(tick);
+        remaining -= tick;
+        if (tick + 1e-7 >= toBoundary) { stop(); play(destination); }
+      }
+      if (action && remaining > 0) mixer.update(remaining);
+    },
+    seek(time: number) {
+      stop();
+      selected = undefined;
+      offset = 0;
+      destination = clips[0];
+      play(destination);
+      if (action) action.time = THREE.MathUtils.clamp(time, 0, destination?.duration ?? 0);
+      mixer.update(0);
+    },
+    get time() { return offset + (transitionClip ? 0 : action?.time ?? 0); },
+    get active() { return !!action; },
+    dispose() { stop(); transition.dispose(); mixer.uncacheRoot(root); },
   };
 }
 

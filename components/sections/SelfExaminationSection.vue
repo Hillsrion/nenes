@@ -30,6 +30,7 @@
           :model-url="getModelUrl(palpationFileName)"
           :animation-step="activeStepId"
           :animation-enabled="modelPresence > 0"
+          :palpation-progress="modelPresence"
           :auto-rotate="false"
           :enable-zoom="false"
           :interactive="false"

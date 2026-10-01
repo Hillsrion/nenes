@@ -3,6 +3,7 @@
     class="py-16 h-[600svh] relative z-20 sm:-mt-[25svh]"
     ref="sectionRef"
     :data-active-symptom="activeSymptom"
+    :data-symptom-phase="entrancePhase"
     :class="[
       useSharedModel ? 'bg-transparent' : 'bg-white',
       { 'opacity-0': !showSymptomsSection }
@@ -45,6 +46,8 @@
           :interactive="false"
           :initial-rotation-y="isProfileView ? -Math.PI / 2 : 0"
           :focus-symptoms="!isProfileView"
+          @framing-ready="onFramingReady"
+          @symptom-ready="onSymptomReady"
           :symptom-type="activeSymptom"
           :model-scale="1.05"
           model-horizontal-alignment="left"
@@ -131,6 +134,7 @@ const emit = defineEmits<{
   profileViewChange: [isProfileView: boolean];
 }>();
 const activeSymptom = ref<SymptomType>("none");
+const entrancePhase = ref<"profile" | "framing" | "symptom" | "cards">("profile");
 const isProfileView = ref(true);
 const profileLabelProgress = ref(0);
 const cardRefs = ref<(HTMLElement | null)[]>([]);
@@ -148,7 +152,21 @@ const setCardRef = (el: Element | null, index: number) => {
   }
 };
 
-const { initializeCarouselAnimation, cleanupCarouselAnimation } =
+const onFramingReady = () => {
+  if (entrancePhase.value !== "framing") return;
+  entrancePhase.value = "symptom";
+  activeSymptom.value = props.cards[0]?.symptom ?? "none";
+  emit("symptomChange", activeSymptom.value);
+  if (activeSymptom.value === "none") onSymptomReady("none");
+};
+const onSymptomReady = (symptom: SymptomType) => {
+  if (entrancePhase.value !== "symptom" || symptom !== activeSymptom.value) return;
+  entrancePhase.value = "cards";
+  releaseCards();
+};
+defineExpose({ onFramingReady, onSymptomReady });
+
+const { initializeCarouselAnimation, cleanupCarouselAnimation, releaseCards } =
   useSymptomsCarouselAnimation({
     $gsap,
     sectionRef,
@@ -156,7 +174,17 @@ const { initializeCarouselAnimation, cleanupCarouselAnimation } =
     titleRef: introCardRef,
     cardStageRef,
     showProfileModel: props.showProfileModel,
+    onEntranceStart: () => {
+      if (entrancePhase.value !== "profile") return;
+      entrancePhase.value = "framing";
+      activeSymptom.value = "none";
+      isProfileView.value = false;
+      emit("symptomChange", "none");
+      emit("profileViewChange", false);
+    },
     onActiveCardChange: (index) => {
+      // The first symptom stays visible while its card approaches, and in gaps.
+      if (props.showProfileModel && (entrancePhase.value !== "cards" || index < 0)) return;
       activeSymptom.value = props.cards[index]?.symptom ?? "none";
       // Gaps between cards must not turn the bust back to profile.
       if (index >= 0) isProfileView.value = false;
@@ -168,6 +196,9 @@ const { initializeCarouselAnimation, cleanupCarouselAnimation } =
       emit("symptomChange", activeSymptom.value);
     },
     onSequenceReset: () => {
+      entrancePhase.value = "profile";
+      activeSymptom.value = "none";
+      emit("symptomChange", "none");
       isProfileView.value = true;
       emit("profileViewChange", true);
     },

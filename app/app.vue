@@ -49,6 +49,9 @@
                 :animation-step="sharedPalpationStep"
                 :camera-progress="journeyCamera.progress"
                 :focus-symptoms="sharedSymptomsFocus"
+                :palpation-progress="palpationModelPresence"
+                @framing-ready="symptomsSectionRef?.onFramingReady()"
+                @symptom-ready="symptomsSectionRef?.onSymptomReady($event)"
                 :second-model-opacity="screeningSecondModelOpacity"
                 :symptom-type="palpationModelPresence > 0 ? 'none' : activeSectionSymptom"
                 :profile-label="symptomsMainTitle"
@@ -84,6 +87,9 @@
                   :interactive="false"
                   :initial-rotation-y="sharedModelRotation"
                   :focus-symptoms="sharedSymptomsFocus"
+                  :palpation-progress="palpationModelPresence"
+                  @framing-ready="symptomsSectionRef?.onFramingReady()"
+                  @symptom-ready="symptomsSectionRef?.onSymptomReady($event)"
                   :symptom-type="palpationModelPresence > 0 ? 'none' : activeSectionSymptom"
                   :model-scale="1.05"
                   model-horizontal-alignment="left"
@@ -96,6 +102,7 @@
 
             <div class="relative z-20 -mt-[100vh]">
               <SymptomsSection
+                ref="symptomsSectionRef"
                 :title="symptomsMainTitle"
                 :intro-card="symptomsIntroCard"
                 :cards="symptomsCards"
@@ -765,6 +772,7 @@ const mainLayoutRef = ref(null); // Ref to MainLayout component
 const symptomsAndExaminationContainerRef = ref<HTMLElement | null>(null);
 const journeyTrackRef = ref<HTMLElement | null>(null);
 const journeyStageRef = ref<HTMLElement | null>(null);
+const symptomsSectionRef = ref<InstanceType<typeof SymptomsSection> | null>(null);
 const symptomsProfileProgress = ref(0);
 const screeningSecondModelOpacity = ref(0);
 const palpationModelPresence = ref(0);
@@ -776,7 +784,7 @@ const sharedModelRotation = computed(() => {
 });
 const activeSectionSymptom = ref<SymptomType>("none");
 const isSymptomsProfileView = ref(true);
-// Keep the close-up between cards; restore the full bust for palpation.
+// Keep the symptoms close-up between cards; the viewer blends into palpation.
 const sharedSymptomsFocus = computed(() =>
   !isSymptomsProfileView.value && palpationModelPresence.value <= 0
 );

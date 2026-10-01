@@ -98,6 +98,8 @@ interface Props {
   compact?: boolean;
   modelScale?: number;
   focusSymptoms?: boolean;
+  /** Scroll progress between symptoms and the closer palpation framing. */
+  palpationProgress?: number;
   showBackdrop?: boolean;
   showLoadingIndicator?: boolean;
   initialRotationY?: number;
@@ -106,6 +108,11 @@ interface Props {
   materialStyle?: MaterialStyle;
   shapeType?: "round" | "asymmetric" | "ptose" | "mastectomy";
 }
+
+const emit = defineEmits<{
+  framingReady: [];
+  symptomReady: [symptom: SymptomType];
+}>();
 
 const props = withDefaults(defineProps<Props>(), {
   animationEnabled: true,
@@ -120,6 +127,7 @@ const props = withDefaults(defineProps<Props>(), {
   compact: false,
   modelScale: 1,
   focusSymptoms: false,
+  palpationProgress: 0,
   showBackdrop: true,
   showLoadingIndicator: true,
   initialRotationY: 0,
@@ -234,7 +242,16 @@ let controlsActive = false;
 let modelIsRotating = false;
 let profileTurnTimer = 0;
 let queuedSymptom: SymptomType | null = null;
-const symptomFraming = { progress: props.focusSymptoms ? 1 : 0 };
+const symptomFraming = { progress: props.focusSymptoms || props.palpationProgress > 0 ? 1 : 0 };
+let lastSettledSymptom: SymptomType = "none";
+let framingNotified = false;
+const notifyFramingReady = () => {
+  if (!framingNotified && isVisible && props.focusSymptoms && symptomFraming.progress >= 0.999 &&
+    !modelIsRotating && modelGroup && Math.abs(modelGroup.rotation.y) < 0.001) {
+    framingNotified = true;
+    emit("framingReady");
+  }
+};
 
 type PerformanceNavigator = Navigator & {
   deviceMemory?: number;
@@ -301,7 +318,10 @@ const alignModelHorizontally = () => {
 const updateSymptomFraming = () => {
   if (!camera || !controls) return;
   const focus = symptomFraming.progress;
-  camera.zoom = THREE.MathUtils.lerp(1, 1.75, focus);
+  camera.zoom = THREE.MathUtils.lerp(
+    THREE.MathUtils.lerp(1, 1.9, focus), 1.65,
+    THREE.MathUtils.clamp(props.palpationProgress, 0, 1)
+  );
   camera.position.y = 0.8 + 0.08 * props.modelScale * focus;
   controls.target.y = 0.08 * props.modelScale * focus;
   camera.updateProjectionMatrix();
@@ -886,6 +906,12 @@ const tick = (timestamp: number) => {
   }
 
   symptomEffects.tick(elapsedTime);
+  notifyFramingReady();
+  if (!symptomEffects.isTransitioning() && !modelIsRotating && !queuedSymptom &&
+    lastSettledSymptom !== props.symptomType) {
+    lastSettledSymptom = props.symptomType;
+    if (props.symptomType !== "none") emit("symptomReady", props.symptomType);
+  }
   if (props.materialStyle === "glow") {
     glowMaterial.emissiveIntensity = 0.7 + Math.sin(elapsedTime * 1.8) * 0.08;
   }
@@ -1009,16 +1035,22 @@ watch(() => props.animationEnabled, () => {
   scheduleRender();
 });
 
-watch(() => props.focusSymptoms, (focused) => {
+watch([() => props.focusSymptoms, () => props.palpationProgress > 0], ([focused, palpating]) => {
+  framingNotified = false;
   gsap.to(symptomFraming, {
-    progress: focused ? 1 : 0,
+    progress: focused || palpating ? 1 : 0,
     duration: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 0.9,
     ease: "power2.inOut",
     overwrite: true,
     onUpdate: updateSymptomFraming,
-    onComplete: refreshProfileContour,
+    onComplete: () => {
+      refreshProfileContour();
+      notifyFramingReady();
+    },
   });
 });
+
+watch(() => props.palpationProgress, updateSymptomFraming);
 
 // Watch shapeType change and animate
 watch(
@@ -1086,6 +1118,7 @@ watch(
 watch(
   () => props.symptomType,
   (newSymptom) => {
+    lastSettledSymptom = "none";
     if (newSymptom === "none") {
       queuedSymptom = null;
       symptomEffects.update(newSymptom);
