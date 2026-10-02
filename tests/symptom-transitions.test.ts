@@ -72,9 +72,9 @@ test('both viewers keep rendering after the 150 ms wake-up until the symptom ble
     effects.update('skin');
     now += 0.2;
     effects.tick(now);
-    // Exercise each component's actual render-loop condition with a stationary
+    // Exercise each viewer's actual render-loop condition with a stationary
     // camera, no controls and no other animation keeping frames alive.
-    const source = await readFile(new URL(`../components/ui/${viewer}.vue`, import.meta.url), 'utf8');
+    const source = await readFile(new URL(`../composables/three-bust/useBust${viewer === "ThreeBustJourney" ? "Journey" : "Viewer"}.ts`, import.meta.url), 'utf8');
     const condition = source.match(/const needsContinuousRendering = \(\) =>([\s\S]*?);/);
     assert.ok(condition, `${viewer}: render condition exists`);
     const context = {
@@ -82,9 +82,9 @@ test('both viewers keep rendering after the 150 ms wake-up until the symptom ble
       lastCameraProgress: 1,
       IDLE_SPIN_PROGRESS: 0.02,
       animationPlayback: null,
-      animationPlaying: { value: false },
+      playback: { needsFrames: false, hasAnimation: false },
       reduceMotion: false,
-      modelIsRotating: false,
+      presentation: { isRotating: false },
       controlsActive: false,
       symptomEffects: effects,
     };

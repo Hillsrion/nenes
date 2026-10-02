@@ -1,0 +1,464 @@
+import { isConstrainedDevice, normalizeLoadedBust, registerBustSymptoms, addBustLighting } from "~/components/ui/three-bust/scene-utils";
+import { useBustSymptomPresentation } from "./useBustSymptomPresentation";
+import { createJourneyCamera, CAMERA_FOV } from "~/components/ui/three-bust/journey-camera";
+import { ref, onMounted, onUnmounted, watch, useId } from "vue";
+import { createPalpationPlayback } from "~/components/ui/three-bust/palpation-playback";
+import { projectProfileContour } from "~/components/ui/three-bust/profile-contour";
+import { createIridescentMaterial } from "~/components/ui/three-bust/materials";
+import * as THREE from "three";
+import { gsap } from "gsap";
+import {
+  createSymptomEffects,
+} from "~/components/ui/three-bust/symptom-effects";
+
+import type { BustJourneyProps, BustEvents } from "~/components/ui/three-bust/types";
+
+export function useBustJourney(props: Required<BustJourneyProps>, emit: BustEvents) {
+  // Tuning constants for the scripted camera move. Proportions are derived from
+  // each bust's normalized bounds so a new GLB keeps the same framing.
+  const FIRST_MODEL_SCALE = 1.15;
+  const SECOND_MODEL_SCALE = 1.65;
+  const BASE_BUST_HEIGHT = 2.8;
+  const containerRef = ref<HTMLDivElement | null>(null);
+  const canvasRef = ref<HTMLCanvasElement | null>(null);
+  const isLoading = ref(true);
+  const profileCurveId = `bust-contour-${useId()}`;
+  const profileContour = ref<ReturnType<typeof projectProfileContour>>(null);
+  const refreshProfileContour = () => {
+    const root = secondPlacement;
+    if (!props.profileLabel || !root || !camera || !containerRef.value) return;
+    const { width, height } = containerRef.value.getBoundingClientRect();
+    if (width > 0 && height > 0) profileContour.value = projectProfileContour(root, camera, width, height);
+  };
+
+  let renderer: THREE.WebGLRenderer | null = null;
+  let scene: THREE.Scene | null = null;
+  let camera: THREE.PerspectiveCamera | null = null;
+  let firstGroup: THREE.Group | null = null;
+  let firstRoot: THREE.Object3D | null = null;
+  let secondPlacement: THREE.Group | null = null;
+  let secondGroup: THREE.Group | null = null;
+  let secondRoot: THREE.Object3D | null = null;
+  const secondBaseMaterials = new Map<THREE.Material, { opacity: number; transparent: boolean; depthWrite: boolean }>();
+  let animationPlayback: ReturnType<typeof createPalpationPlayback> | null = null;
+  const animationTime = ref(0);
+  let previousAnimationTimestamp = 0;
+  let reduceMotion = false;
+  let firstBounds = new THREE.Box3();
+  const symptomEffects = createSymptomEffects(() => secondGroup);
+  const presentation = useBustSymptomPresentation({
+    getGroup: () => secondGroup, getRotation: () => props.secondRotationY,
+    getSymptom: () => props.symptomType, effects: symptomEffects,
+    refreshProfileContour, scheduleRender: (duration) => scheduleRender(duration),
+    onSymptomReady: (symptom) => emit("symptomReady", symptom),
+  });
+  const { profileLabelOpacity } = presentation;
+
+  // Separate instances keep the second bust's fade and symptom tint independent.
+  const firstMaterial = createIridescentMaterial();
+  const secondMaterial = createIridescentMaterial();
+  const symptomFraming = { progress: props.focusSymptoms || props.palpationProgress > 0 ? 1 : 0 };
+  let framingNotified = false;
+  const notifyFramingReady = () => {
+    if (!framingNotified && isVisible && props.focusSymptoms && symptomFraming.progress >= 0.999 &&
+      !presentation.isRotating && secondGroup && Math.abs(secondGroup.rotation.y) < 0.001) {
+      framingNotified = true;
+      emit("framingReady");
+    }
+  };
+  let environmentTexture: THREE.Texture | null = null;
+  let animationFrameId = 0;
+  let viewportObserver: IntersectionObserver | null = null;
+  let resizeObserver: ResizeObserver | null = null;
+  let initialized = false;
+  let disposed = false;
+  let isVisible = false;
+  let lastRenderTime = 0;
+  let renderUntil = 0;
+  let visibilityChangeHandler: (() => void) | null = null;
+
+  const stopRendering = () => {
+    if (animationFrameId) cancelAnimationFrame(animationFrameId);
+    animationFrameId = 0;
+  };
+
+  const scheduleRender = (duration = 0) => {
+    if (duration > 0) renderUntil = Math.max(renderUntil, performance.now() + duration);
+    if (
+      animationFrameId ||
+      !renderer ||
+      !isVisible ||
+      document.hidden ||
+      disposed
+    ) return;
+    animationFrameId = requestAnimationFrame(tick);
+  };
+
+  const needsContinuousRendering = () =>
+    (animationPlayback?.active && !reduceMotion) ||
+    presentation.isRotating ||
+    symptomEffects.isTransitioning() ||
+    props.symptomType === "nipple";
+
+  // Normalize a freshly loaded GLB exactly like ThreeBustViewer does: strip the
+  // symptom skin helper, recenter, scale to the target height and lift slightly.
+  const normalizeLoadedBust = (root: THREE.Object3D, targetHeight: number) => {
+    root.getObjectByName("SYMPTOM_skin")?.removeFromParent();
+    root.traverse((child) => {
+      if (child instanceof THREE.Mesh && !child.geometry.getAttribute("normal")) {
+        child.geometry.computeVertexNormals();
+      }
+    });
+    const box = new THREE.Box3().setFromObject(root);
+    const center = box.getCenter(new THREE.Vector3());
+    const size = box.getSize(new THREE.Vector3());
+    const scale = targetHeight / Math.max(size.x, size.y, size.z);
+    root.scale.set(scale, scale, scale);
+    root.position.sub(center.multiplyScalar(scale));
+    root.position.y += 0.2;
+    root.updateMatrixWorld(true);
+    return new THREE.Box3().setFromObject(root);
+  };
+
+  const applyBustMaterial = (root: THREE.Object3D, material: THREE.Material) => {
+    root.traverse((child) => {
+      if (!(child instanceof THREE.Mesh) || child.userData.preserveMaterial) return;
+      child.material = material;
+      child.material.needsUpdate = true;
+    });
+  };
+
+  const updateSecondModelOpacity = (opacity: number) => {
+    const alpha = THREE.MathUtils.clamp(opacity, 0, 1);
+    if (secondPlacement) secondPlacement.visible = alpha > 0;
+    secondBaseMaterials.forEach((original, material) => {
+      const fading = alpha < 1;
+      const transparent = original.transparent || fading;
+      const depthWrite = original.depthWrite && !fading;
+      if (material.transparent !== transparent || material.depthWrite !== depthWrite) {
+        material.transparent = transparent;
+        material.depthWrite = depthWrite;
+        material.needsUpdate = true;
+      }
+      material.opacity = original.opacity * alpha;
+    });
+    symptomEffects.setGlobalOpacity(alpha);
+    scheduleRender(120);
+  };
+
+  const journeyCamera = createJourneyCamera({
+    getSceneState: () => ({ camera, firstBounds, secondPlacement, scene }),
+    isDebug: () => props.debugPath,
+    getPalpationProgress: () => props.palpationProgress,
+    getSymptomFocus: () => symptomFraming.progress,
+    getCanvas: () => canvasRef.value,
+    refreshProfileContour,
+  });
+  const { buildCameraPath, updateCameraForProgress } = journeyCamera;
+
+  const initThree = async () => {
+    if (initialized || disposed || !canvasRef.value || !containerRef.value) return;
+
+    const rect = containerRef.value.getBoundingClientRect();
+    const width = rect.width;
+    const height = rect.height;
+    if (!width || !height) return;
+    // A fixed viewport-filling container is never taller than the viewport; if
+    // it is, a transformed ancestor is absorbing `fixed` (loading-gate exit).
+    // Retry once that transform has transitioned away.
+    if (height > window.innerHeight * 1.5) {
+      initialized = false;
+      window.setTimeout(() => void initThree(), 700);
+      return;
+    }
+    initialized = true;
+    const constrainedDevice = isConstrainedDevice();
+
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(CAMERA_FOV, width / height, 0.1, 100);
+
+    renderer = new THREE.WebGLRenderer({
+      canvas: canvasRef.value,
+      alpha: true,
+      antialias: true,
+      // Debug captures rely on toDataURL, which needs the drawing buffer kept.
+      preserveDrawingBuffer: props.debugPath,
+      powerPreference: "high-performance",
+    });
+    renderer.setSize(width, height, false);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, constrainedDevice ? 1 : 1.25));
+    renderer.setClearColor(0x000000, 0);
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 0.9;
+
+    const [{ RoomEnvironment }, { GLTFLoader }] = await Promise.all([
+      import("three/examples/jsm/environments/RoomEnvironment.js"),
+      import("three/examples/jsm/loaders/GLTFLoader.js"),
+    ]);
+    if (disposed) return;
+    const pmremGenerator = new THREE.PMREMGenerator(renderer);
+    const roomEnvironment = new RoomEnvironment();
+    environmentTexture = pmremGenerator.fromScene(roomEnvironment, 0.04).texture;
+    scene.environment = environmentTexture;
+    roomEnvironment.dispose();
+    pmremGenerator.dispose();
+
+    addBustLighting(scene);
+
+    firstGroup = new THREE.Group();
+    scene.add(firstGroup);
+    secondPlacement = new THREE.Group();
+    secondGroup = new THREE.Group();
+    secondPlacement.add(secondGroup);
+    scene.add(secondPlacement);
+
+    const loader = new GLTFLoader();
+    const loadBust = (url: string) =>
+      new Promise<import("three/examples/jsm/loaders/GLTFLoader.js").GLTF | null>((resolve) => {
+        if (!url) {
+          resolve(null);
+          return;
+        }
+        loader.load(
+          url,
+          (gltf) => resolve(gltf),
+          undefined,
+          (error) => {
+            console.error("Journey stage: unable to load bust, skipping it.", error);
+            resolve(null);
+          }
+        );
+      });
+
+    const [firstGLTF, secondGLTF] = await Promise.all([
+      loadBust(props.firstModelUrl),
+      loadBust(props.secondModelUrl),
+    ]);
+    if (disposed || !renderer || !scene || !camera) return;
+
+    const firstScene = firstGLTF?.scene;
+    const secondScene = secondGLTF?.scene;
+    if (firstScene && firstGroup) {
+      firstBounds = normalizeLoadedBust(firstScene, BASE_BUST_HEIGHT * FIRST_MODEL_SCALE);
+      applyBustMaterial(firstScene, firstMaterial);
+      firstRoot = firstScene;
+      firstGroup.add(firstScene);
+    }
+
+    if (secondScene && secondGroup) {
+      normalizeLoadedBust(secondScene, BASE_BUST_HEIGHT * SECOND_MODEL_SCALE);
+      secondScene.position.y -= 0.48;
+      applyBustMaterial(secondScene, secondMaterial);
+      // Place the second bust deep and to screen right, along the camera's
+      // shoulder pass, while preserving the final framing around that bust.
+      const firstSize = firstBounds.getSize(new THREE.Vector3());
+      secondPlacement.position.set(
+        firstSize.x * 1.15 + 2.2,
+        0,
+        -(firstSize.y * 1.55 + 3.4)
+      );
+      secondRoot = secondScene;
+      secondGroup.add(secondScene);
+      secondGroup.rotation.y = props.secondRotationY;
+      registerBustSymptoms(secondScene, !!secondGLTF?.animations.some(clip =>
+        clip.tracks.some(track => track.name.includes("morphTargetInfluences"))
+      ), symptomEffects);
+      if (secondGLTF?.animations.length) {
+        animationPlayback = createPalpationPlayback(secondScene, secondGLTF.animations, secondGLTF.parser.json.extras?.palpationStudy?.steps ?? []);
+        animationPlayback.selectStep(props.animationStep);
+        reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      }
+      symptomEffects.build(secondScene, props.symptomType);
+      symptomEffects.applyTint(props.symptomType);
+      secondScene.traverse((child) => {
+        if (!(child instanceof THREE.Mesh)) return;
+        (Array.isArray(child.material) ? child.material : [child.material]).forEach((material) => {
+          if (!secondBaseMaterials.has(material)) {
+            secondBaseMaterials.set(material, {
+              opacity: material.opacity,
+              transparent: material.transparent,
+              depthWrite: material.depthWrite,
+            });
+          }
+        });
+      });
+      updateSecondModelOpacity(props.secondModelOpacity);
+    }
+
+    buildCameraPath();
+    updateCameraForProgress(props.cameraProgress);
+    refreshProfileContour();
+    isLoading.value = false;
+    scheduleRender();
+  };
+
+  const handleResize = () => {
+    if (!containerRef.value || !camera || !renderer) return;
+
+    const rect = containerRef.value.getBoundingClientRect();
+    const width = rect.width;
+    const height = rect.height;
+    if (!width || !height) return;
+
+    camera.aspect = width / height;
+    camera.updateProjectionMatrix();
+    buildCameraPath();
+    updateCameraForProgress(journeyCamera.progress >= 0 ? journeyCamera.progress : props.cameraProgress);
+    renderer.setSize(width, height, false);
+    refreshProfileContour();
+    scheduleRender();
+  };
+
+  const tick = (timestamp: number) => {
+    animationFrameId = 0;
+    if (!renderer || !scene || !camera) return;
+    if (!isVisible || document.hidden || disposed) return;
+
+    const targetFps = isConstrainedDevice()
+      ? 24
+      : presentation.isRotating
+        ? 60
+        : 30;
+    if (timestamp - lastRenderTime < 1000 / targetFps) {
+      scheduleRender();
+      return;
+    }
+    lastRenderTime = timestamp;
+
+    const elapsedTime = timestamp / 1000;
+    if (animationPlayback?.active && !reduceMotion) {
+      animationPlayback.update(previousAnimationTimestamp ? Math.min((timestamp - previousAnimationTimestamp) / 1000, 0.1) : 0);
+      animationTime.value = animationPlayback.time;
+    }
+    previousAnimationTimestamp = timestamp;
+
+    symptomEffects.tick(elapsedTime);
+    notifyFramingReady();
+    presentation.notifySymptomReady();
+    renderer.render(scene, camera);
+    if (needsContinuousRendering() || timestamp < renderUntil) scheduleRender();
+  };
+
+  onMounted(() => {
+    if (!process.client || !containerRef.value) return;
+
+    visibilityChangeHandler = () => {
+      if (document.hidden) stopRendering();
+      else scheduleRender();
+    };
+    document.addEventListener("visibilitychange", visibilityChangeHandler);
+
+    viewportObserver = new IntersectionObserver(
+      ([entry]) => {
+        isVisible = entry?.isIntersecting ?? false;
+        if (!isVisible) {
+          stopRendering();
+          return;
+        }
+        if (!initialized) void initThree();
+        else scheduleRender();
+      },
+      { rootMargin: "200px 0px", threshold: 0 }
+    );
+    viewportObserver.observe(containerRef.value);
+
+    resizeObserver = new ResizeObserver(handleResize);
+    resizeObserver.observe(containerRef.value);
+  });
+
+  onUnmounted(() => {
+    animationPlayback?.dispose();
+    disposed = true;
+    gsap.killTweensOf(symptomFraming);
+    viewportObserver?.disconnect();
+    resizeObserver?.disconnect();
+    if (visibilityChangeHandler) {
+      document.removeEventListener("visibilitychange", visibilityChangeHandler);
+    }
+    stopRendering();
+    if (renderer) {
+      renderer.dispose();
+      renderer.forceContextLoss();
+    }
+    environmentTexture?.dispose();
+    firstMaterial.dispose();
+    secondMaterial.dispose();
+
+    [firstRoot, secondRoot].forEach((root) => {
+      root?.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          child.geometry.dispose();
+        }
+      });
+    });
+    symptomEffects.dispose();
+    secondBaseMaterials.clear();
+
+    if (scene) {
+      scene.traverse((child) => {
+        if (child instanceof THREE.Mesh || child instanceof THREE.Line) {
+          child.geometry?.dispose();
+          const materials = Array.isArray(child.material) ? child.material : [child.material];
+          materials.forEach((material) => {
+            if (material !== firstMaterial && material !== secondMaterial) material?.dispose();
+          });
+        }
+      });
+    }
+
+    renderer = null;
+    scene = null;
+    camera = null;
+    firstGroup = null;
+    firstRoot = null;
+    secondPlacement = null;
+    secondGroup = null;
+    secondRoot = null;
+    journeyCamera.dispose();
+  });
+
+  watch(() => props.animationStep, step => {
+    animationPlayback?.selectStep(step);
+    animationTime.value = animationPlayback?.time ?? 0;
+    previousAnimationTimestamp = 0;
+    scheduleRender();
+  });
+
+  watch(
+    () => props.cameraProgress,
+    (progress) => {
+      updateCameraForProgress(progress);
+      scheduleRender(400);
+    }
+  );
+
+  watch([() => props.focusSymptoms, () => props.palpationProgress > 0], ([focused, palpating]) => {
+    framingNotified = false;
+    gsap.to(symptomFraming, {
+      progress: focused || palpating ? 1 : 0,
+      duration: reduceMotion ? 0 : 0.9,
+      ease: "power2.inOut",
+      overwrite: true,
+      onUpdate: () => {
+        updateCameraForProgress(props.cameraProgress);
+        scheduleRender();
+      },
+      onComplete: () => {
+        refreshProfileContour();
+        notifyFramingReady();
+      },
+    });
+  });
+
+  watch(() => props.palpationProgress, () => {
+    updateCameraForProgress(props.cameraProgress);
+    scheduleRender();
+  });
+
+  watch(() => props.secondModelOpacity, updateSecondModelOpacity);
+
+  return {
+    containerRef, canvasRef, isLoading, animationTime,
+    profileLabelOpacity, profileCurveId, profileContour,
+  };
+}
