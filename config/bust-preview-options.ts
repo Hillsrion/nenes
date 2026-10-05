@@ -68,14 +68,13 @@ export const previewSymptoms: Array<{
       label: "Fossettes ou croûtes",
       short: "Petites zones localisées",
       description:
-        "Les rétractions du maillage et les petits reliefs irréguliers illustrent fossettes ou croûtes inhabituelles.",
+        "Les rétractions de la peau et de fines plaques sèches, irrégulières et squameuses illustrent fossettes ou croûtes inhabituelles.",
     },
     {
       id: "nipple",
       label: "Mamelon ou écoulement",
       short: "Modification localisée",
       description:
-        "Des gouttes se forment au mamelon, se détachent puis tombent pour illustrer un écoulement spontané.",
+        "Une petite goutte translucide se forme au mamelon puis se détache. L’écoulement peut être clair, jaunâtre ou teinté de sang : il n’est pas toujours rouge.",
     },
   ];
-

@@ -69,18 +69,18 @@ export function getR2VideoUrl(videoKey: string): string {
  * For videos that have multiple resolution/format versions
  *
  * @param videoKey - The key/folder name (e.g., 'step-03')
- * @param resolution - Resolution (default: '1080p')
+ * @param resolution - Resolution (default: 'desktop')
  * @param format - Video format (default: 'webm')
  * @returns Full R2 URL
  */
 export function getR2VideoUrlResponsive(
   videoKey: string,
-  resolution: "1080p" | "1440p" = "1080p",
+  resolution: "desktop" | "mobile" = "desktop",
   format: "mp4" | "webm" = "webm"
 ): string {
   const baseUrl = R2_CONFIG.publicUrl.replace(/\/$/, "");
 
-  // Assuming folder structure: /step-03/step-03-1080p.webm
+  // Assuming folder structure: /step-03/step-03-desktop.webm
   return `${baseUrl}/${videoKey}/${videoKey}-${resolution}.${format}`;
 }
 

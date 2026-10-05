@@ -1,23 +1,26 @@
 import * as THREE from "three";
+import { createCrustPatchGeometry } from "./crust-geometry";
 
 export type SymptomType = "none" | "asymmetry" | "skin" | "dimpling" | "nipple";
 type MorphSymptomType = Exclude<SymptomType, "none" | "nipple">;
 
 const symptomMorphNames: MorphSymptomType[] = ["asymmetry", "skin", "dimpling"];
 const markerForward = new THREE.Vector3(0, 0, 1);
-const dropletFallOffset = new THREE.Vector3();
 
 interface SurfaceAnchor {
   point: THREE.Vector3;
   normal: THREE.Vector3;
 }
 
+interface MorphSurfaceAnchor extends SurfaceAnchor {
+  neutralPoint: THREE.Vector3;
+  neutralNormal: THREE.Vector3;
+}
+
 interface AnimatedDroplet {
   mesh: THREE.Mesh;
   origin: THREE.Vector3;
   normal: THREE.Vector3;
-  phase: number;
-  lateral: number;
 }
 
 interface SymptomColorState {
@@ -46,6 +49,7 @@ export const createSymptomEffects = (
   const symptomLayers = new Map<SymptomType, THREE.Group>();
   const symptomMorphMeshes: THREE.Mesh[] = [];
   const animatedDroplets: AnimatedDroplet[] = [];
+  const crustPatches: Array<{ mesh: THREE.Mesh; anchor: MorphSurfaceAnchor }> = [];
   const symptomColorStates = new WeakMap<THREE.BufferGeometry, SymptomColorState>();
   const weights = { asymmetry: 0, skin: 0, dimpling: 0, nipple: 0 };
   let fromWeights = { ...weights };
@@ -60,7 +64,7 @@ export const createSymptomEffects = (
 
 
   const findFrontSurface = (
-    loadedModel: THREE.Object3D,
+    mesh: THREE.Mesh,
     x: number,
     y: number
   ): SurfaceAnchor | null => {
@@ -68,23 +72,80 @@ export const createSymptomEffects = (
     if (!modelGroup) return null;
 
     modelGroup.updateMatrixWorld(true);
+    const bounds = mesh.geometry.boundingBox!;
+    // Cast in the body's coordinate system, excluding animated hands/helpers.
     const raycaster = new THREE.Raycaster(
-      modelGroup.localToWorld(new THREE.Vector3(x, y, 3)),
-      new THREE.Vector3(0, 0, -1).transformDirection(modelGroup.matrixWorld)
+      mesh.localToWorld(new THREE.Vector3(x, y, bounds.max.z + bounds.getSize(new THREE.Vector3()).z + 1)),
+      new THREE.Vector3(0, 0, -1).transformDirection(mesh.matrixWorld)
     );
     const hit = raycaster
-      .intersectObject(loadedModel, true)
+      .intersectObject(mesh, false)
       .find((intersection) => intersection.face && intersection.object instanceof THREE.Mesh);
     if (!hit?.face) return null;
 
-    const mesh = hit.object as THREE.Mesh;
-    const normalMatrix = new THREE.Matrix3().getNormalMatrix(mesh.matrixWorld);
-    const worldNormal = hit.face.normal.clone().applyMatrix3(normalMatrix).normalize();
     const inverseGroupMatrix = new THREE.Matrix4().copy(modelGroup.matrixWorld).invert();
+    const normalMatrix = new THREE.Matrix3().getNormalMatrix(inverseGroupMatrix.multiply(mesh.matrixWorld));
     return {
       point: modelGroup.worldToLocal(hit.point.clone()),
-      normal: worldNormal.transformDirection(inverseGroupMatrix).normalize(),
+      normal: (hit.normal ?? hit.face.normal).clone().applyMatrix3(normalMatrix).normalize(),
     };
+  };
+
+  const findNippleAnchor = (mesh: THREE.Mesh) => {
+    // Profiles are calibrated against neutral vertices. Three's boundingBox
+    // also includes every morph endpoint, including large palpation offsets.
+    const bounds = new THREE.Box3().setFromBufferAttribute(mesh.geometry.getAttribute("position"));
+    if (!mesh.geometry.boundingBox) mesh.geometry.computeBoundingBox();
+    const center = bounds.getCenter(new THREE.Vector3());
+    const half = bounds.getSize(new THREE.Vector3()).multiplyScalar(0.5);
+    const profile = mesh.userData.symptomProfile;
+    const [relativeX, relativeY] = profile?.nipple ?? profile?.breast ?? [0.35, 0.14];
+    const x = center.x + half.x * relativeX;
+    const y = center.y + half.y * relativeY;
+    const initial = findFrontSurface(mesh, x, y);
+    if (!initial) return null;
+
+    // The seed may land on the nipple's flank. Its own normal then tilts the
+    // search plane toward that flank, keeping the source off-center. Estimate
+    // the breast's underlying slope outside the nipple before finding its tip.
+    const radius = Math.min(half.x, half.y) * 0.045;
+    const surroundingNormal = new THREE.Vector3();
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const surrounding = findFrontSurface(mesh, x + dx * radius * 2, y + dy * radius * 2);
+      if (surrounding) surroundingNormal.add(surrounding.normal);
+    }
+    const searchNormal = surroundingNormal.lengthSq() > 0.001
+      ? surroundingNormal.normalize() : initial.normal;
+    let best = initial;
+    let bestScore = 0;
+    let bestX = x;
+    let bestY = y;
+    const consider = (candidateX: number, candidateY: number) => {
+      if (Math.hypot(candidateX - x, candidateY - y) > radius + Number.EPSILON) return;
+      const candidate = findFrontSurface(mesh, candidateX, candidateY);
+      if (!candidate) return;
+      const offset = candidate.point.clone().sub(initial.point);
+      const score = offset.dot(searchNormal) - offset.length() * 0.06;
+      if (score > bestScore) {
+        best = candidate;
+        bestScore = score;
+        bestX = candidateX;
+        bestY = candidateY;
+      }
+    };
+    for (let row = -2; row <= 2; row += 1) {
+      for (let column = -2; column <= 2; column += 1) {
+        if (row * row + column * column > 4) continue;
+        consider(x + column * radius / 2, y + row * radius / 2);
+      }
+    }
+    // Resolve between coarse samples without widening the calibrated search.
+    const refinementX = bestX;
+    const refinementY = bestY;
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      consider(refinementX + dx * radius / 4, refinementY + dy * radius / 4);
+    }
+    return best;
   };
 
   const smoothstep = (edge0: number, edge1: number, value: number) => {
@@ -226,7 +287,7 @@ export const createSymptomEffects = (
     const dimpleColors = new Float32Array(positions.count * 3);
     const neutral = new THREE.Color(0xffffff);
     const irritatedSkin = new THREE.Color(0xd74f68);
-    const crustTone = new THREE.Color(0x7d303d);
+    const crustTone = new THREE.Color(0xb96e5e);
     const mixed = new THREE.Color();
 
     for (let index = 0; index < positions.count; index += 1) {
@@ -259,7 +320,7 @@ export const createSymptomEffects = (
         );
       });
       const irregularity = 0.72 + Math.sin(x * 83 + y * 57) * 0.12;
-      const dimpleBlend = THREE.MathUtils.clamp(dimpleWeight * irregularity * 0.68, 0, 0.68);
+      const dimpleBlend = THREE.MathUtils.clamp(dimpleWeight * irregularity * 0.35, 0, 0.35);
       mixed.lerpColors(neutral, crustTone, dimpleBlend);
       dimpleColors[index * 3] = mixed.r;
       dimpleColors[index * 3 + 1] = mixed.g;
@@ -303,7 +364,7 @@ export const createSymptomEffects = (
   const findMorphSurfaceAnchors = (
     name: MorphSymptomType,
     requestedCount: number
-  ): SurfaceAnchor[] => {
+  ): MorphSurfaceAnchor[] => {
     const modelGroup = getModelGroup();
     if (!modelGroup) return [];
     modelGroup.updateMatrixWorld(true);
@@ -314,32 +375,27 @@ export const createSymptomEffects = (
       const morphPositions =
         targetIndex === undefined ? undefined : mesh.geometry.morphAttributes.position?.[targetIndex];
       if (!morphPositions) return;
+      const positions = mesh.geometry.getAttribute("position");
+      const strengthAt = (index: number) => Math.hypot(
+        morphPositions.getX(index) - (mesh.geometry.morphTargetsRelative ? 0 : positions.getX(index)),
+        morphPositions.getY(index) - (mesh.geometry.morphTargetsRelative ? 0 : positions.getY(index)),
+        morphPositions.getZ(index) - (mesh.geometry.morphTargetsRelative ? 0 : positions.getZ(index))
+      );
 
       let maximumStrength = 0;
       for (let index = 0; index < morphPositions.count; index += 1) {
-        maximumStrength = Math.max(
-          maximumStrength,
-          Math.hypot(
-            morphPositions.getX(index),
-            morphPositions.getY(index),
-            morphPositions.getZ(index)
-          )
-        );
+        maximumStrength = Math.max(maximumStrength, strengthAt(index));
       }
       if (maximumStrength <= Number.EPSILON) return;
       const threshold = maximumStrength * 0.55;
       for (let index = 0; index < morphPositions.count; index += 1) {
-        const strength = Math.hypot(
-          morphPositions.getX(index),
-          morphPositions.getY(index),
-          morphPositions.getZ(index)
-        );
+        const strength = strengthAt(index);
         if (strength >= threshold) candidates.push({ mesh, index, strength });
       }
     });
     candidates.sort((left, right) => right.strength - left.strength);
 
-    const anchors: SurfaceAnchor[] = [];
+    const anchors: MorphSurfaceAnchor[] = [];
     const inverseGroupMatrix = new THREE.Matrix4().copy(modelGroup.matrixWorld).invert();
     for (const candidate of candidates) {
       const { mesh, index } = candidate;
@@ -366,18 +422,25 @@ export const createSymptomEffects = (
           new THREE.Vector3(positions.getX(index), positions.getY(index), positions.getZ(index))
         );
         normal.add(new THREE.Vector3(normals.getX(index), normals.getY(index), normals.getZ(index)));
+      } else if (!morphNormal) {
+        normal.set(normals.getX(index), normals.getY(index), normals.getZ(index));
       }
 
       const groupPoint = modelGroup.worldToLocal(mesh.localToWorld(point));
       if (anchors.some((anchor) => anchor.point.distanceTo(groupPoint) < 0.12)) continue;
 
-      const normalMatrix = new THREE.Matrix3().getNormalMatrix(mesh.matrixWorld);
+      const normalMatrix = new THREE.Matrix3().getNormalMatrix(
+        inverseGroupMatrix.clone().multiply(mesh.matrixWorld)
+      );
+      const neutralPoint = modelGroup.worldToLocal(mesh.localToWorld(new THREE.Vector3(
+        positions.getX(index), positions.getY(index), positions.getZ(index)
+      )));
+      const neutralNormal = new THREE.Vector3(normals.getX(index), normals.getY(index), normals.getZ(index))
+        .applyMatrix3(normalMatrix).normalize();
       const groupNormal = normal
         .applyMatrix3(normalMatrix)
-        .normalize()
-        .transformDirection(inverseGroupMatrix)
         .normalize();
-      anchors.push({ point: groupPoint, normal: groupNormal });
+      anchors.push({ point: groupPoint, normal: groupNormal, neutralPoint, neutralNormal });
       if (anchors.length >= requestedCount) break;
     }
     return anchors;
@@ -387,87 +450,83 @@ export const createSymptomEffects = (
     const anchors = findMorphSurfaceAnchors("dimpling", 3);
     if (!anchors.length) return;
 
-    const geometry = new THREE.DodecahedronGeometry(1, 0);
-    const positions = geometry.getAttribute("position");
-    for (let index = 0; index < positions.count; index += 1) {
-      const x = positions.getX(index);
-      const y = positions.getY(index);
-      const z = positions.getZ(index);
-      const irregularity = 1 + Math.sin(x * 9.7 + y * 7.3 + z * 11.1) * 0.13;
-      positions.setXYZ(index, x * irregularity, y * irregularity, z);
-    }
-    geometry.computeVertexNormals();
-
-    const material = new THREE.MeshStandardMaterial({ color: 0x5d2928, roughness: 0.93 });
-    const crusts = new THREE.InstancedMesh(geometry, material, anchors.length);
-    crusts.name = "integrated-crusts";
-    crusts.castShadow = true;
-    crusts.receiveShadow = true;
-    crusts.userData.preserveMaterial = true;
-
-    const transform = new THREE.Object3D();
-    anchors.forEach((anchor, index) => {
-      transform.position.copy(anchor.point).addScaledVector(anchor.normal, 0.0015);
-      transform.quaternion.setFromUnitVectors(markerForward, anchor.normal);
-      const width = 0.025 + index * 0.004;
-      transform.scale.set(width, width * (0.58 + index * 0.07), 0.005 + index * 0.001);
-      transform.updateMatrix();
-      crusts.setMatrixAt(index, transform.matrix);
+    const material = new THREE.MeshStandardMaterial({
+      color: 0xffffff, vertexColors: true, roughness: 0.97, metalness: 0,
+      side: THREE.DoubleSide,
     });
-    crusts.instanceMatrix.needsUpdate = true;
-    crusts.computeBoundingSphere();
+    const crusts = new THREE.Group();
+    crusts.name = "integrated-crusts";
+    anchors.forEach((anchor, index) => {
+      const patch = new THREE.Mesh(createCrustPatchGeometry(index + 1), material);
+      patch.name = `crust-patch-${index + 1}`;
+      const width = 0.027 + index * 0.003;
+      patch.scale.set(width, width * (0.72 + index * 0.06), width);
+      patch.castShadow = true;
+      patch.receiveShadow = true;
+      patch.userData.preserveMaterial = true;
+      crustPatches.push({ mesh: patch, anchor });
+      crusts.add(patch);
+    });
     layer.add(crusts);
   };
 
   const addNippleDischarge = (
     layer: THREE.Group,
-    loadedModel: THREE.Object3D,
-    x: number,
-    y: number
+    body: THREE.Mesh
   ) => {
-    const anchor = findFrontSurface(loadedModel, x, y);
+    const anchor = findNippleAnchor(body);
     if (!anchor) return;
 
     const liquidMaterial = new THREE.MeshPhysicalMaterial({
-      color: 0xa7133b,
-      roughness: 0.12,
-      clearcoat: 1,
-      clearcoatRoughness: 0.035,
+      // One possible serous discharge; blood is not the universal appearance.
+      color: 0xf5e8cb,
+      roughness: 0.045,
+      transmission: 0.72,
+      ior: 1.333,
+      thickness: 0.025,
+      attenuationColor: new THREE.Color(0xf5e5c1),
+      attenuationDistance: 0.16,
+      specularIntensity: 1,
+      clearcoat: 0.65,
+      clearcoatRoughness: 0.025,
       transparent: true,
       opacity: 0.94,
       depthWrite: true,
     });
-    nippleSourceBead = new THREE.Mesh(new THREE.SphereGeometry(0.017, 24, 16), liquidMaterial);
+    nippleSourceBead = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 20), liquidMaterial);
     nippleSourceBead.name = "nipple-discharge-source";
-    nippleSourceBead.position.copy(anchor.point).addScaledVector(anchor.normal, 0.021);
+    nippleSourceBead.position.copy(anchor.point).addScaledVector(anchor.normal, 0.001);
+    nippleSourceBead.quaternion.setFromUnitVectors(markerForward, anchor.normal);
+    nippleSourceBead.scale.set(0.009, 0.008, 0.004);
     nippleSourceBead.userData.preserveMaterial = true;
     nippleSourceBead.renderOrder = 12;
     layer.add(nippleSourceBead);
 
     const dropletProfile = [
-      new THREE.Vector2(0, -0.09),
-      new THREE.Vector2(0.014, -0.078),
-      new THREE.Vector2(0.021, -0.056),
-      new THREE.Vector2(0.018, -0.034),
-      new THREE.Vector2(0.008, -0.012),
-      new THREE.Vector2(0, 0),
+      new THREE.Vector2(0, -0.035),
+      new THREE.Vector2(0.004, -0.034),
+      new THREE.Vector2(0.008, -0.031),
+      new THREE.Vector2(0.011, -0.026),
+      new THREE.Vector2(0.012, -0.021),
+      new THREE.Vector2(0.010, -0.015),
+      new THREE.Vector2(0.006, -0.009),
+      new THREE.Vector2(0.003, -0.004),
+      new THREE.Vector2(0.0025, 0),
     ];
-    const dropletGeometry = new THREE.LatheGeometry(dropletProfile, 24);
-    [0, 0.333, 0.666].forEach((phase, index) => {
-      const droplet = new THREE.Mesh(dropletGeometry, liquidMaterial);
-      droplet.name = `falling-nipple-droplet-${index + 1}`;
-      droplet.position.copy(anchor.point).addScaledVector(anchor.normal, 0.022);
-      droplet.userData.preserveMaterial = true;
-      droplet.castShadow = true;
-      droplet.renderOrder = 12;
-      layer.add(droplet);
-      animatedDroplets.push({
-        mesh: droplet,
-        origin: droplet.position.clone(),
-        normal: anchor.normal.clone(),
-        phase,
-        lateral: (index - 1) * 0.012,
-      });
+    const profileCurve = new THREE.SplineCurve(dropletProfile);
+    const dropletGeometry = new THREE.LatheGeometry(
+      profileCurve.getPoints(48).map(point => new THREE.Vector2(Math.max(0, point.x), point.y)), 32
+    );
+    const droplet = new THREE.Mesh(dropletGeometry, liquidMaterial);
+    droplet.name = "falling-nipple-droplet-1";
+    droplet.position.copy(anchor.point).addScaledVector(anchor.normal, 0.003);
+    droplet.userData.preserveMaterial = true;
+    droplet.renderOrder = 12;
+    layer.add(droplet);
+    animatedDroplets.push({
+      mesh: droplet,
+      origin: droplet.position.clone(),
+      normal: anchor.normal.clone(),
     });
   };
 
@@ -485,6 +544,12 @@ export const createSymptomEffects = (
       layerMaterials.get(type)?.forEach((opacity, material) => {
         material.opacity = opacity * weight * globalOpacity;
       });
+    });
+    crustPatches.forEach(({ mesh, anchor }) => {
+      mesh.position.lerpVectors(anchor.neutralPoint, anchor.point, weights.dimpling);
+      const normal = anchor.neutralNormal.clone().lerp(anchor.normal, weights.dimpling).normalize();
+      mesh.position.addScaledVector(normal, 0.0005);
+      mesh.quaternion.setFromUnitVectors(markerForward, normal);
     });
     if (updateColors) applyTint(targetSymptom);
   };
@@ -520,7 +585,7 @@ export const createSymptomEffects = (
     applyWeights(false);
   };
 
-  const build = (loadedModel: THREE.Object3D, symptom: SymptomType) => {
+  const build = (_loadedModel: THREE.Object3D, symptom: SymptomType) => {
     const modelGroup = getModelGroup();
     if (!modelGroup) return;
 
@@ -541,19 +606,11 @@ export const createSymptomEffects = (
     const dimplingLayer = createLayer("dimpling");
     addCrustRelief(dimplingLayer);
     const nippleLayer = createLayer("nipple");
-    const calibratedMesh = symptomMorphMeshes.find((mesh) => mesh.userData.symptomProfile?.nipple);
-    if (calibratedMesh) {
-      const bounds = new THREE.Box3().setFromBufferAttribute(calibratedMesh.geometry.getAttribute("position"));
-      const center = bounds.getCenter(new THREE.Vector3());
-      const half = bounds.getSize(new THREE.Vector3()).multiplyScalar(0.5);
-      const [x, y] = calibratedMesh.userData.symptomProfile.nipple;
-      const point = modelGroup.worldToLocal(calibratedMesh.localToWorld(
-        new THREE.Vector3(center.x + half.x * x, center.y + half.y * y, center.z)
-      ));
-      addNippleDischarge(nippleLayer, loadedModel, point.x, point.y);
-    } else {
-      addNippleDischarge(nippleLayer, loadedModel, 0.34, 0.26);
-    }
+    const body = symptomMorphMeshes.find((mesh) => mesh.userData.symptomProfile?.nipple)
+      ?? [...symptomMorphMeshes].sort((a, b) =>
+        b.geometry.getAttribute("position").count - a.geometry.getAttribute("position").count
+      )[0];
+    if (body) addNippleDischarge(nippleLayer, body);
     symptomLayers.forEach((layer, type) => {
       const materials = new Map<THREE.Material, number>();
       layer.traverse((child) => {
@@ -576,44 +633,47 @@ export const createSymptomEffects = (
     advanceTransition(elapsedTime);
     if (!symptomLayers.get("nipple")?.visible) return;
     if (nippleSourceBead) {
-      const beadScale = 0.82 + (Math.sin(elapsedTime * 4.8) + 1) * 0.09;
-      nippleSourceBead.scale.setScalar(beadScale);
+      const swelling = prefersReducedMotion() ? 1 : 0.94 + Math.sin(elapsedTime * 1.8) * 0.06;
+      nippleSourceBead.scale.set(0.009 * swelling, 0.008 * swelling, 0.004);
     }
-    animatedDroplets.forEach(({ mesh, origin, normal, phase, lateral }) => {
-      const cycle = (elapsedTime * 0.48 + phase) % 1;
-      const formationEnd = 0.2;
+    animatedDroplets.forEach(({ mesh, origin, normal }) => {
+      const cycle = prefersReducedMotion() ? 0.58 : (elapsedTime * 0.28) % 1;
+      const formationEnd = 0.74;
       mesh.visible = true;
       mesh.position.copy(origin);
       if (cycle < formationEnd) {
         const formation = smoothstep(0, formationEnd, cycle);
-        mesh.position.addScaledVector(normal, formation * 0.012);
-        mesh.scale.set(0.58 + formation * 0.42, 0.08 + formation * 0.92, 0.58 + formation * 0.42);
+        mesh.scale.set(0.28 + formation * 0.72, 0.18 + formation * 0.82, 0.28 + formation * 0.72);
         return;
       }
 
       const fall = (cycle - formationEnd) / (1 - formationEnd);
       const gravity = fall * fall;
       const disappear = 1 - smoothstep(0.84, 1, fall);
-      dropletFallOffset.set(lateral * fall, -0.68 * gravity, 0);
       mesh.position
-        .addScaledVector(normal, 0.012 + fall * 0.055)
-        .add(dropletFallOffset);
+        .addScaledVector(normal, fall * 0.008);
+      mesh.position.y -= 0.28 * gravity;
       mesh.scale.set(
-        (1 - fall * 0.16) * disappear,
-        (1.18 + (1 - fall) * 0.42) * disappear,
-        (1 - fall * 0.16) * disappear
+        (1 + fall * 0.1) * disappear,
+        (1.05 - fall * 0.25) * disappear,
+        (1 + fall * 0.1) * disappear
       );
       if (disappear < 0.03) mesh.visible = false;
     });
   };
 
   const dispose = () => {
+    const geometries = new Set<THREE.BufferGeometry>();
+    const materials = new Set<THREE.Material>();
     symptomRoot?.traverse((child) => {
       if (!(child instanceof THREE.Mesh)) return;
-      child.geometry.dispose();
-      const materials = Array.isArray(child.material) ? child.material : [child.material];
-      materials.forEach((material) => material.dispose());
+      geometries.add(child.geometry);
+      (Array.isArray(child.material) ? child.material : [child.material])
+        .forEach((material) => materials.add(material));
     });
+    geometries.forEach((geometry) => geometry.dispose());
+    materials.forEach((material) => material.dispose());
+    symptomRoot?.removeFromParent();
     symptomRoot = null;
     nippleSourceBead = null;
     symptomLayers.clear();
@@ -624,6 +684,7 @@ export const createSymptomEffects = (
     fromWeights = { ...weights };
     symptomMorphMeshes.length = 0;
     animatedDroplets.length = 0;
+    crustPatches.length = 0;
   };
 
   const registerMesh = (mesh: THREE.Mesh, ensureSkinRelief = false) => {

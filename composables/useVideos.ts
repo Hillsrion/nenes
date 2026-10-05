@@ -1,4 +1,6 @@
-import type { Ref } from "vue";
+import { nextTick, type Ref } from "vue";
+
+type VideoTransitionPhase = "cover" | "reveal";
 
 interface Step {
   content: string;
@@ -12,11 +14,11 @@ interface UseVideosOptions {
   currentStepIndex: Ref<number>;
   videoRef: Ref<HTMLVideoElement | null>;
   overlayRef: Ref<HTMLDivElement | null>;
-  transitionCallback?: (url: string) => void;
+  transitionCallback?: (phase: VideoTransitionPhase) => Promise<void> | void;
   getVideoSource: (
     stepIndex: number,
     format: "mp4" | "webm",
-    resolution: "1080p" | "1440p" | "mobile"
+    resolution: "desktop" | "mobile"
   ) => string;
 }
 
@@ -44,6 +46,40 @@ export function useVideos(options: UseVideosOptions) {
   let transitionVersion = 0;
   let disposed = false;
 
+  const waitForVideoElementReady = (
+    video: HTMLVideoElement,
+    url: string
+  ): Promise<void> => {
+    const requestedUrl = new URL(url, window.location.href).href;
+    const isRequestedVideoReady = () =>
+      video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA &&
+      video.currentSrc === requestedUrl;
+
+    if (isRequestedVideoReady()) return Promise.resolve();
+
+    return new Promise((resolve) => {
+      let settled = false;
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        video.removeEventListener("loadeddata", onReady);
+        video.removeEventListener("canplay", onReady);
+        video.removeEventListener("error", finish);
+        window.clearTimeout(timeoutId);
+        resolve();
+      };
+      const onReady = () => {
+        if (isRequestedVideoReady()) finish();
+      };
+      const timeoutId = window.setTimeout(finish, 3000);
+
+      video.addEventListener("loadeddata", onReady);
+      video.addEventListener("canplay", onReady);
+      video.addEventListener("error", finish);
+      onReady();
+    });
+  };
+
   // Initialize mobile/tablet detection and first video
   onMounted(() => {
     const checkDevice = () => {
@@ -59,7 +95,7 @@ export function useVideos(options: UseVideosOptions) {
     if (firstStep) {
       const firstVideoUrl = isMobileOrTablet.value
         ? options.getVideoSource(0, "mp4", "mobile")
-        : options.getVideoSource(0, isIOS.value ? "mp4" : "webm", "1080p");
+        : options.getVideoSource(0, isIOS.value ? "mp4" : "webm", "desktop");
 
       if (firstVideoUrl) {
         actualVideoUrl.value = firstVideoUrl;
@@ -86,7 +122,7 @@ export function useVideos(options: UseVideosOptions) {
     const format = isIOS.value ? "mp4" : "webm";
     return isMobileOrTablet.value
       ? options.getVideoSource(currentStepIndex.value, format, "mobile")
-      : options.getVideoSource(currentStepIndex.value, format, "1080p");
+      : options.getVideoSource(currentStepIndex.value, format, "desktop");
   });
 
   // Video loading method
@@ -183,7 +219,7 @@ export function useVideos(options: UseVideosOptions) {
       const format = isIOS.value ? "mp4" : "webm";
       const url = isMobileOrTablet.value
         ? options.getVideoSource(index, format, "mobile")
-        : options.getVideoSource(index, format, "1080p");
+        : options.getVideoSource(index, format, "desktop");
 
       if (!url) return Promise.resolve();
 
@@ -207,19 +243,31 @@ export function useVideos(options: UseVideosOptions) {
     )
       return;
 
-    const version = ++transitionVersion;
     const videoUrl = currentVideoUrl.value;
+    const version = ++transitionVersion;
 
-    // Set transitioning flag
-    isTransitioning.value = true;
-
-    // Call the transition callback (fade in overlay)
-    if (transitionCallback) {
-      transitionCallback(videoUrl);
+    if (actualVideoUrl.value === videoUrl) {
+      // A quick reverse step can return to the visible clip while another
+      // transition is covering it; cancel that transition and uncover it.
+      if (isTransitioning.value) {
+        await transitionCallback?.("reveal");
+        if (version === transitionVersion && !disposed) {
+          isTransitioning.value = false;
+        }
+      }
+      return;
     }
 
-    // Wait for a short duration for the overlay to be fully opaque (e.g., 300ms, matching the tl.to duration)
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    // Set the initial source directly; only subsequent steps need a transition.
+    if (!actualVideoUrl.value) {
+      actualVideoUrl.value = videoUrl;
+      return;
+    }
+
+    isTransitioning.value = true;
+
+    // Fully cover the current video before changing its source.
+    await transitionCallback?.("cover");
 
     if (version !== transitionVersion || disposed) return;
 
@@ -232,13 +280,21 @@ export function useVideos(options: UseVideosOptions) {
 
     if (version !== transitionVersion || disposed) return;
 
-    // Update actualVideoUrl while the overlay is opaque
     actualVideoUrl.value = videoUrl;
+    await nextTick();
 
-    // Reset transitioning flag after full transition completes (after overlay fades out)
-    setTimeout(() => {
-      if (version === transitionVersion && !disposed) isTransitioning.value = false;
-    }, 800);
+    const video = videoRef.value;
+    if (video) {
+      await waitForVideoElementReady(video, videoUrl);
+      if (version !== transitionVersion || disposed) return;
+      void video.play().catch(() => {});
+    }
+
+    // Reveal only after the new source is ready on the visible video element.
+    await transitionCallback?.("reveal");
+    if (version === transitionVersion && !disposed) {
+      isTransitioning.value = false;
+    }
   };
 
   // A newer scroll step supersedes an in-flight load, including reverse scroll.

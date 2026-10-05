@@ -1,7 +1,7 @@
 import { useContent } from "~/composables/useContent";
 
 export type VideoFormat = "mp4" | "webm";
-export type VideoResolution = "1080p" | "1440p" | "mobile";
+export type VideoResolution = "desktop" | "mobile";
 
 interface UseR2VideoSourceOptions {
   baseUrl?: string;

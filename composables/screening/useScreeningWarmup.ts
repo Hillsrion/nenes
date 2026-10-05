@@ -77,7 +77,7 @@ export const useScreeningWarmup = ({
 
           const useMobile = window.innerWidth <= 768;
           const format: VideoFormat = deviceStore.isIOS ? "mp4" : "webm";
-          const resolution: VideoResolution = useMobile ? "mobile" : "1080p";
+          const resolution: VideoResolution = useMobile ? "mobile" : "desktop";
 
           const urls = stepsToPreload
             .map((stepIndex) =>

@@ -28,12 +28,7 @@
               media="(max-width: 768px)"
             />
             <source
-              :src="getCurrentStepVideoSource('mp4', '1440p')"
-              type="video/mp4"
-              media="(min-width: 1920px)"
-            />
-            <source
-              :src="getCurrentStepVideoSource('mp4', '1080p')"
+              :src="getCurrentStepVideoSource('mp4', 'desktop')"
               type="video/mp4"
               media="(min-width: 769px)"
             />
@@ -52,22 +47,12 @@
               media="(max-width: 768px)"
             />
             <source
-              :src="getCurrentStepVideoSource('webm', '1440p')"
-              type="video/webm"
-              media="(min-width: 1920px)"
-            />
-            <source
-              :src="getCurrentStepVideoSource('webm', '1080p')"
+              :src="getCurrentStepVideoSource('webm', 'desktop')"
               type="video/webm"
               media="(min-width: 769px)"
             />
             <source
-              :src="getCurrentStepVideoSource('mp4', '1440p')"
-              type="video/mp4"
-              media="(min-width: 1920px)"
-            />
-            <source
-              :src="getCurrentStepVideoSource('mp4', '1080p')"
+              :src="getCurrentStepVideoSource('mp4', 'desktop')"
               type="video/mp4"
               media="(min-width: 769px)"
             />
@@ -80,7 +65,7 @@
         <!-- Video transition overlay -->
         <div
           ref="overlayRef"
-          class="absolute inset-0 bg-black/40 pointer-events-none opacity-0 transition-opacity duration-300"
+          class="absolute inset-0 bg-black pointer-events-none opacity-0"
         />
 
         <!-- Loading spinner -->
@@ -172,20 +157,37 @@ const { getVideoSourceFor, getCurrentStepVideoSource } =
     fallbackVideoUrl,
   });
 
-const handleVideoTransition = (url: string) => {
-  if (!overlayRef.value) return;
-  const tl = $gsap.timeline();
-  tl.to(overlayRef.value, {
-    opacity: 1,
-    duration: 0.25,
-    ease: "power2.inOut",
-  })
-    .to({}, { duration: 0.15 })
-    .to(overlayRef.value, {
-      opacity: 0,
-      duration: 0.25,
+let settleVideoOverlayTween: (() => void) | null = null;
+
+const handleVideoTransition = (
+  phase: "cover" | "reveal"
+): Promise<void> => {
+  const overlay = overlayRef.value;
+  if (!overlay) return Promise.resolve();
+
+  settleVideoOverlayTween?.();
+  $gsap.killTweensOf(overlay);
+
+  return new Promise((resolve) => {
+    let settled = false;
+    const settle = () => {
+      if (settled) return;
+      settled = true;
+      if (settleVideoOverlayTween === settle) {
+        settleVideoOverlayTween = null;
+      }
+      resolve();
+    };
+
+    settleVideoOverlayTween = settle;
+    $gsap.to(overlay, {
+      opacity: phase === "cover" ? 1 : 0,
+      duration: 0.3,
       ease: "power2.inOut",
+      onComplete: settle,
+      onInterrupt: settle,
     });
+  });
 };
 
 const { videoLoading, actualVideoUrl } = useVideos({
@@ -258,6 +260,8 @@ watch(actualVideoUrl, (newUrl) => {
 }, { flush: "post" });
 
 onUnmounted(() => {
+  settleVideoOverlayTween?.();
+  if (overlayRef.value) $gsap.killTweensOf(overlayRef.value);
   cleanup();
 });
 </script>
