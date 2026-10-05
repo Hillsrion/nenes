@@ -1,6 +1,6 @@
 <template>
   <div
-    ref="containerRef"
+    ref="containerRef" :data-model-url="modelUrl"
     class="relative h-full w-full"
     :data-animation-step="animationStep ?? currentAnimationStep?.id"
     :data-animation-time="animationTime.toFixed(2)"

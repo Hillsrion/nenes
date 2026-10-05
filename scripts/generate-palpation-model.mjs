@@ -4,13 +4,16 @@ import { readFile, writeFile } from 'node:fs/promises';
 import * as THREE from 'three';
 import {PalpationSurface, collisionSamples} from './lib/palpation-collision.mjs';
 
-const [input = 'private-3d-inputs/palpation-study/bust-zou-animation-base.glb', output = 'public/models/bust-zou-full-multiview-hi3d-palpation.glb'] = process.argv.slice(2);
+const [input = 'private-3d-inputs/palpation-study/bust-zou-animation-base.glb', output = 'public/models/bust-zou-full-multiview-hi3d-palpation.glb', profilePath] = process.argv.slice(2);
+const profile = profilePath ? JSON.parse(await readFile(profilePath, 'utf8')) : null;
 if (input === output) throw new Error('Use a separate output file.');
 const source = await readFile(input);
 const jsonLength = source.readUInt32LE(12);
 const gltf = JSON.parse(source.subarray(20, 20 + jsonLength));
 const bin = source.subarray(28 + jsonLength, 28 + jsonLength + source.readUInt32LE(20 + jsonLength));
 const primitive = gltf.meshes[0].primitives[0];
+const meshNode = gltf.nodes.findIndex(node => node.mesh === 0);
+if (meshNode < 0) throw new Error('Missing source mesh node.');
 if (primitive.targets || gltf.animations) throw new Error('Expected an unanimated source model.');
 const chunks = [bin];
 let byteLength = bin.length;
@@ -62,16 +65,16 @@ const smooth = (value) => { const t = THREE.MathUtils.clamp(value, 0, 1); return
 const siteSteps=JSON.parse(await readFile(new URL('../config/self-examination-steps.json',import.meta.url),'utf8'));
 const specifications=[];
 for (const side of [1,-1]) {
-  const cx=side===1?0.17:-0.131, cy=side===1?0.18:0.147;
+  const [cx, cy] = profile?.breasts?.[side === 1 ? 0 : 1] ?? (side === 1 ? [0.17, 0.18] : [-0.131, 0.147]);
   // Two concentric passes sampled in alternating quadrants, progressing inward.
   for(let i=0;i<9;i++) {
-    const angle=i*Math.PI/2, radius=0.072*(1-i/10);
+    const angle=i*Math.PI/2, radius=(profile?.breastRadius ?? 0.072)*(1-i/10);
     const x=cx+side*radius*Math.cos(angle);
     specifications.push({x:side===1?Math.min(x,0.222):x,y:cy+radius*Math.sin(angle),side,kind:'breast',duration:3.6});
   }
   // Arm is down in the source scan: show its accessible anterior axillary fold
   // and the bridge toward the upper outer breast, without inventing an arm rig.
-  for(const [x,y] of [[0.247,0.31],[0.23,0.28],[0.205,0.25]])specifications.push({x:x*side,y,side,kind:'axilla',duration:3.6});
+  for(const [x,y] of (profile?.axilla ?? [[0.247,0.31],[0.23,0.28],[0.205,0.25]]))specifications.push({x:x*side,y,side,kind:'axilla',duration:3.6});
   specifications.push({x:cx,y:cy,side,kind:'nipple',duration:4});
 }
 let sequenceTime=0;
@@ -172,8 +175,9 @@ gltf.materials.push({ name: 'Palpation · gant ivoire', pbrMetallicRoughness: { 
 const hand = gltf.nodes.length;
 gltf.nodes.push({ name: 'PalpationHand', translation: stations[0].center.clone().addScaledVector(stations[0].normal,0.022).toArray(), rotation:stations[0].rotation.toArray(), children: [] });
 // Sibling of the bust mesh: all calibration and motion use its original axes.
-const parent = gltf.nodes.find(node => node.children?.includes(2));
-parent.children.push(hand);
+const parent = gltf.nodes.find(node => node.children?.includes(meshNode));
+if (parent) parent.children.push(hand);
+else gltf.scenes[gltf.scene ?? 0].nodes.push(hand);
 const handParts = [];
 function ellipsoid(name, center, scale, rotation = 0, parentNode = hand) {
   const g = new THREE.SphereGeometry(1, 20, 14);
@@ -341,11 +345,11 @@ gltf.animations.push({ name, samplers:[
   ...fingerTranslations.map(values=>({input:timeAccessor,output:accessor(new Float32Array(values),'VEC3'),interpolation:'LINEAR'})),
   {input:timeAccessor,output:accessor(new Float32Array(thumbTranslations),'VEC3'),interpolation:'LINEAR'},
   {input:timeAccessor,output:accessor(new Float32Array(scales),'VEC3'),interpolation:'LINEAR'}
-],channels:[{ sampler:0,target:{node:hand,path:'translation'} },{sampler:1,target:{node:2,path:'weights'}},{sampler:2,target:{node:hand,path:'rotation'}},...fingerNodes.map((node,i)=>({sampler:i+3,target:{node,path:'translation'}})),{sampler:6,target:{node:thumbNode,path:'translation'}},{sampler:7,target:{node:hand,path:'scale'}}]});
+],channels:[{ sampler:0,target:{node:hand,path:'translation'} },{sampler:1,target:{node:meshNode,path:'weights'}},{sampler:2,target:{node:hand,path:'rotation'}},...fingerNodes.map((node,i)=>({sampler:i+3,target:{node,path:'translation'}})),{sampler:6,target:{node:thumbNode,path:'translation'}},{sampler:7,target:{node:hand,path:'scale'}}]});
 }
 generateClip('Palpation · étude de contact',stations.map((_,i)=>i),true);
 for(const chapter of chapters) generateClip(chapter.clipName,chapter.indices);
-gltf.extras={...gltf.extras, modelLabel:'Zou · essai palpation', palpationStudy:{version:5,duration,steps:chapters.map(({indices,...chapter})=>chapter),segments:stations.map(s=>({start:s.start,end:s.end,kind:s.kind,side:s.side})),stations:stations.map(s=>s.center.toArray()),source:input.split('/').pop(),clearanceMargin,largestCollisionCorrection,description:'Collision de toute la main contre le maillage déformé, compression locale et redistribution amortie. Approximation visuelle, non biomécanique.'}};
+gltf.extras={...gltf.extras, modelLabel:profile?.modelLabel ?? 'Zou · essai palpation', palpationStudy:{version:5,duration,steps:chapters.map(({indices,...chapter})=>chapter),segments:stations.map(s=>({start:s.start,end:s.end,kind:s.kind,side:s.side})),stations:stations.map(s=>s.center.toArray()),source:input.split('/').pop(),clearanceMargin,largestCollisionCorrection,description:'Collision de toute la main contre le maillage déformé, compression locale et redistribution amortie. Approximation visuelle, non biomécanique.'}};
 gltf.buffers[0].byteLength=byteLength;
 let json=Buffer.from(JSON.stringify(gltf));
 json=Buffer.concat([json,Buffer.alloc((4-json.length%4)%4,0x20)]);

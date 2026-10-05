@@ -1,5 +1,6 @@
 <template>
-  <div ref="containerRef" class="relative h-full w-full" :data-animation-step="animationStep" :data-animation-time="animationTime.toFixed(2)" :data-model-rotation="secondRotationY">
+  <div ref="containerRef" class="relative h-full w-full" :data-model-url="secondModelUrl" :data-model-loading="secondModelLoading" :data-camera-progress="cameraProgress.toFixed(3)" :data-animation-step="animationStep" :data-animation-time="animationTime.toFixed(2)" :data-model-rotation="secondRotationY">
+    <div class="pointer-events-none absolute inset-0" :style="{ background: 'radial-gradient(circle at 58% 38%, #fff 0%, #ffe9f1 52%, #f8d6e2 100%)', opacity: Math.min(1, Math.max(0, (cameraProgress - 0.22) / 0.28)) * Math.min(1, Math.max(0, (1 - cameraProgress) / 0.2)) }" aria-hidden="true" />
     <canvas
       ref="canvasRef"
       class="relative z-10 block h-full w-full touch-none transition-opacity duration-700"
@@ -30,11 +31,15 @@ import { useBustJourney } from "~/composables/three-bust/useBustJourney";
 
 const emit = defineEmits<{
   framingReady: [];
+  fruitReady: [];
   symptomReady: [symptom: SymptomType];
 }>();
 
 const props = withDefaults(defineProps<BustJourneyProps>(), {
   animationStep: "observation",
+  fruitSelectionActive: false,
+  selectedFruitIndex: 1,
+  hoveredFruitIndex: -1,
   firstModelUrl: "",
   secondModelUrl: "",
   cameraProgress: 0,
@@ -49,7 +54,7 @@ const props = withDefaults(defineProps<BustJourneyProps>(), {
 });
 
 const {
-  containerRef, canvasRef, isLoading, animationTime,
+  containerRef, canvasRef, isLoading, secondModelLoading, animationTime,
   profileLabelOpacity, profileCurveId, profileContour,
 } = useBustJourney(props, emit);
 </script>

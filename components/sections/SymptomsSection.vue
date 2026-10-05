@@ -5,7 +5,7 @@
     :data-active-symptom="activeSymptom"
     :data-symptom-phase="entrancePhase"
     :class="[
-      useSharedModel ? 'bg-transparent' : 'bg-white',
+      useSharedModel ? 'bg-transparent !mt-0' : 'bg-white',
       { 'opacity-0': !showSymptomsSection }
     ]"
   >
@@ -58,7 +58,7 @@
       </div>
       <div
         ref="cardStageRef"
-        class="absolute inset-0 z-50"
+        class="pointer-events-none absolute inset-0 z-50"
       >
         <div
           v-for="(card, index) in cards"

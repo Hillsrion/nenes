@@ -39,13 +39,17 @@
           <div
             v-if="journeyStageReady"
             ref="journeyStageRef"
-            class="pointer-events-none sticky top-0 z-10 hidden h-0 overflow-visible lg:block"
+            class="pointer-events-none sticky top-0 z-10 h-0 overflow-visible"
             aria-hidden="true"
           >
             <div class="absolute inset-x-0 top-0 h-screen">
               <ThreeBustJourney
                 :first-model-url="journeyFirstModelUrl"
-                :second-model-url="getModelUrl(palpationFileName)"
+                :second-model-url="selectedJourneyModelUrl"
+                :fruit-selection-active="fruitSelectionActive"
+                :selected-fruit-index="selectedFruitIndex"
+                :hovered-fruit-index="hoveredFruitIndex"
+                @fruit-ready="journeySceneReady = true"
                 :animation-step="sharedPalpationStep"
                 :camera-progress="journeyCamera.progress"
                 :focus-symptoms="sharedSymptomsFocus"
@@ -65,42 +69,22 @@
           <ScreeningSection
             :sidebar-elements="screeningContentElements"
             :title="screeningMainTitle"
-            @second-model-opacity-change="screeningSecondModelOpacity = $event"
+          />
+          <FruitSelectionSection
+            ref="fruitSelectionSectionRef"
+            :active="fruitSelectionActive"
+            :continuing="fruitContinuing"
+            :selected-fruit="selectedFruit"
+            :selected-index="selectedFruitIndex"
+            :hovered-index="hoveredFruitIndex"
+            :model-file="selectedJourneyModelFile"
+            :scene-ready="journeySceneReady"
+            @select="selectedFruit = $event"
+            @hover="hoveredFruit = $event"
+            @continue="continueFruitSelection"
           />
           <div class="relative bg-white" ref="symptomsAndExaminationContainerRef">
-            <!-- One persistent model for symptoms and palpation on touch layouts. -->
-            <div
-              class="pointer-events-none sticky top-0 h-screen w-full z-15 overflow-hidden lg:hidden"
-              aria-hidden="true"
-            >
-              <div
-                class="absolute bottom-[-15svh] left-0 z-10 mx-0 h-[115svh] w-[min(100vw,56rem)] max-md:w-[100vw]"
-              >
-                <ThreeBustViewer
-                  material-style="iridescent"
-                  :profile-label="symptomsMainTitle"
-                  :profile-label-progress="sharedProfileLabelProgress"
-                  :model-url="getModelUrl(palpationFileName)"
-                  :animation-step="sharedPalpationStep"
-                  :auto-rotate="false"
-                  :enable-zoom="false"
-                  :interactive="false"
-                  :initial-rotation-y="sharedModelRotation"
-                  :focus-symptoms="sharedSymptomsFocus"
-                  :palpation-progress="palpationModelPresence"
-                  @framing-ready="symptomsSectionRef?.onFramingReady()"
-                  @symptom-ready="symptomsSectionRef?.onSymptomReady($event)"
-                  :symptom-type="palpationModelPresence > 0 ? 'none' : activeSectionSymptom"
-                  :model-scale="1.05"
-                  model-horizontal-alignment="left"
-                  :show-backdrop="false"
-                  :show-loading-indicator="false"
-                  compact
-                />
-              </div>
-            </div>
-
-            <div class="relative z-20 -mt-[100vh]">
+            <div class="relative z-20">
               <SymptomsSection
                 ref="symptomsSectionRef"
                 :title="symptomsMainTitle"
@@ -140,6 +124,8 @@
 
 <script setup lang="ts">
 import type { SymptomType } from "~/components/ui/three-bust/symptom-effects";
+import { useFruitJourneySelection } from "~/composables/three-bust/useFruitJourneySelection";
+import FruitSelectionSection from "~/components/sections/FruitSelectionSection.vue";
 import { useJourneyStage } from "~/composables/three-bust/useJourneyStage";
 import MainLayout from "~/components/layout/MainLayout.vue";
 import LoadingSection from "~/components/sections/LoadingSection.vue";
@@ -151,7 +137,6 @@ import ResourcesSection from "~/components/sections/ResourcesSection.vue";
 import Logo from "~/components/ui/Logo.vue";
 import CursorImageSpawner from "~/components/ui/CursorImageSpawner.vue";
 import ThreeDPreview from "~/components/ui/ThreeDPreview.vue";
-import ThreeBustViewer from "~/components/ui/ThreeBustViewer.vue";
 import ThreeBustJourney from "~/components/ui/ThreeBustJourney.vue";
 import ThreeDStudio from "~/components/ui/ThreeDStudio.vue";
 import ThreeDModelCatalogPage from "~/components/ui/ThreeDModelCatalogPage.vue";
@@ -176,7 +161,7 @@ const isThreeDStudio = computed(
   () => route.path === "/studio-3d" || route.query.studio3d === "upload"
 );
 const isThreeDPreview = computed(() => route.query.preview3d === "photo");
-const { monoviewFileName, palpationFileName, getModelUrl } = useDemoBustModelUrls();
+const { monoviewFileName, getModelUrl } = useDemoBustModelUrls();
 // Lenis instance for scroll control
 const lenis = useLenis();
 
@@ -250,7 +235,20 @@ const journeyTrackRef = ref<HTMLElement | null>(null);
 const journeyStageRef = ref<HTMLElement | null>(null);
 const symptomsSectionRef = ref<InstanceType<typeof SymptomsSection> | null>(null);
 const symptomsProfileProgress = ref(0);
-const screeningSecondModelOpacity = ref(0);
+const fruitSelectionSectionRef = ref<InstanceType<typeof FruitSelectionSection> | null>(null);
+const fruitElementRef = computed(() => fruitSelectionSectionRef.value?.sectionRef ?? null);
+const journeySceneReady = ref(false);
+const {
+  selectedFruit, hoveredFruit,
+  selectedIndex: selectedFruitIndex, hoveredIndex: hoveredFruitIndex,
+  modelFile: selectedJourneyModelFile, modelUrl: selectedJourneyModelUrl,
+  selectionActive: fruitSelectionActive, continuing: fruitContinuing,
+  continueSelection: continueFruitSelection,
+} = useFruitJourneySelection({
+  sectionRef: fruitElementRef, destinationRef: symptomsAndExaminationContainerRef,
+  ready: computed(() => isLoadingComplete.value && !isThreeDPreview.value),
+});
+const screeningSecondModelOpacity = computed(() => Math.min(1, Math.max(0, (journeyCamera.progress - 0.52) / 0.24)));
 const palpationModelPresence = ref(0);
 const palpationStepId = ref("observation");
 const sharedPalpationStep = computed(() => palpationModelPresence.value > 0 ? palpationStepId.value : "observation");
@@ -277,7 +275,7 @@ const journeyFirstModelUrl = computed(() => {
 });
 
 const { journeyCamera, journeyStageReady, scheduleJourneyStageMount } = useJourneyStage({
-  trackRef: journeyTrackRef, stageRef: journeyStageRef, endRef: symptomsAndExaminationContainerRef,
+  trackRef: journeyTrackRef, stageRef: journeyStageRef, fruitRef: fruitElementRef, endRef: symptomsAndExaminationContainerRef,
 });
 
 // Computed logo color based on store state

@@ -28,10 +28,13 @@ export interface BustViewerProps {
 }
 
 export interface BustJourneyProps {
+  fruitSelectionActive?: boolean;
+  selectedFruitIndex?: number;
+  hoveredFruitIndex?: number;
   animationStep?: string;
   firstModelUrl?: string;
   secondModelUrl?: string;
-  /** 0: screening framing on the first bust · 1: locked profile framing on the second. */
+  /** 0: screening · 0.5: fruit selection · 1: locked profile framing on the second. */
   cameraProgress?: number;
   focusSymptoms?: boolean;
   /** Scroll progress between symptoms and the closer palpation framing. */
@@ -46,5 +49,6 @@ export interface BustJourneyProps {
 
 export interface BustEvents {
   (event: "framingReady"): void;
+  (event: "fruitReady"): void;
   (event: "symptomReady", symptom: SymptomType): void;
 }

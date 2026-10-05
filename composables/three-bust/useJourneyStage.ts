@@ -1,10 +1,12 @@
 import { reactive, ref, watch, nextTick, onUnmounted, type Ref } from "vue";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { journeyScrollProgress } from "~/utils/journey-scroll-progress";
 
 export function useJourneyStage(options: {
   trackRef: Ref<HTMLElement | null>;
   stageRef: Ref<HTMLElement | null>;
+  fruitRef: Ref<HTMLElement | null>;
   endRef: Ref<HTMLElement | null>;
 }) {
   const $gsap = gsap;
@@ -14,19 +16,22 @@ export function useJourneyStage(options: {
   const journeyCamera = reactive({ progress: 0 });
   const journeyStageReady = ref(false);
 
-  let journeyCameraTimeline: gsap.core.Timeline | null = null;
+  let cameraScrollTrigger: ScrollTrigger | null = null;
+  let cameraTween: gsap.core.Tween | null = null;
   let journeyStageInAnimation: gsap.core.Tween | null = null;
   let journeyStageOutAnimation: gsap.core.Tween | null = null;
   let journeyStageReadyTimer: number | null = null;
 
   const killJourneyAnimations = () => {
-    [journeyCameraTimeline, journeyStageInAnimation, journeyStageOutAnimation].forEach(
+    [cameraTween, journeyStageInAnimation, journeyStageOutAnimation].forEach(
       (animation) => {
         animation?.scrollTrigger?.kill?.();
         animation?.kill?.();
       }
     );
-    journeyCameraTimeline = null;
+    cameraScrollTrigger?.kill();
+    cameraScrollTrigger = null;
+    cameraTween = null;
     journeyStageInAnimation = null;
     journeyStageOutAnimation = null;
   };
@@ -41,7 +46,7 @@ export function useJourneyStage(options: {
   const initializeJourneyStage = () => {
     const track = options.trackRef.value;
     const stage = options.stageRef.value;
-    if (!track || !stage || !options.endRef.value) return;
+    if (!track || !stage || !options.endRef.value || !options.fruitRef.value) return;
 
     killJourneyAnimations();
 
@@ -73,22 +78,26 @@ export function useJourneyStage(options: {
       },
     });
 
-    // Hold the opening framing through most of the screening scroll, then spend
-    // the remaining runway (screening outro + symptoms rise-in) on the move so
-    // the camera locks on the profile exactly when the symptoms section pins.
-    journeyCameraTimeline = $gsap.timeline({
-      scrollTrigger: {
-        trigger: track,
-        start: "top top",
-        endTrigger: options.endRef.value,
-        end: "top top",
-        scrub: 0.8,
-        invalidateOnRefresh: true,
+    let fruitStop = 0;
+    const updateProgress = (trigger: ScrollTrigger, immediate = false) => {
+      const progress = journeyScrollProgress(trigger.scroll(), trigger.start, fruitStop, trigger.end);
+      cameraTween?.kill();
+      if (immediate) journeyCamera.progress = progress;
+      else cameraTween = $gsap.to(journeyCamera, {
+        progress, duration: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 0.45,
+        ease: "power1.out", overwrite: true,
+      });
+    };
+    // A single controller owns both camera legs, including reverse scroll and
+    // resized touch layouts. Independent scrub tweens would fight at the stop.
+    cameraScrollTrigger = ScrollTrigger.create({
+      trigger: track, start: "top top", endTrigger: options.endRef.value, end: "top top",
+      onRefresh: trigger => {
+        fruitStop = trigger.start + options.fruitRef.value!.getBoundingClientRect().top - track.getBoundingClientRect().top;
+        updateProgress(trigger, true);
       },
+      onUpdate: trigger => updateProgress(trigger),
     });
-    journeyCameraTimeline
-      .to({}, { duration: 3, ease: "none" })
-      .to(journeyCamera, { progress: 1, duration: 1, ease: "power1.inOut" });
 
     // The loading gate collapses the document height while it hides the page;
     // re-measure every trigger once the real layout is back.

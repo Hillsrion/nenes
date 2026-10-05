@@ -158,6 +158,37 @@ Les coordonnées du profil sont relatives au centre et aux demi-dimensions du
 maillage neutre. Ce profil est propre au modèle d’Anaïs : ne pas l'appliquer
 automatiquement à un autre buste.
 
+## Anaïs full hi3d aux bras fixes
+
+Le sélecteur du parcours lie l’orange au fichier local stable
+`public/models/bust-anais-full-hi3d-palpation.glb`. Cette variante dérive de
+`bust-anais-full-hi3d.glb` et n’utilise pas le modèle articulé `*-palpation-rig.glb`.
+Les bras restent fixes ; une main séparée montre les chapitres sein, aisselle,
+mamelon et autre côté. Les symptômes utilisent les repères propres à ce scan
+complet dans `config/anais-full-symptoms.json`, différents du profil multivue.
+
+Pour reconstruire une nouvelle sortie, choisir des chemins privés encore
+inexistants et conserver toute sortie précédente avant de réutiliser le nom
+stable :
+
+    node scripts/prepare-palpation-mesh.mjs public/models/bust-anais-full-hi3d.glb private-3d-inputs/anais-fixed-study/animation-base.glb 2
+    pnpm model:symptoms -- private-3d-inputs/anais-fixed-study/animation-base.glb private-3d-inputs/anais-fixed-study/symptoms.glb "Anaïs · symptômes · bras fixes" config/anais-full-symptoms.json
+    node scripts/generate-palpation-model.mjs private-3d-inputs/anais-fixed-study/animation-base.glb private-3d-inputs/anais-fixed-study/palpation.glb config/anais-full-palpation.json
+    node scripts/combine-palpation-symptoms.mjs private-3d-inputs/anais-fixed-study/palpation.glb private-3d-inputs/anais-fixed-study/symptoms.glb public/models/bust-anais-full-hi3d-palpation.glb "Anaïs · symptômes et palpation · bras fixes"
+    pnpm model:palpation:check public/models/bust-anais-full-hi3d-palpation.glb 60
+
+La préparation réduit le scan de 999 974 à 99 998 sommets et multiplie ses
+coordonnées par deux pour employer la même main que Zou ; le viewer normalise
+ensuite le corps sans changer ses proportions. Les générateurs refusent
+d’écraser une sortie. Contrôler les symptômes, les contacts et les quatre
+chapitres dans le navigateur avant publication.
+
+Le citron utilise son modèle de volume quand il existe, sinon la démonstration.
+Le pamplemousse se rabat sur le modèle Zou actuellement utilisé. L’orange utilise
+son modèle de volume finalisé, puis cette version d’Anaïs si elle est disponible.
+Ces liaisons sont définies dans `config/bust-fruit-catalog.ts` et les GLB restent
+ignorés par Git ; les sorties locales ne sont pas publiées automatiquement.
+
 ## Nommer les variantes de volume par fruit
 
 Le catalogue n’est pas suivi par Git : il est découvert depuis les GLB locaux

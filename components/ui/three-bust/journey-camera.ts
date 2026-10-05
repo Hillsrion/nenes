@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { FRUIT_CAMERA_DISTANCE, FRUIT_COLUMN_NDC } from "./journey-fruits";
 
 const CAMERA_FOV = 40;
 /** Keep the symptoms bust slightly left of center to clear the cards. */
@@ -18,6 +19,7 @@ interface JourneyCameraContext {
     scene: THREE.Scene | null;
   };
   isDebug: () => boolean;
+  getSelectedFruitIndex?: () => number;
   getPalpationProgress: () => number;
   getSymptomFocus: () => number;
   getCanvas: () => HTMLCanvasElement | null;
@@ -27,6 +29,9 @@ interface JourneyCameraContext {
 export function createJourneyCamera(context: JourneyCameraContext) {
   let positionCurve: THREE.CubicBezierCurve3 | null = null;
   let targetCurve: THREE.CubicBezierCurve3 | null = null;
+  let departurePosition: THREE.CubicBezierCurve3 | null = null;
+  let departureTarget: THREE.CubicBezierCurve3 | null = null;
+  const fruitCenter = new THREE.Vector3();
   const tmpTarget = new THREE.Vector3();
   let lastCameraProgress = -1;
   /**
@@ -40,6 +45,7 @@ export function createJourneyCamera(context: JourneyCameraContext) {
     const { camera, firstBounds, secondPlacement, scene } = context.getSceneState();
     if (!camera || !secondPlacement) return;
     const aspect = camera.aspect;
+    const arrivalDistance = aspect < 1 ? 8.5 : ARRIVAL_DISTANCE;
     const halfFov = THREE.MathUtils.degToRad(CAMERA_FOV) / 2;
 
     const firstSize = firstBounds.getSize(new THREE.Vector3());
@@ -65,12 +71,12 @@ export function createJourneyCamera(context: JourneyCameraContext) {
     // offset derives from the half-width at the true camera-to-subject distance
     // so the bust center lands exactly at the target NDC x (left edge bleed,
     // matching the former sticky viewer proportions).
-    const arrivalHalfWidth = Math.tan(halfFov) * ARRIVAL_DISTANCE * aspect;
+    const arrivalHalfWidth = Math.tan(halfFov) * arrivalDistance * aspect;
     const arrivalOffsetX = -ARRIVAL_CENTER_NDC_X * arrivalHalfWidth;
     const arrival = new THREE.Vector3(
       secondCenterWorld.x + arrivalOffsetX,
       secondCenterWorld.y + 0.6,
-      secondCenterWorld.z + ARRIVAL_DISTANCE
+      secondCenterWorld.z + arrivalDistance
     );
     const arrivalTarget = new THREE.Vector3(
       secondCenterWorld.x + arrivalOffsetX,
@@ -87,8 +93,20 @@ export function createJourneyCamera(context: JourneyCameraContext) {
 
     const look1 = t0.clone().lerp(arrivalTarget, 0.25);
     const look2 = t0.clone().lerp(arrivalTarget, 0.78);
-    positionCurve = new THREE.CubicBezierCurve3(p0, eye1, eye2, arrival);
-    targetCurve = new THREE.CubicBezierCurve3(t0, look1, look2, arrivalTarget);
+    // Pause in a centered fruit gallery before taking the selected shoulder path.
+    fruitCenter.set(firstSize.x * 0.8 + 2.2, 0, -(firstSize.y * 0.8 + 2));
+    const fruitEye = fruitCenter.clone().add(new THREE.Vector3(0, 0, FRUIT_CAMERA_DISTANCE));
+    positionCurve = new THREE.CubicBezierCurve3(
+      p0, eye1.clone().lerp(fruitEye, 0.25), fruitEye.clone().add(new THREE.Vector3(-0.8, 0.65, -0.5)), fruitEye,
+    );
+    targetCurve = new THREE.CubicBezierCurve3(t0, look1, fruitCenter.clone().add(new THREE.Vector3(-0.5, 0, 0)), fruitCenter.clone());
+    const selectedOffset = ((context.getSelectedFruitIndex?.() ?? 1) - 1)
+      * FRUIT_COLUMN_NDC * Math.tan(halfFov) * FRUIT_CAMERA_DISTANCE * aspect;
+    const selectedCenter = fruitCenter.clone().add(new THREE.Vector3(selectedOffset, 0, 0));
+    departurePosition = new THREE.CubicBezierCurve3(
+      fruitEye, fruitEye.clone().add(new THREE.Vector3(selectedOffset * 0.5, 0.6, -2.8)), eye2, arrival,
+    );
+    departureTarget = new THREE.CubicBezierCurve3(fruitCenter.clone(), selectedCenter, look2, arrivalTarget);
 
     if (context.isDebug() && scene) {
       scene.getObjectByName("journey-debug")?.removeFromParent();
@@ -110,6 +128,8 @@ export function createJourneyCamera(context: JourneyCameraContext) {
       };
       addCurve(positionCurve, 0x22c55e);
       addCurve(targetCurve, 0xf472b6);
+      addCurve(departurePosition, 0x22c55e);
+      addCurve(departureTarget, 0xf472b6);
       scene.add(debugGroup);
     }
   };
@@ -118,15 +138,21 @@ export function createJourneyCamera(context: JourneyCameraContext) {
     const { camera, firstBounds } = context.getSceneState();
     if (!camera || !positionCurve || !targetCurve) return;
     const clamped = THREE.MathUtils.clamp(progress, 0, 1);
-    positionCurve.getPoint(clamped, camera.position);
-    targetCurve.getPoint(clamped, tmpTarget);
+    if (clamped <= 0.5) {
+      positionCurve.getPoint(clamped * 2, camera.position);
+      targetCurve.getPoint(clamped * 2, tmpTarget);
+    } else {
+      departurePosition!.getPoint((clamped - 0.5) * 2, camera.position);
+      departureTarget!.getPoint((clamped - 0.5) * 2, tmpTarget);
+    }
     // Keep the chest in the same left column through symptoms and palpation.
-    const focus = context.getSymptomFocus() * clamped;
-    const palpation = THREE.MathUtils.clamp(context.getPalpationProgress(), 0, 1) * clamped;
+    const modelProgress = THREE.MathUtils.smoothstep(clamped, 0.5, 1);
+    const focus = context.getSymptomFocus() * modelProgress;
+    const palpation = THREE.MathUtils.clamp(context.getPalpationProgress(), 0, 1) * modelProgress;
     camera.zoom = THREE.MathUtils.lerp(
       THREE.MathUtils.lerp(1, SYMPTOMS_ZOOM, focus), PALPATION_ZOOM, palpation
     );
-    const offsetX = -ARRIVAL_CENTER_NDC_X * Math.tan(THREE.MathUtils.degToRad(CAMERA_FOV) / 2) * ARRIVAL_DISTANCE * camera.aspect;
+    const offsetX = -ARRIVAL_CENTER_NDC_X * Math.tan(THREE.MathUtils.degToRad(CAMERA_FOV) / 2) * (camera.aspect < 1 ? 8.5 : ARRIVAL_DISTANCE) * camera.aspect;
     const correctionX = offsetX * (1 - 1 / camera.zoom);
     camera.position.x -= correctionX;
     tmpTarget.x -= correctionX;
@@ -165,8 +191,9 @@ export function createJourneyCamera(context: JourneyCameraContext) {
 
   return {
     buildCameraPath, updateCameraForProgress,
+    getFruitCenter: () => fruitCenter.clone(),
     get progress() { return lastCameraProgress; },
-    dispose() { positionCurve = null; targetCurve = null; },
+    dispose() { positionCurve = null; targetCurve = null; departurePosition = null; departureTarget = null; },
   };
 }
 

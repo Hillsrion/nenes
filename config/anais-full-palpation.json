@@ -1,0 +1,28 @@
+{
+  "modelLabel": "Anaïs · symptômes et palpation · bras fixes",
+  "breasts": [
+    [
+      0.12,
+      0.29
+    ],
+    [
+      -0.12,
+      0.29
+    ]
+  ],
+  "axilla": [
+    [
+      0.2,
+      0.4
+    ],
+    [
+      0.18,
+      0.37
+    ],
+    [
+      0.155,
+      0.34
+    ]
+  ],
+  "breastRadius": 0.052
+}

@@ -1,5 +1,6 @@
 import { isConstrainedDevice, normalizeLoadedBust, registerBustSymptoms, addBustLighting } from "~/components/ui/three-bust/scene-utils";
 import { useBustSymptomPresentation } from "./useBustSymptomPresentation";
+import { createJourneyFruits } from "~/components/ui/three-bust/journey-fruits";
 import { createJourneyCamera, CAMERA_FOV } from "~/components/ui/three-bust/journey-camera";
 import { ref, onMounted, onUnmounted, watch, useId } from "vue";
 import { createPalpationPlayback } from "~/components/ui/three-bust/palpation-playback";
@@ -22,6 +23,10 @@ export function useBustJourney(props: Required<BustJourneyProps>, emit: BustEven
   const containerRef = ref<HTMLDivElement | null>(null);
   const canvasRef = ref<HTMLCanvasElement | null>(null);
   const isLoading = ref(true);
+  const secondModelLoading = ref(true);
+  let fruits: ReturnType<typeof createJourneyFruits> | null = null;
+  let secondLoadVersion = 0;
+  let loadBust: ((url: string) => Promise<import("three/examples/jsm/loaders/GLTFLoader.js").GLTF | null>) | null = null;
   const profileCurveId = `bust-contour-${useId()}`;
   const profileContour = ref<ReturnType<typeof projectProfileContour>>(null);
   const refreshProfileContour = () => {
@@ -57,6 +62,11 @@ export function useBustJourney(props: Required<BustJourneyProps>, emit: BustEven
   // Separate instances keep the second bust's fade and symptom tint independent.
   const firstMaterial = createIridescentMaterial();
   const secondMaterial = createIridescentMaterial();
+  const secondMaterialDefaults = {
+    opacity: secondMaterial.opacity,
+    transparent: secondMaterial.transparent,
+    depthWrite: secondMaterial.depthWrite,
+  };
   const symptomFraming = { progress: props.focusSymptoms || props.palpationProgress > 0 ? 1 : 0 };
   let framingNotified = false;
   const notifyFramingReady = () => {
@@ -98,27 +108,8 @@ export function useBustJourney(props: Required<BustJourneyProps>, emit: BustEven
     (animationPlayback?.active && !reduceMotion) ||
     presentation.isRotating ||
     symptomEffects.isTransitioning() ||
-    props.symptomType === "nipple";
-
-  // Normalize a freshly loaded GLB exactly like ThreeBustViewer does: strip the
-  // symptom skin helper, recenter, scale to the target height and lift slightly.
-  const normalizeLoadedBust = (root: THREE.Object3D, targetHeight: number) => {
-    root.getObjectByName("SYMPTOM_skin")?.removeFromParent();
-    root.traverse((child) => {
-      if (child instanceof THREE.Mesh && !child.geometry.getAttribute("normal")) {
-        child.geometry.computeVertexNormals();
-      }
-    });
-    const box = new THREE.Box3().setFromObject(root);
-    const center = box.getCenter(new THREE.Vector3());
-    const size = box.getSize(new THREE.Vector3());
-    const scale = targetHeight / Math.max(size.x, size.y, size.z);
-    root.scale.set(scale, scale, scale);
-    root.position.sub(center.multiplyScalar(scale));
-    root.position.y += 0.2;
-    root.updateMatrixWorld(true);
-    return new THREE.Box3().setFromObject(root);
-  };
+    props.symptomType === "nipple" ||
+    (props.fruitSelectionActive === true && !reduceMotion);
 
   const applyBustMaterial = (root: THREE.Object3D, material: THREE.Material) => {
     root.traverse((child) => {
@@ -149,12 +140,96 @@ export function useBustJourney(props: Required<BustJourneyProps>, emit: BustEven
   const journeyCamera = createJourneyCamera({
     getSceneState: () => ({ camera, firstBounds, secondPlacement, scene }),
     isDebug: () => props.debugPath,
+    getSelectedFruitIndex: () => props.selectedFruitIndex,
     getPalpationProgress: () => props.palpationProgress,
     getSymptomFocus: () => symptomFraming.progress,
     getCanvas: () => canvasRef.value,
     refreshProfileContour,
   });
   const { buildCameraPath, updateCameraForProgress } = journeyCamera;
+
+  const disposeRoot = (root: THREE.Object3D | null) => {
+    root?.traverse(child => {
+      if (!(child instanceof THREE.Mesh)) return;
+      child.geometry.dispose();
+      (Array.isArray(child.material) ? child.material : [child.material]).forEach(material => {
+        if (material !== firstMaterial && material !== secondMaterial) material.dispose();
+      });
+    });
+  };
+  const clearSecondModel = () => {
+    animationPlayback?.dispose();
+    animationPlayback = null;
+    symptomEffects.dispose();
+    secondBaseMaterials.clear();
+    Object.assign(secondMaterial, secondMaterialDefaults);
+    secondMaterial.needsUpdate = true;
+    disposeRoot(secondRoot);
+    secondGroup?.clear();
+    secondRoot = null;
+    animationTime.value = 0;
+    previousAnimationTimestamp = 0;
+    profileContour.value = null;
+    framingNotified = false;
+  };
+  const attachSecondModel = (gltf: import("three/examples/jsm/loaders/GLTFLoader.js").GLTF | null) => {
+    const secondScene = gltf?.scene;
+    if (secondScene && secondGroup && secondPlacement) {
+      clearSecondModel();
+      normalizeLoadedBust(secondScene, BASE_BUST_HEIGHT * SECOND_MODEL_SCALE);
+      secondScene.position.y -= 0.48;
+      applyBustMaterial(secondScene, secondMaterial);
+      // Place the second bust deep and to screen right, along the camera's
+      // shoulder pass, while preserving the final framing around that bust.
+      const firstSize = firstBounds.getSize(new THREE.Vector3());
+      secondPlacement.position.set(
+        firstSize.x * 1.15 + 2.2,
+        0,
+        -(firstSize.y * 1.55 + 3.4)
+      );
+      secondRoot = secondScene;
+      secondGroup.add(secondScene);
+      secondGroup.rotation.y = props.secondRotationY;
+      registerBustSymptoms(secondScene, !!gltf?.animations.some(clip =>
+        clip.tracks.some(track => track.name.includes("morphTargetInfluences"))
+      ), symptomEffects);
+      if (gltf?.animations.length) {
+        animationPlayback = createPalpationPlayback(secondScene, gltf.animations, gltf.parser.json.extras?.palpationStudy?.steps ?? []);
+        animationPlayback.selectStep(props.animationStep);
+        reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      }
+      symptomEffects.build(secondScene, props.symptomType);
+      symptomEffects.applyTint(props.symptomType);
+      secondScene.traverse((child) => {
+        if (!(child instanceof THREE.Mesh)) return;
+        (Array.isArray(child.material) ? child.material : [child.material]).forEach((material) => {
+          if (!secondBaseMaterials.has(material)) {
+            secondBaseMaterials.set(material, {
+              opacity: material.opacity,
+              transparent: material.transparent,
+              depthWrite: material.depthWrite,
+            });
+          }
+        });
+      });
+      updateSecondModelOpacity(props.secondModelOpacity);
+    }
+
+    secondModelLoading.value = false;
+  };
+  const replaceSecondModel = async (url: string) => {
+    if (!loadBust || !initialized || isLoading.value) return;
+    const version = ++secondLoadVersion;
+    secondModelLoading.value = true;
+    const gltf = await loadBust(url);
+    if (disposed || version !== secondLoadVersion) { disposeRoot(gltf?.scene ?? null); return; }
+    if (gltf) attachSecondModel(gltf);
+    secondModelLoading.value = false;
+    buildCameraPath();
+    updateCameraForProgress(props.cameraProgress);
+    refreshProfileContour();
+    scheduleRender(500);
+  };
 
   const initThree = async () => {
     if (initialized || disposed || !canvasRef.value || !containerRef.value) return;
@@ -173,6 +248,7 @@ export function useBustJourney(props: Required<BustJourneyProps>, emit: BustEven
     }
     initialized = true;
     const constrainedDevice = isConstrainedDevice();
+    reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(CAMERA_FOV, width / height, 0.1, 100);
@@ -207,13 +283,14 @@ export function useBustJourney(props: Required<BustJourneyProps>, emit: BustEven
 
     firstGroup = new THREE.Group();
     scene.add(firstGroup);
+    firstGroup.visible = width >= 1024;
     secondPlacement = new THREE.Group();
     secondGroup = new THREE.Group();
     secondPlacement.add(secondGroup);
     scene.add(secondPlacement);
 
     const loader = new GLTFLoader();
-    const loadBust = (url: string) =>
+    loadBust = (url: string) =>
       new Promise<import("three/examples/jsm/loaders/GLTFLoader.js").GLTF | null>((resolve) => {
         if (!url) {
           resolve(null);
@@ -230,14 +307,14 @@ export function useBustJourney(props: Required<BustJourneyProps>, emit: BustEven
         );
       });
 
+    const loadedSecondUrl = props.secondModelUrl;
     const [firstGLTF, secondGLTF] = await Promise.all([
       loadBust(props.firstModelUrl),
-      loadBust(props.secondModelUrl),
+      loadBust(loadedSecondUrl),
     ]);
     if (disposed || !renderer || !scene || !camera) return;
 
     const firstScene = firstGLTF?.scene;
-    const secondScene = secondGLTF?.scene;
     if (firstScene && firstGroup) {
       firstBounds = normalizeLoadedBust(firstScene, BASE_BUST_HEIGHT * FIRST_MODEL_SCALE);
       applyBustMaterial(firstScene, firstMaterial);
@@ -245,50 +322,21 @@ export function useBustJourney(props: Required<BustJourneyProps>, emit: BustEven
       firstGroup.add(firstScene);
     }
 
-    if (secondScene && secondGroup) {
-      normalizeLoadedBust(secondScene, BASE_BUST_HEIGHT * SECOND_MODEL_SCALE);
-      secondScene.position.y -= 0.48;
-      applyBustMaterial(secondScene, secondMaterial);
-      // Place the second bust deep and to screen right, along the camera's
-      // shoulder pass, while preserving the final framing around that bust.
-      const firstSize = firstBounds.getSize(new THREE.Vector3());
-      secondPlacement.position.set(
-        firstSize.x * 1.15 + 2.2,
-        0,
-        -(firstSize.y * 1.55 + 3.4)
-      );
-      secondRoot = secondScene;
-      secondGroup.add(secondScene);
-      secondGroup.rotation.y = props.secondRotationY;
-      registerBustSymptoms(secondScene, !!secondGLTF?.animations.some(clip =>
-        clip.tracks.some(track => track.name.includes("morphTargetInfluences"))
-      ), symptomEffects);
-      if (secondGLTF?.animations.length) {
-        animationPlayback = createPalpationPlayback(secondScene, secondGLTF.animations, secondGLTF.parser.json.extras?.palpationStudy?.steps ?? []);
-        animationPlayback.selectStep(props.animationStep);
-        reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      }
-      symptomEffects.build(secondScene, props.symptomType);
-      symptomEffects.applyTint(props.symptomType);
-      secondScene.traverse((child) => {
-        if (!(child instanceof THREE.Mesh)) return;
-        (Array.isArray(child.material) ? child.material : [child.material]).forEach((material) => {
-          if (!secondBaseMaterials.has(material)) {
-            secondBaseMaterials.set(material, {
-              opacity: material.opacity,
-              transparent: material.transparent,
-              depthWrite: material.depthWrite,
-            });
-          }
-        });
-      });
-      updateSecondModelOpacity(props.secondModelOpacity);
-    }
+    attachSecondModel(secondGLTF);
+
+    fruits = createJourneyFruits(scene, reduceMotion);
+    await fruits.ready;
+    if (disposed) return;
+    fruits.select(props.selectedFruitIndex, props.hoveredFruitIndex);
+    fruits.setActive(props.fruitSelectionActive);
+    emit("fruitReady");
 
     buildCameraPath();
+    fruits?.place(journeyCamera.getFruitCenter(), camera.aspect, CAMERA_FOV);
     updateCameraForProgress(props.cameraProgress);
     refreshProfileContour();
     isLoading.value = false;
+    if (props.secondModelUrl !== loadedSecondUrl) void replaceSecondModel(props.secondModelUrl);
     scheduleRender();
   };
 
@@ -301,8 +349,10 @@ export function useBustJourney(props: Required<BustJourneyProps>, emit: BustEven
     if (!width || !height) return;
 
     camera.aspect = width / height;
+    if (firstGroup) firstGroup.visible = width >= 1024;
     camera.updateProjectionMatrix();
     buildCameraPath();
+    fruits?.place(journeyCamera.getFruitCenter(), camera.aspect, CAMERA_FOV);
     updateCameraForProgress(journeyCamera.progress >= 0 ? journeyCamera.progress : props.cameraProgress);
     renderer.setSize(width, height, false);
     refreshProfileContour();
@@ -332,6 +382,10 @@ export function useBustJourney(props: Required<BustJourneyProps>, emit: BustEven
     }
     previousAnimationTimestamp = timestamp;
 
+    const fruitOpacity = props.cameraProgress < 0.5
+      ? THREE.MathUtils.smoothstep(props.cameraProgress, 0.38, 0.5)
+      : 1 - THREE.MathUtils.smoothstep(props.cameraProgress, 0.5, 0.68);
+    fruits?.tick(elapsedTime, fruitOpacity);
     symptomEffects.tick(elapsedTime);
     notifyFramingReady();
     presentation.notifySymptomReady();
@@ -368,6 +422,8 @@ export function useBustJourney(props: Required<BustJourneyProps>, emit: BustEven
 
   onUnmounted(() => {
     animationPlayback?.dispose();
+    fruits?.dispose();
+    ++secondLoadVersion;
     disposed = true;
     gsap.killTweensOf(symptomFraming);
     viewportObserver?.disconnect();
@@ -417,6 +473,17 @@ export function useBustJourney(props: Required<BustJourneyProps>, emit: BustEven
     journeyCamera.dispose();
   });
 
+  watch(() => props.secondModelUrl, url => { void replaceSecondModel(url); });
+  watch(() => props.fruitSelectionActive, active => {
+    fruits?.setActive(active);
+    scheduleRender(200);
+  });
+  watch(() => [props.selectedFruitIndex, props.hoveredFruitIndex], () => {
+    fruits?.select(props.selectedFruitIndex, props.hoveredFruitIndex);
+    buildCameraPath();
+    updateCameraForProgress(props.cameraProgress);
+    scheduleRender(200);
+  });
   watch(() => props.animationStep, step => {
     animationPlayback?.selectStep(step);
     animationTime.value = animationPlayback?.time ?? 0;
@@ -458,7 +525,7 @@ export function useBustJourney(props: Required<BustJourneyProps>, emit: BustEven
   watch(() => props.secondModelOpacity, updateSecondModelOpacity);
 
   return {
-    containerRef, canvasRef, isLoading, animationTime,
+    containerRef, canvasRef, isLoading, secondModelLoading, animationTime,
     profileLabelOpacity, profileCurveId, profileContour,
   };
 }
