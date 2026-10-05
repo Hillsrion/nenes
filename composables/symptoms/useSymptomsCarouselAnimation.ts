@@ -108,7 +108,9 @@ export const useSymptomsCarouselAnimation = ({
       (context: any) => {
         const { isMobile, isDesktop } = context.conditions;
         const mobileRotation = 40;
-        const mobileStagger = 0.12;
+        // Wider stagger gives each centered symptom card more breathing room,
+        // keeping its corresponding mark on the bust visible for longer.
+        const mobileStagger = 0.2;
         // Give the face/zoom and the first symptom their own beats before cards.
         // Completion signals also keep this order when the reader scrolls fast.
         const carouselStart = showProfileModel
@@ -149,7 +151,7 @@ export const useSymptomsCarouselAnimation = ({
           {
             rotation: isMobile ? -mobileRotation : isDesktop ? -45 : -30,
             ease: "power1.inOut",
-            stagger: isMobile ? mobileStagger : isDesktop ? 0.12 : 0.09,
+            stagger: isMobile ? mobileStagger : isDesktop ? 0.18 : 0.15,
             paused: true,
             onUpdate: updateActiveCard,
           }
