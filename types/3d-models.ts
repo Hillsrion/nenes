@@ -4,5 +4,6 @@ export interface BustModelCatalogEntry {
   shortLabel: string;
   description: string;
   fileName: string;
+  optimizedFileName?: string;
   badge: string;
 }

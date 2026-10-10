@@ -226,6 +226,28 @@ ne contiendrait ni l'asymétrie ni les fossettes.
 
 ## Tester sans modifier le code
 
+### Compresser les fichiers pour le web
+
+Après validation d'un GLB, créer une copie sans perte dans le dossier ignoré
+`public/models/optimized/`, en gardant son nom stable :
+
+    pnpm model:optimize -- public/models/bust-anais-full-hi3d-palpation.glb
+    pnpm model:optimize -- public/models/bust-anais-full-pose-hi3d.glb
+
+Cette étape ne relance pas l'inférence et ne modifie ni la topologie, ni les
+coordonnées, ni les symptômes, ni les animations. Le script encode les buffers
+avec Meshopt, décode chaque buffer et compare tous les octets avant d'écrire.
+Il refuse les GLB texturés, les sources déjà compressées et les sorties
+existantes. Les originaux restent en place.
+
+Le catalogue conserve le nom et le label d'origine. Les viewers préfèrent la
+copie optimisée uniquement quand le catalogue confirme sa présence locale, ou
+sa présence sous `models/optimized/` dans le bucket en production. En son
+absence, ils utilisent la référence d'origine. Les copies locales restent
+ignorées par Git et ne sont pas publiées automatiquement.
+
+### Prévisualiser un GLB
+
 Servir le site en forçant la source locale des modèles :
 
     NUXT_PUBLIC_3D_MODELS_URL=http://localhost:3000 pnpm dev

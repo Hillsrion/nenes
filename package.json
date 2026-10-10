@@ -22,7 +22,8 @@
     "prebuild": "pnpm run images:optimize",
     "model:palpation:prepare": "node scripts/prepare-palpation-mesh.mjs",
     "model:palpation": "node scripts/generate-palpation-model.mjs",
-    "model:palpation:check": "node scripts/validate-palpation-collisions.mjs"
+    "model:palpation:check": "node scripts/validate-palpation-collisions.mjs",
+    "model:optimize": "node scripts/optimize-bust-model.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.709.0",

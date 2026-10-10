@@ -269,9 +269,10 @@ export function useBustJourney(props: Required<BustJourneyProps>, emit: BustJour
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 0.9;
 
-    const [{ RoomEnvironment }, { GLTFLoader }] = await Promise.all([
+    const [{ RoomEnvironment }, { GLTFLoader }, { MeshoptDecoder }] = await Promise.all([
       import("three/examples/jsm/environments/RoomEnvironment.js"),
       import("three/examples/jsm/loaders/GLTFLoader.js"),
+      import("three/examples/jsm/libs/meshopt_decoder.module.js"),
     ]);
     if (disposed) return;
     const pmremGenerator = new THREE.PMREMGenerator(renderer);
@@ -292,6 +293,7 @@ export function useBustJourney(props: Required<BustJourneyProps>, emit: BustJour
     scene.add(secondPlacement);
 
     const loader = new GLTFLoader();
+    loader.setMeshoptDecoder(MeshoptDecoder);
     loadBust = (url: string) =>
       new Promise<import("three/examples/jsm/loaders/GLTFLoader.js").GLTF | null>((resolve) => {
         if (!url) {

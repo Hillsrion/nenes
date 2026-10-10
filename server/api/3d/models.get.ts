@@ -84,12 +84,17 @@ export default defineEventHandler(async (event) => {
       listPublishedR2ModelFiles(event),
     ]);
     const visibleFileName = (fileName: string) => !hiddenBustModelFiles.has(fileName);
+    const optimizedLocalFiles = import.meta.dev
+      ? await readdir(path.join(process.cwd(), 'public/models/optimized')).catch(() => [] as string[])
+      : [];
+    const optimizedBucketFiles = new Set(publishedFiles.filter(fileName => fileName.startsWith('optimized/')));
     const localEntries = [...new Set(localFiles)]
       .filter(visibleFileName)
-      .map((fileName) => toCatalogEntry(fileName, "local"));
+      .map((fileName) => ({ ...toCatalogEntry(fileName, "local"), ...(optimizedLocalFiles.includes(fileName) ? { optimizedFileName: `optimized/${fileName}` } : {}) }));
     const bucketEntries = [...new Set(publishedFiles)]
       .filter(visibleFileName)
-      .map((fileName) => toCatalogEntry(fileName, "bucket"));
+      .filter(fileName => !fileName.startsWith('optimized/'))
+      .map((fileName) => ({ ...toCatalogEntry(fileName, "bucket"), ...((!import.meta.dev && optimizedBucketFiles.has(`optimized/${fileName}`)) ? { optimizedFileName: `optimized/${fileName}` } : {}) }));
     setResponseHeader(event, "Cache-Control", "private, max-age=60");
 
     return [...localEntries, ...bucketEntries];

@@ -203,8 +203,12 @@ export function useBustViewer(props: Required<Omit<BustViewerProps, "animationSt
     // Load Model or Create Mock
     if (props.modelUrl) {
       try {
-        const { GLTFLoader } = await import("three/examples/jsm/loaders/GLTFLoader.js");
+        const [{ GLTFLoader }, { MeshoptDecoder }] = await Promise.all([
+          import("three/examples/jsm/loaders/GLTFLoader.js"),
+          import("three/examples/jsm/libs/meshopt_decoder.module.js"),
+        ]);
         const loader = new GLTFLoader();
+        loader.setMeshoptDecoder(MeshoptDecoder);
 
         loader.load(
           props.modelUrl,

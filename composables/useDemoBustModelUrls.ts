@@ -1,5 +1,8 @@
+import { useBustModelCatalog } from './useBustModelCatalog';
+
 export const useDemoBustModelUrls = () => {
   const runtimeConfig = useRuntimeConfig();
+  const catalog = useBustModelCatalog();
   const modelsPublicUrl = String(runtimeConfig.public.r2.modelsPublicUrl || "").replace(
     /\/+$/,
     ""
@@ -10,7 +13,8 @@ export const useDemoBustModelUrls = () => {
 
   const getModelUrl = (fileName: string) => {
     if (!fileName) return "";
-    const encodedName = fileName.split("/").map(encodeURIComponent).join("/");
+    const availableFile = catalog.value.find(model => model.fileName === fileName && model.optimizedFileName)?.optimizedFileName || fileName;
+    const encodedName = availableFile.split("/").map(encodeURIComponent).join("/");
     if (import.meta.dev) return `/models/${encodedName}`;
     return modelsPublicUrl
       ? `${modelsPublicUrl}/models/${encodedName}`
