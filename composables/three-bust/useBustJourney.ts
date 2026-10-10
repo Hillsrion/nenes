@@ -12,9 +12,9 @@ import {
   createSymptomEffects,
 } from "~/components/ui/three-bust/symptom-effects";
 
-import type { BustJourneyProps, BustEvents } from "~/components/ui/three-bust/types";
+import type { BustJourneyProps, BustJourneyEvents } from "~/components/ui/three-bust/types";
 
-export function useBustJourney(props: Required<BustJourneyProps>, emit: BustEvents) {
+export function useBustJourney(props: Required<BustJourneyProps>, emit: BustJourneyEvents) {
   // Tuning constants for the scripted camera move. Proportions are derived from
   // each bust's normalized bounds so a new GLB keeps the same framing.
   const FIRST_MODEL_SCALE = 1.15;
@@ -109,7 +109,8 @@ export function useBustJourney(props: Required<BustJourneyProps>, emit: BustEven
     presentation.isRotating ||
     symptomEffects.isTransitioning() ||
     props.symptomType === "nipple" ||
-    (props.fruitSelectionActive === true && !reduceMotion);
+    (props.fruitSelectionActive === true && !reduceMotion) ||
+    (props.fruitTransitionActive === true && !reduceMotion);
 
   const applyBustMaterial = (root: THREE.Object3D, material: THREE.Material) => {
     root.traverse((child) => {
@@ -223,7 +224,7 @@ export function useBustJourney(props: Required<BustJourneyProps>, emit: BustEven
     secondModelLoading.value = true;
     const gltf = await loadBust(url);
     if (disposed || version !== secondLoadVersion) { disposeRoot(gltf?.scene ?? null); return; }
-    if (gltf) attachSecondModel(gltf);
+    if (gltf) { attachSecondModel(gltf); emit("modelReady", url); }
     secondModelLoading.value = false;
     buildCameraPath();
     updateCameraForProgress(props.cameraProgress);
@@ -252,6 +253,7 @@ export function useBustJourney(props: Required<BustJourneyProps>, emit: BustEven
 
     scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(CAMERA_FOV, width / height, 0.1, 100);
+    scene.add(camera);
 
     renderer = new THREE.WebGLRenderer({
       canvas: canvasRef.value,
@@ -323,6 +325,7 @@ export function useBustJourney(props: Required<BustJourneyProps>, emit: BustEven
     }
 
     attachSecondModel(secondGLTF);
+    if (secondGLTF) emit("modelReady", loadedSecondUrl);
 
     fruits = createJourneyFruits(scene, reduceMotion);
     await fruits.ready;
@@ -366,7 +369,7 @@ export function useBustJourney(props: Required<BustJourneyProps>, emit: BustEven
 
     const targetFps = isConstrainedDevice()
       ? 24
-      : presentation.isRotating
+      : props.fruitTransitionActive || presentation.isRotating
         ? 60
         : 30;
     if (timestamp - lastRenderTime < 1000 / targetFps) {
@@ -385,7 +388,7 @@ export function useBustJourney(props: Required<BustJourneyProps>, emit: BustEven
     const fruitOpacity = props.cameraProgress < 0.5
       ? THREE.MathUtils.smoothstep(props.cameraProgress, 0.38, 0.5)
       : 1 - THREE.MathUtils.smoothstep(props.cameraProgress, 0.5, 0.68);
-    fruits?.tick(elapsedTime, fruitOpacity);
+    fruits?.tick(elapsedTime, fruitOpacity, props.fruitTransitionActive ? props.fruitTransitionProgress : null, camera);
     symptomEffects.tick(elapsedTime);
     notifyFramingReady();
     presentation.notifySymptomReady();
@@ -478,6 +481,7 @@ export function useBustJourney(props: Required<BustJourneyProps>, emit: BustEven
     fruits?.setActive(active);
     scheduleRender(200);
   });
+  watch(() => [props.fruitTransitionActive, props.fruitTransitionProgress], () => scheduleRender(400));
   watch(() => [props.selectedFruitIndex, props.hoveredFruitIndex], () => {
     fruits?.select(props.selectedFruitIndex, props.hoveredFruitIndex);
     buildCameraPath();

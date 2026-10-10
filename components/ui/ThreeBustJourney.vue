@@ -1,6 +1,6 @@
 <template>
-  <div ref="containerRef" class="relative h-full w-full" :data-model-url="secondModelUrl" :data-model-loading="secondModelLoading" :data-camera-progress="cameraProgress.toFixed(3)" :data-animation-step="animationStep" :data-animation-time="animationTime.toFixed(2)" :data-model-rotation="secondRotationY">
-    <div class="pointer-events-none absolute inset-0" :style="{ background: 'radial-gradient(circle at 58% 38%, #fff 0%, #ffe9f1 52%, #f8d6e2 100%)', opacity: Math.min(1, Math.max(0, (cameraProgress - 0.22) / 0.28)) * Math.min(1, Math.max(0, (1 - cameraProgress) / 0.2)) }" aria-hidden="true" />
+  <div ref="containerRef" class="relative h-full w-full" :data-fruit-flight-phase="fruitTransitionPhase" :data-fruit-flight-progress="fruitTransitionProgress.toFixed(3)" :data-model-url="secondModelUrl" :data-model-loading="secondModelLoading" :data-camera-progress="cameraProgress.toFixed(3)" :data-animation-step="animationStep" :data-animation-time="animationTime.toFixed(2)" :data-model-rotation="secondRotationY">
+    <div class="pointer-events-none absolute inset-0" :style="{ background: 'radial-gradient(circle at 58% 38%, #fff 0%, #ffe9f1 52%, #f8d6e2 100%)', opacity: fruitTransitionActive ? 0 : Math.min(1, Math.max(0, (cameraProgress - 0.22) / 0.28)) * Math.min(1, Math.max(0, (1 - cameraProgress) / 0.2)) }" aria-hidden="true" />
     <canvas
       ref="canvasRef"
       class="relative z-10 block h-full w-full touch-none transition-opacity duration-700"
@@ -32,12 +32,16 @@ import { useBustJourney } from "~/composables/three-bust/useBustJourney";
 const emit = defineEmits<{
   framingReady: [];
   fruitReady: [];
+  modelReady: [url: string];
   symptomReady: [symptom: SymptomType];
 }>();
 
 const props = withDefaults(defineProps<BustJourneyProps>(), {
   animationStep: "observation",
   fruitSelectionActive: false,
+  fruitTransitionActive: false,
+  fruitTransitionProgress: 0,
+  fruitTransitionPhase: "idle",
   selectedFruitIndex: 1,
   hoveredFruitIndex: -1,
   firstModelUrl: "",

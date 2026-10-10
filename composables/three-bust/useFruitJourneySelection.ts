@@ -1,15 +1,17 @@
-import { computed, nextTick, onUnmounted, ref, watch, type Ref } from "vue";
+import { computed, nextTick, onUnmounted, reactive, ref, watch, type Ref } from "vue";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useLenis } from "lenis/vue";
 import { useBustModelCatalog } from "~/composables/useBustModelCatalog";
 import { useDemoBustModelUrls } from "~/composables/useDemoBustModelUrls";
 import { resolveJourneyFruitModel, journeyFruitChoices, type JourneyFruitId } from "~/config/bust-fruit-catalog";
+import { FRUIT_COVER_PROGRESS } from "~/utils/fruit-flight-motion";
 
 export function useFruitJourneySelection(options: {
   sectionRef: Ref<HTMLElement | null>;
   destinationRef: Ref<HTMLElement | null>;
   ready: Ref<boolean>;
+  loadedModelUrl: Ref<string>;
 }) {
   const lenis = useLenis();
   const { palpationFileName, getModelUrl } = useDemoBustModelUrls();
@@ -18,6 +20,8 @@ export function useFruitJourneySelection(options: {
   const hoveredFruit = ref<JourneyFruitId | null>(null);
   const selectionActive = ref(false);
   const continuing = ref(false);
+  const flight = reactive({ progress: 0 });
+  const flightPhase = ref<"idle" | "approach" | "covered" | "reveal">("idle");
   const selectionVisited = ref(false);
   const selectedIndex = computed(() => journeyFruitChoices.findIndex(choice => choice.id === selectedFruit.value));
   const hoveredIndex = computed(() => journeyFruitChoices.findIndex(choice => choice.id === hoveredFruit.value));
@@ -25,8 +29,9 @@ export function useFruitJourneySelection(options: {
     selectedFruit.value, catalog.value.map(model => model.fileName), palpationFileName,
   ));
   const modelUrl = computed(() => getModelUrl(modelFile.value));
+  const modelReady = computed(() => options.loadedModelUrl.value === modelUrl.value);
   let gate: ScrollTrigger | null = null;
-  let scrollTween: gsap.core.Tween | null = null;
+  let flightTween: gsap.core.Tween | null = null;
   let disposed = false;
   let normalizerWasEnabled = false;
   let selectionScrollY = 0;
@@ -62,6 +67,8 @@ export function useFruitJourneySelection(options: {
   function enterSelection() {
     if (disposed || selectionActive.value || continuing.value || !gate) return;
     selectionVisited.value = true;
+    flight.progress = 0;
+    flightPhase.value = "idle";
     selectionActive.value = true;
     selectionScrollY = window.scrollY + options.sectionRef.value!.getBoundingClientRect().top;
     lockScroll();
@@ -73,24 +80,35 @@ export function useFruitJourneySelection(options: {
     continuing.value = true;
     selectionActive.value = false;
     hoveredFruit.value = null;
-    const destination = options.destinationRef.value;
-    if (!destination) { continuing.value = false; unlockScroll(); return; }
-    const duration = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 1.65;
-    const position = { y: window.scrollY };
-    // Cross the gate fully even when browser zoom rounds fractional CSS pixels.
-    const destinationY = Math.ceil(window.scrollY + destination.getBoundingClientRect().top) + 2;
-    // Keep the scroll normalizer paused until both the camera and the page arrive.
-    // Re-enabling it beforehand can restore the momentum from the incoming wheel.
-    scrollTween = gsap.to(position, {
-      y: destinationY, duration, ease: "power2.inOut",
-      onUpdate: () => {
-        if (lenis.value) lenis.value.scrollTo(position.y, { immediate: true, force: true });
-        else window.scrollTo(0, position.y);
-        ScrollTrigger.update();
-      },
-      onComplete: () => { continuing.value = false; unlockScroll(); },
+    flight.progress = 0;
+    flightPhase.value = "approach";
+    flightTween = gsap.to(flight, {
+      progress: FRUIT_COVER_PROGRESS,
+      duration: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 1.05,
+      ease: "none",
+      onComplete: () => { flightPhase.value = "covered"; revealModel(); },
     });
   }
+  function revealModel() {
+    if (!continuing.value || flightPhase.value !== "covered" || !modelReady.value) return;
+    const destination = options.destinationRef.value;
+    if (!destination) { continuing.value = false; flightPhase.value = "idle"; unlockScroll(); return; }
+    // Cross the gate fully even when browser zoom rounds fractional CSS pixels.
+    const destinationY = Math.ceil(window.scrollY + destination.getBoundingClientRect().top) + 2;
+    if (lenis.value) lenis.value.scrollTo(destinationY, { immediate: true, force: true });
+    else window.scrollTo(0, destinationY);
+    ScrollTrigger.update();
+    // The camera arrives while the fruit fills the viewport. Give the new model
+    // a rendered frame before the fruit clears the near plane behind the lens.
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    flightTween = gsap.to(flight, {
+      progress: 1, delay: reducedMotion ? 0 : 0.3, duration: reducedMotion ? 0 : 0.75,
+      ease: "power1.in",
+      onStart: () => { flightPhase.value = "reveal"; },
+      onComplete: () => { continuing.value = false; flightPhase.value = "idle"; unlockScroll(); },
+    });
+  }
+  watch(modelReady, revealModel);
   watch(options.ready, async ready => {
     if (!ready || gate) return;
     await nextTick();
@@ -111,9 +129,10 @@ export function useFruitJourneySelection(options: {
   onUnmounted(() => {
     disposed = true;
     gate?.kill();
-    scrollTween?.kill();
+    flightTween?.kill();
     if (selectionActive.value || continuing.value) unlockScroll();
   });
   return { selectedFruit, hoveredFruit, selectedIndex, hoveredIndex, modelFile, modelUrl,
-    selectionActive, selectionVisited, continuing, continueSelection };
+    selectionActive, selectionVisited, continuing, flightPhase,
+    flightProgress: computed(() => flight.progress), continueSelection };
 }

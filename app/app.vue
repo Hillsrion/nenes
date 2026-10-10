@@ -36,10 +36,14 @@
              sentinel carries the canvas: `fixed` would resolve against the
              transformed body (GSAP normalizeScroll) instead of the viewport. -->
         <div ref="journeyTrackRef" class="relative">
+          <div v-if="fruitContinuing" class="pointer-events-none sticky top-0 z-0 h-0" aria-hidden="true">
+            <div class="absolute inset-x-0 top-0 h-[100svh] bg-[radial-gradient(circle_at_58%_38%,#fff_0%,#ffe9f1_52%,#f8d6e2_100%)]" />
+          </div>
           <div
             v-if="journeyStageReady"
             ref="journeyStageRef"
             class="pointer-events-none sticky top-0 z-10 h-0 overflow-visible"
+            :style="{ zIndex: fruitContinuing ? 200 : 10 }"
             aria-hidden="true"
           >
             <div class="absolute inset-x-0 top-0 h-screen">
@@ -47,11 +51,15 @@
                 :first-model-url="journeyFirstModelUrl"
                 :second-model-url="selectedJourneyModelUrl"
                 :fruit-selection-active="fruitSelectionActive"
+                :fruit-transition-active="fruitContinuing"
+                :fruit-transition-progress="fruitFlightProgress"
+                :fruit-transition-phase="fruitFlightPhase"
                 :selected-fruit-index="selectedFruitIndex"
                 :hovered-fruit-index="hoveredFruitIndex"
                 @fruit-ready="journeySceneReady = true"
+                @model-ready="journeyReadyModelUrl = $event"
                 :animation-step="sharedPalpationStep"
-                :camera-progress="journeyCamera.progress"
+                :camera-progress="displayedJourneyCameraProgress"
                 :focus-symptoms="sharedSymptomsFocus"
                 :palpation-progress="palpationModelPresence"
                 @framing-ready="symptomsSectionRef?.onFramingReady()"
@@ -238,17 +246,23 @@ const symptomsProfileProgress = ref(0);
 const fruitSelectionSectionRef = ref<InstanceType<typeof FruitSelectionSection> | null>(null);
 const fruitElementRef = computed(() => fruitSelectionSectionRef.value?.sectionRef ?? null);
 const journeySceneReady = ref(false);
+const journeyReadyModelUrl = ref("");
 const {
   selectedFruit, hoveredFruit,
   selectedIndex: selectedFruitIndex, hoveredIndex: hoveredFruitIndex,
   modelFile: selectedJourneyModelFile, modelUrl: selectedJourneyModelUrl,
   selectionActive: fruitSelectionActive, continuing: fruitContinuing,
+  flightProgress: fruitFlightProgress, flightPhase: fruitFlightPhase,
   continueSelection: continueFruitSelection,
 } = useFruitJourneySelection({
   sectionRef: fruitElementRef, destinationRef: symptomsAndExaminationContainerRef,
   ready: computed(() => isLoadingComplete.value && !isThreeDPreview.value),
+  loadedModelUrl: journeyReadyModelUrl,
 });
-const screeningSecondModelOpacity = computed(() => Math.min(1, Math.max(0, (journeyCamera.progress - 0.52) / 0.24)));
+const displayedJourneyCameraProgress = computed(() => fruitContinuing.value
+  ? fruitFlightPhase.value === "approach" ? 0.5 : 1
+  : journeyCamera.progress);
+const screeningSecondModelOpacity = computed(() => Math.min(1, Math.max(0, (displayedJourneyCameraProgress.value - 0.52) / 0.24)));
 const palpationModelPresence = ref(0);
 const palpationStepId = ref("observation");
 const sharedPalpationStep = computed(() => palpationModelPresence.value > 0 ? palpationStepId.value : "observation");

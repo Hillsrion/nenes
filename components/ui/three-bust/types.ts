@@ -29,6 +29,9 @@ export interface BustViewerProps {
 
 export interface BustJourneyProps {
   fruitSelectionActive?: boolean;
+  fruitTransitionActive?: boolean;
+  fruitTransitionProgress?: number;
+  fruitTransitionPhase?: "idle" | "approach" | "covered" | "reveal";
   selectedFruitIndex?: number;
   hoveredFruitIndex?: number;
   animationStep?: string;
@@ -49,6 +52,10 @@ export interface BustJourneyProps {
 
 export interface BustEvents {
   (event: "framingReady"): void;
-  (event: "fruitReady"): void;
   (event: "symptomReady", symptom: SymptomType): void;
+}
+
+export interface BustJourneyEvents extends BustEvents {
+  (event: "fruitReady"): void;
+  (event: "modelReady", url: string): void;
 }

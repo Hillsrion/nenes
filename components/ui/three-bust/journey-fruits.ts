@@ -3,6 +3,7 @@ import { journeyFruitChoices } from "../../../config/bust-fruit-catalog";
 import { loadingFruitSequence } from "../../../config/loading-fruits";
 import { createFruitModel } from "../../../utils/loading-fruit-models";
 import { fruitSelectionOffset } from "../../../utils/fruit-selection-motion";
+import { FRUIT_COVER_PROGRESS, fruitFlightPosition } from "../../../utils/fruit-flight-motion";
 
 export const FRUIT_CAMERA_DISTANCE = 8;
 export const FRUIT_COLUMN_NDC = 0.54;
@@ -20,6 +21,7 @@ export function createJourneyFruits(scene: THREE.Scene, reducedMotion: boolean) 
   let hoveredIndex = -1;
   let halfWidth = 3;
   let responsiveScale = 1;
+  let flight: { pivot: THREE.Group; start: THREE.Vector3; index: number } | null = null;
   const ownedGeometries = new Set<THREE.BufferGeometry>();
   const definitions = [
     loadingFruitSequence[0],
@@ -64,6 +66,52 @@ export function createJourneyFruits(scene: THREE.Scene, reducedMotion: boolean) 
       }
     });
   }
+  function clearFlight() {
+    if (!flight) return;
+    disposeMaterials(flight.pivot);
+    flight.pivot.removeFromParent();
+    flight = null;
+  }
+  function updateFlight(progress: number | null, camera?: THREE.PerspectiveCamera) {
+    if (progress === null || reducedMotion || !camera) { clearFlight(); return; }
+    if (!flight || flight.index !== selectedIndex) {
+      clearFlight();
+      const source = records.find(record => record.index === selectedIndex)?.pivot;
+      if (!source) return;
+      const start = camera.worldToLocal(source.getWorldPosition(new THREE.Vector3()));
+      const pivot = source.clone(true);
+      pivot.name = "journey-fruit-flight";
+      pivot.visible = true;
+      pivot.quaternion.copy(camera.getWorldQuaternion(new THREE.Quaternion()).invert()
+        .multiply(source.getWorldQuaternion(new THREE.Quaternion())));
+      pivot.scale.copy(source.getWorldScale(new THREE.Vector3()));
+      pivot.traverse(child => {
+        if (!(child instanceof THREE.Mesh)) return;
+        const cloneMaterial = (material: THREE.Material) => {
+          const clone = material.clone();
+          // Keep the viewport covered until the model is ready to be revealed.
+          clone.side = THREE.DoubleSide;
+          clone.transparent = true;
+          clone.opacity = 1;
+          clone.depthTest = clone.depthWrite = false;
+          return clone;
+        };
+        child.material = Array.isArray(child.material) ? child.material.map(cloneMaterial) : cloneMaterial(child.material);
+        child.renderOrder = 10000;
+      });
+      camera.add(pivot);
+      flight = { pivot, start, index: selectedIndex };
+    }
+    const position = fruitFlightPosition(progress, flight.start.x, flight.start.y);
+    flight.pivot.position.set(position.x, position.y, position.z);
+    const opacity = 1 - THREE.MathUtils.smoothstep(progress, FRUIT_COVER_PROGRESS, 0.8);
+    flight.pivot.visible = opacity > 0;
+    flight.pivot.traverse(child => {
+      if (!(child instanceof THREE.Mesh)) return;
+      const materials = Array.isArray(child.material) ? child.material : [child.material];
+      materials.forEach(material => { material.opacity = opacity; });
+    });
+  }
   return {
     ready,
     place(center: THREE.Vector3, aspect: number, fov: number) {
@@ -77,11 +125,14 @@ export function createJourneyFruits(scene: THREE.Scene, reducedMotion: boolean) 
       active = value;
     },
     select(index: number, hover = -1) { selectedIndex = index; hoveredIndex = hover; },
-    tick(now: number, opacity: number) {
+    tick(now: number, opacity: number, flightProgress: number | null = null, camera?: THREE.PerspectiveCamera) {
+      updateFlight(flightProgress, camera);
+      if (flightProgress !== null) opacity *= 1 - THREE.MathUtils.smoothstep(flightProgress, 0, 0.12);
       if (opacity > 0.001 && !group.visible) startTime = now;
       group.visible = opacity > 0.001;
       if (!group.visible) return;
       records.forEach(({ pivot, index }) => {
+        pivot.visible = flightProgress === null || index !== selectedIndex;
         const motion = fruitSelectionOffset(now - startTime - index * 0.14, reducedMotion);
         pivot.position.y = motion.y;
         pivot.rotation.z = motion.rotation;
@@ -106,6 +157,7 @@ export function createJourneyFruits(scene: THREE.Scene, reducedMotion: boolean) 
     get active() { return active; },
     dispose() {
       disposed = true;
+      clearFlight();
       disposeMaterials(group);
       ownedGeometries.forEach(geometry => geometry.dispose());
       ownedGeometries.clear();

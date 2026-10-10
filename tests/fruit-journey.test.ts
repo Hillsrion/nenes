@@ -6,6 +6,34 @@ import { FRUIT_CAMERA_DISTANCE } from "../components/ui/three-bust/journey-fruit
 import { journeyScrollProgress } from "../utils/journey-scroll-progress";
 import { fruitSelectionOffset } from "../utils/fruit-selection-motion";
 import { resolveJourneyFruitModel } from "../config/bust-fruit-catalog";
+import { FRUIT_COVER_PROGRESS, fruitFlightPosition } from "../utils/fruit-flight-motion";
+import { journeyFruitChoices } from "../config/bust-fruit-catalog";
+
+test("the clicked fruit centers, covers the near plane on desktop and mobile, then clears behind the camera", () => {
+  assert.deepEqual(fruitFlightPosition(0, 2, 0.04), { x: 2, y: 0.04, z: -8 });
+  let previousZ = -8;
+  for (let i = 0; i <= 100; i++) {
+    const pose = fruitFlightPosition(i / 100, 2, 0.04);
+    assert.ok(pose.z >= previousZ);
+    previousZ = pose.z;
+  }
+  const covered = fruitFlightPosition(FRUIT_COVER_PROGRESS, 2, 0.04);
+  assert.equal(covered.x, 0);
+  assert.equal(covered.y, 0);
+  for (const aspect of [1440 / 900, 390 / 844]) {
+    for (const fruit of journeyFruitChoices) {
+      // A conservative core radius, smaller than the normalized citrus meshes.
+      const core = new THREE.Sphere(new THREE.Vector3(0, 0, covered.z), fruit.visualScale * Math.min(1, aspect) * 0.65);
+      for (const x of [-1, 0, 1]) for (const y of [-1, 0, 1]) {
+        const halfHeight = Math.tan(THREE.MathUtils.degToRad(CAMERA_FOV / 2));
+        const direction = new THREE.Vector3(x * halfHeight * aspect, y * halfHeight, -1).normalize();
+        const hit = new THREE.Ray(new THREE.Vector3(), direction).intersectSphere(core, new THREE.Vector3());
+        assert.ok(hit && hit.z < -0.1, `${fruit.id} must mask viewport corner ${x},${y} at aspect ${aspect}`);
+      }
+    }
+  }
+  assert.ok(fruitFlightPosition(1, 2, 0.04).z > 2);
+});
 
 test("the scroll gate and camera arrival agree across desktop, mobile and reverse scroll", () => {
   for (const [start, stop, end] of [[1000, 5700, 6700], [800, 2400, 3244]]) {
