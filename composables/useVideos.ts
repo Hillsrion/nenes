@@ -1,4 +1,4 @@
-import { nextTick, type Ref } from "vue";
+import { computed, ref, watch, onMounted, onUnmounted, nextTick, type Ref } from "vue";
 
 type VideoTransitionPhase = "cover" | "reveal";
 
@@ -14,6 +14,7 @@ interface UseVideosOptions {
   currentStepIndex: Ref<number>;
   videoRef: Ref<HTMLVideoElement | null>;
   overlayRef: Ref<HTMLDivElement | null>;
+  playbackActive?: Ref<boolean>;
   transitionCallback?: (phase: VideoTransitionPhase) => Promise<void> | void;
   getVideoSource: (
     stepIndex: number,
@@ -45,6 +46,21 @@ export function useVideos(options: UseVideosOptions) {
 
   let transitionVersion = 0;
   let disposed = false;
+  const isVisible = ref(false);
+  const canPlay = computed(() => isVisible.value && (options.playbackActive?.value ?? true));
+  let viewportObserver: IntersectionObserver | null = null;
+  const pendingLoads = new Map<string, Promise<void>>();
+  const cancelLoads = new Set<() => void>();
+  const checkDevice = () => {
+    isMobileOrTablet.value = window.innerWidth <= 1023;
+    isIOS.value = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  };
+  const updatePlayback = () => {
+    const video = videoRef.value;
+    if (!video) return;
+    if (!canPlay.value || document.hidden) video.pause();
+    else if (actualVideoUrl.value) void video.play().catch(() => {});
+  };
 
   const waitForVideoElementReady = (
     video: HTMLVideoElement,
@@ -82,32 +98,25 @@ export function useVideos(options: UseVideosOptions) {
 
   // Initialize mobile/tablet detection and first video
   onMounted(() => {
-    const checkDevice = () => {
-      isMobileOrTablet.value = window.innerWidth <= 768;
-      isIOS.value = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    };
-
     checkDevice();
     window.addEventListener("resize", checkDevice);
-
-    // Initialize the first video URL after device is checked
-    const firstStep = steps[0];
-    if (firstStep) {
-      const firstVideoUrl = isMobileOrTablet.value
-        ? options.getVideoSource(0, "mp4", "mobile")
-        : options.getVideoSource(0, isIOS.value ? "mp4" : "webm", "desktop");
-
-      if (firstVideoUrl) {
-        actualVideoUrl.value = firstVideoUrl;
-        loadVideo(firstVideoUrl).catch(() => { videoLoading.value = false; });
-      }
-    }
+    document.addEventListener("visibilitychange", updatePlayback);
+    viewportObserver = new IntersectionObserver(([entry]) => {
+      isVisible.value = entry?.isIntersecting ?? false;
+      updatePlayback();
+    });
+    if (videoRef.value) viewportObserver.observe(videoRef.value);
   });
 
   // Cleanup
   onUnmounted(() => {
     disposed = true;
     transitionVersion++;
+    viewportObserver?.disconnect();
+    window.removeEventListener("resize", checkDevice);
+    document.removeEventListener("visibilitychange", updatePlayback);
+    videoRef.value?.pause();
+    cancelLoads.forEach(cancel => cancel());
     loadedVideos.value.clear();
     videoLoading.value = false;
     actualVideoUrl.value = "";
@@ -127,16 +136,16 @@ export function useVideos(options: UseVideosOptions) {
 
   // Video loading method
   const loadVideo = async (url: string): Promise<void> => {
-    if (!url) {
+    if (!url || disposed) {
       return Promise.resolve();
     }
     if (loadedVideos.value.has(url)) {
       return Promise.resolve();
     }
+    const pending = pendingLoads.get(url);
+    if (pending) return pending;
 
-    videoLoading.value = true;
-
-    return new Promise((resolve, reject) => {
+    const request = new Promise<void>((resolve, reject) => {
       const video = document.createElement("video");
       video.preload = "auto"; // Ensure full video data is preloaded
       video.playsInline = true; // Essential for iOS autoplay
@@ -146,13 +155,15 @@ export function useVideos(options: UseVideosOptions) {
       const settle = () => {
         if (settled) return;
         settled = true;
-        loadedVideos.value.add(url);
+        if (!disposed) loadedVideos.value.add(url);
         video.removeEventListener("canplaythrough", onCanPlayThrough);
         video.removeEventListener("loadeddata", onLoadedData);
         video.removeEventListener("canplay", onCanPlay);
         video.removeEventListener("error", onError);
         clearTimeout(timeoutId);
-        videoLoading.value = false; // Reset loading state
+        cancelLoads.delete(cancel);
+        video.removeAttribute("src");
+        video.load();
       };
 
       const onCanPlayThrough = () => {
@@ -171,14 +182,12 @@ export function useVideos(options: UseVideosOptions) {
       };
 
       const onError = () => {
-        video.removeEventListener("canplaythrough", onCanPlayThrough);
-        video.removeEventListener("loadeddata", onLoadedData);
-        video.removeEventListener("canplay", onCanPlay);
-        video.removeEventListener("error", onError);
-        clearTimeout(timeoutId);
-        videoLoading.value = false; // Reset loading state on error
+        settle();
+        loadedVideos.value.delete(url);
         reject(new Error(`Failed to load video: ${url}`));
       };
+      const cancel = () => { settle(); resolve(); };
+      cancelLoads.add(cancel);
 
       video.addEventListener("canplaythrough", onCanPlayThrough);
       video.addEventListener("loadeddata", onLoadedData);
@@ -196,19 +205,22 @@ export function useVideos(options: UseVideosOptions) {
         resolve();
       }, 6000);
     });
+    pendingLoads.set(url, request);
+    try { await request; } finally { pendingLoads.delete(url); }
   };
 
   // Preload upcoming videos for better performance
   const preloadUpcomingVideos = async () => {
+    if (!canPlay.value || disposed || (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData) return;
     const currentIndex = currentStepIndex.value;
-    const upcomingIndices = [
+    const upcomingIndices = (isMobileOrTablet.value ? [currentIndex + 1] : [
       currentIndex + 1,
       currentIndex + 2,
       currentIndex + 3,
       currentIndex + 4,
       Math.max(0, currentIndex - 1),
       Math.max(0, currentIndex - 2),
-    ].filter(
+    ]).filter(
       (index) => index >= 0 && index < steps.length && index !== currentIndex
     );
 
@@ -239,6 +251,7 @@ export function useVideos(options: UseVideosOptions) {
       !overlayRef.value ||
       !videoRef.value ||
       !currentVideoUrl.value ||
+      !canPlay.value ||
       disposed
     )
       return;
@@ -260,7 +273,16 @@ export function useVideos(options: UseVideosOptions) {
 
     // Set the initial source directly; only subsequent steps need a transition.
     if (!actualVideoUrl.value) {
+      videoLoading.value = true;
       actualVideoUrl.value = videoUrl;
+      await nextTick();
+      if (!disposed) {
+        updatePlayback();
+        if (videoRef.value) await waitForVideoElementReady(videoRef.value, videoUrl);
+      }
+      if (version !== transitionVersion || disposed) return;
+      videoLoading.value = false;
+      void preloadUpcomingVideos();
       return;
     }
 
@@ -287,7 +309,7 @@ export function useVideos(options: UseVideosOptions) {
     if (video) {
       await waitForVideoElementReady(video, videoUrl);
       if (version !== transitionVersion || disposed) return;
-      void video.play().catch(() => {});
+      updatePlayback();
     }
 
     // Reveal only after the new source is ready on the visible video element.
@@ -298,7 +320,11 @@ export function useVideos(options: UseVideosOptions) {
   };
 
   // A newer scroll step supersedes an in-flight load, including reverse scroll.
-  watch(currentStepIndex, () => { preloadUpcomingVideos(); });
+  watch(canPlay, (active) => {
+    if (active) void transitionToVideo();
+    updatePlayback();
+  });
+  watch(currentStepIndex, () => { void preloadUpcomingVideos(); });
   watch(currentVideoUrl, (newUrl, oldUrl) => {
     if (newUrl !== oldUrl) transitionToVideo();
   });

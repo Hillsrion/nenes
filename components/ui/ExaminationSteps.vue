@@ -1,83 +1,49 @@
 <template>
-  <div ref="stepsContainerRef" class="relative w-full" :data-video-step="steps[currentStepIndex]?.id ?? currentStepIndex">
+  <div ref="stepsContainerRef" class="relative w-full" :data-video-step="steps[currentStepIndex]?.id ?? currentStepIndex" :data-demonstration-visibility="stageVisibility.toFixed(3)">
     <!-- Video and Post-It Stage -->
     <div
       ref="stageRef"
       class="relative w-full flex flex-col items-start opacity-0"
+      :aria-hidden="stageVisibility <= 0"
     >
-      <!-- Landscape Video Container -->
-      <div
-        ref="videoContainerRef"
-        class="relative w-full max-w-[520px] lg:max-w-[580px] aspect-video rounded-2xl sm:rounded-3xl overflow-hidden shadow-[0_18px_40px_rgba(36,66,219,0.12)] border border-black/[0.06] bg-[#f0f2f6]"
-      >
-        <video
-          ref="videoRef"
-          :src="actualVideoUrl || undefined"
-          class="w-full h-full object-cover"
-          autoplay
-          muted
-          loop
-          preload="auto"
-          playsinline
-        >
-          <!-- iOS sources -->
-          <template v-if="isIOSDevice">
-            <source
-              :src="getCurrentStepVideoSource('mp4', 'mobile')"
-              type="video/mp4"
-              media="(max-width: 768px)"
-            />
-            <source
-              :src="getCurrentStepVideoSource('mp4', 'desktop')"
-              type="video/mp4"
-              media="(min-width: 769px)"
-            />
-          </template>
-
-          <!-- Non-iOS sources -->
-          <template v-else>
-            <source
-              :src="getCurrentStepVideoSource('webm', 'mobile')"
-              type="video/webm"
-              media="(max-width: 768px)"
-            />
-            <source
-              :src="getCurrentStepVideoSource('mp4', 'mobile')"
-              type="video/mp4"
-              media="(max-width: 768px)"
-            />
-            <source
-              :src="getCurrentStepVideoSource('webm', 'desktop')"
-              type="video/webm"
-              media="(min-width: 769px)"
-            />
-            <source
-              :src="getCurrentStepVideoSource('mp4', 'desktop')"
-              type="video/mp4"
-              media="(min-width: 769px)"
-            />
-          </template>
-
-          <!-- Default fallback -->
-          <source :src="actualVideoUrl" type="video/mp4" />
-        </video>
-
-        <!-- Video transition overlay -->
+      <!-- The same video moves behind the shared 3D canvas on mobile. -->
+      <Teleport :to="backgroundVideoTarget || 'body'" :disabled="!isBackgroundVideo">
         <div
-          ref="overlayRef"
-          class="absolute inset-0 bg-black pointer-events-none opacity-0"
-        />
-
-        <!-- Loading spinner -->
-        <div
-          v-if="videoLoading"
-          class="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-[2px] pointer-events-none"
+          ref="videoContainerRef"
+          class="examination-video relative w-full max-w-[520px] lg:max-w-[580px] aspect-video rounded-2xl sm:rounded-3xl overflow-hidden shadow-[0_18px_40px_rgba(36,66,219,0.12)] border border-black/[0.06] bg-[#f0f2f6]"
+          :class="{ 'is-background': isBackgroundVideo }"
+          :style="isBackgroundVideo ? { opacity: backgroundVideoActive ? stageVisibility : 0 } : undefined"
         >
+          <video
+            ref="videoRef"
+            :src="actualVideoUrl || undefined"
+            :aria-hidden="!actualVideoUrl || (isBackgroundVideo && !backgroundVideoActive)"
+            aria-label="Démonstration des gestes d’autopalpation"
+            class="w-full h-full object-cover"
+            muted
+            loop
+            preload="none"
+            playsinline
+          >
+          </video>
+
+          <!-- Video transition overlay -->
           <div
-            class="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin"
+            ref="overlayRef"
+            class="absolute inset-0 bg-black pointer-events-none opacity-0"
           />
+
+          <!-- Loading spinner -->
+          <div
+            v-if="videoLoading"
+            class="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-[2px] pointer-events-none"
+          >
+            <div
+              class="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin"
+            />
+          </div>
         </div>
-      </div>
+      </Teleport>
 
       <!-- Post-It Cards Deck (Overlapping bottom-left of video) -->
       <div
@@ -106,6 +72,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from "vue";
+import { useMediaQuery } from "@vueuse/core";
 import { useAnimationsStore } from "~/stores";
 import { useVideos } from "~/composables/useVideos";
 import { useExaminationVideoSources } from "~/composables/examination/useExaminationVideoSources";
@@ -125,10 +92,22 @@ interface Step {
 interface Props {
   steps: Step[];
   parentSection?: HTMLElement;
+  introElement?: HTMLElement | null;
+  introWords?: (HTMLElement | null)[];
+  backgroundVideoTarget?: HTMLElement | null;
+  backgroundVideoActive?: boolean;
 }
 
 const props = defineProps<Props>();
-const emit = defineEmits<{ (event: "step-change", index: number): void }>();
+const isMobileLayout = useMediaQuery('(max-width: 1023px)');
+const isBackgroundVideo = computed(() => isMobileLayout.value && !!props.backgroundVideoTarget);
+const stageVisibility = ref(0);
+const playbackActive = computed(() => stageVisibility.value > 0 && (!isBackgroundVideo.value || !!props.backgroundVideoActive));
+const emit = defineEmits<{
+  (event: "step-change", index: number): void;
+  (event: "stage-visibility", visibility: number): void;
+}>();
+watch(stageVisibility, value => emit("stage-visibility", value), { immediate: true });
 
 const { $gsap } = useNuxtApp();
 const store = useAnimationsStore();
@@ -144,14 +123,13 @@ const cardRefs = ref<(HTMLElement | null)[]>([]);
 const currentStepIndex = ref(0);
 watch(currentStepIndex, index => emit("step-change", index), { immediate: true });
 const fallbackVideoUrl = ref("");
-const isIOSDevice = ref(false);
 
 const setCardRef = (el: any, index: number) => {
   if (el) cardRefs.value[index] = el;
 };
 
 // Video sources setup
-const { getVideoSourceFor, getCurrentStepVideoSource } =
+const { getVideoSourceFor } =
   useExaminationVideoSources({
     currentStepIndex,
     fallbackVideoUrl,
@@ -195,6 +173,7 @@ const { videoLoading, actualVideoUrl } = useVideos({
   currentStepIndex,
   videoRef,
   overlayRef,
+  playbackActive,
   transitionCallback: handleVideoTransition,
   getVideoSource: (stepIndex, format, resolution) =>
     getVideoSourceFor(stepIndex, format, resolution),
@@ -218,11 +197,18 @@ const { initializeAnimations, cleanup } = useExaminationCardSequence({
   $gsap, stepsContainerRef, stageRef, cardRefs, currentStepIndex,
   getParentSection: () => props.parentSection,
   getStepsCount: () => props.steps.length,
+  getIntroElement: () => props.introElement ?? null,
+  getIntroWords: () => (props.introWords ?? []).filter((word): word is HTMLElement => !!word),
+  onStageVisibility: value => { stageVisibility.value = value; },
 });
 
-// Device check on mount
+watch(isMobileLayout, () => {
+  if (store.getSectionState("loading") === "isComplete") {
+    void nextTick(initializeAnimations);
+  }
+});
+
 onMounted(() => {
-  isIOSDevice.value = /iPad|iPhone|iPod/.test(navigator.userAgent);
   if (store.getSectionState("loading") === "isComplete") {
     nextTick(() => {
       setTimeout(() => {
@@ -265,3 +251,25 @@ onUnmounted(() => {
   cleanup();
 });
 </script>
+
+<style scoped>
+.examination-video.is-background {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  aspect-ratio: auto;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  pointer-events: none;
+}
+.examination-video.is-background::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(255, 255, 255, 0.26) 45%, rgba(255, 255, 255, 0.1) 75%, rgba(255, 255, 255, 0.3));
+}
+</style>

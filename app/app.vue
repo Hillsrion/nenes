@@ -22,7 +22,7 @@
         <Logo
           class="fixed top-8 left-1/2 -translate-x-1/2 z-150 transition-opacity duration-500 ease-out"
           :color="logoColor"
-          :style="{ opacity: store.logo.opacity }"
+          :style="{ opacity: mobilePalpationDemonstrationActive ? 0 : store.logo.opacity, visibility: mobilePalpationDemonstrationActive ? 'hidden' : undefined }"
         />
 
         <!-- Unified Statistics and Content Section -->
@@ -46,8 +46,10 @@
             :style="{ zIndex: fruitContinuing ? 200 : 10 }"
             aria-hidden="true"
           >
-            <div class="absolute inset-x-0 top-0 h-screen">
+            <div class="absolute inset-x-0 top-0 h-[100svh]">
+              <div ref="journeyVideoLayerRef" class="pointer-events-none absolute inset-0 z-0" />
               <ThreeBustJourney
+                :style="{ opacity: mobilePalpationVideoActive ? 0 : 1 }"
                 :first-model-url="journeyFirstModelUrl"
                 :second-model-url="selectedJourneyModelUrl"
                 :fruit-selection-active="fruitSelectionActive"
@@ -108,8 +110,11 @@
               <SelfExaminationSection
                 :steps="selfExaminationSteps"
                 :use-shared-model="true"
+                :background-video-target="journeyVideoLayerRef"
                 @model-presence="palpationModelPresence = $event"
                 @step-change="palpationStepId = $event"
+                @demonstration-active="mobilePalpationDemonstrationActive = $event"
+                @video-view-active="mobilePalpationVideoActive = $event"
               />
             </div>
           </div>
@@ -241,6 +246,7 @@ const mainLayoutRef = ref(null); // Ref to MainLayout component
 const symptomsAndExaminationContainerRef = ref<HTMLElement | null>(null);
 const journeyTrackRef = ref<HTMLElement | null>(null);
 const journeyStageRef = ref<HTMLElement | null>(null);
+const journeyVideoLayerRef = ref<HTMLElement | null>(null);
 const symptomsSectionRef = ref<InstanceType<typeof SymptomsSection> | null>(null);
 const symptomsProfileProgress = ref(0);
 const fruitSelectionSectionRef = ref<InstanceType<typeof FruitSelectionSection> | null>(null);
@@ -264,6 +270,8 @@ const displayedJourneyCameraProgress = computed(() => fruitContinuing.value
   : journeyCamera.progress);
 const screeningSecondModelOpacity = computed(() => Math.min(1, Math.max(0, (displayedJourneyCameraProgress.value - 0.52) / 0.24)));
 const palpationModelPresence = ref(0);
+const mobilePalpationDemonstrationActive = ref(false);
+const mobilePalpationVideoActive = ref(false);
 const palpationStepId = ref("observation");
 const sharedPalpationStep = computed(() => palpationModelPresence.value > 0 ? palpationStepId.value : "observation");
 const sharedModelRotation = computed(() => {
