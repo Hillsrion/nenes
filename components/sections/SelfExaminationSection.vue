@@ -219,11 +219,17 @@ onUnmounted(() => {
   .palpation-model { top: 25svh; left: 0; width: 50vw; height: 40svh; }
   .palpation-content { width: 100%; padding-top: 0; }
   .palpation-content > div:first-child { position: absolute; top: 12svh; left: 24px; width: calc(100% - 48px); }
-  .palpation-content h2 { font-size: clamp(1rem, 2.5vw, 1.5rem); line-height: 1.35; }
+  .palpation-content h2 { font-size: clamp(1.5rem, 4vw, 2rem); line-height: 1.35; }
   .palpation-demonstration { position: absolute; top: 37svh; left: 52vw; width: 44vw; margin-top: 0; }
   .palpation-content :deep(.examination-cards) { position: absolute; top: 27svh; left: calc(-52vw + 24px); width: calc(100vw - 48px); margin: 0; min-height: 210px; }
   .palpation-content :deep(.examination-postit) { min-height: 185px; }
   .palpation-content :deep(.postit-content) { padding: 1.2rem 1rem 1.2rem 2rem; }
   .palpation-content :deep(p) { font-size: 0.875rem; line-height: 1.5; }
+}
+@media (max-width: 1023px) and (max-height: 600px) and (orientation: portrait) {
+  .palpation-content h2 { font-size: 1.25rem; }
+}
+@media (max-width: 1023px) and (orientation: landscape) {
+  .palpation-content h2 { font-size: clamp(1.125rem, 2.4vw, 1.5rem); }
 }
 </style>
