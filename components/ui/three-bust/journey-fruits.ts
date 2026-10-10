@@ -12,7 +12,7 @@ export function createJourneyFruits(scene: THREE.Scene, reducedMotion: boolean) 
   group.name = "journey-fruit-selection";
   group.visible = false;
   scene.add(group);
-  const records: Array<{ pivot: THREE.Group; ripple: THREE.Mesh; index: number }> = [];
+  const records: Array<{ pivot: THREE.Group; index: number }> = [];
   let disposed = false;
   let startTime = 0;
   let active = false;
@@ -45,23 +45,14 @@ export function createJourneyFruits(scene: THREE.Scene, reducedMotion: boolean) 
     model.rotation.set(0.12, -0.2 + index * 0.25, index === 0 ? -0.3 : 0.06);
     pivot.add(model);
     group.add(pivot);
-    const ripple = new THREE.Mesh(
-      new THREE.RingGeometry(0.75, 0.765, 80),
-      new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false }),
-    );
-    ownedGeometries.add(ripple.geometry);
-    ripple.rotation.x = -Math.PI / 2.6;
-    ripple.position.y = -journeyFruitChoices[index].visualScale * 0.85;
-    group.add(ripple);
-    records.push({ pivot, ripple, index });
+    records.push({ pivot, index });
     layout();
   }));
 
   function layout() {
-    records.forEach(({ pivot, ripple, index }) => {
+    records.forEach(({ pivot, index }) => {
       pivot.scale.setScalar(responsiveScale);
       pivot.position.x = (index - 1) * FRUIT_COLUMN_NDC * halfWidth;
-      ripple.position.x = pivot.position.x;
     });
   }
   function disposeMaterials(root: THREE.Object3D) {
@@ -90,7 +81,7 @@ export function createJourneyFruits(scene: THREE.Scene, reducedMotion: boolean) 
       if (opacity > 0.001 && !group.visible) startTime = now;
       group.visible = opacity > 0.001;
       if (!group.visible) return;
-      records.forEach(({ pivot, ripple, index }) => {
+      records.forEach(({ pivot, index }) => {
         const motion = fruitSelectionOffset(now - startTime - index * 0.14, reducedMotion);
         pivot.position.y = motion.y;
         pivot.rotation.z = motion.rotation;
@@ -110,9 +101,6 @@ export function createJourneyFruits(scene: THREE.Scene, reducedMotion: boolean) 
             standard.emissiveIntensity = 0.16;
           });
         });
-        const size = 1 + (1 - motion.ripple) * 1.3;
-        ripple.scale.setScalar(size);
-        (ripple.material as THREE.MeshBasicMaterial).opacity = motion.ripple * opacity * 0.55;
       });
     },
     get active() { return active; },

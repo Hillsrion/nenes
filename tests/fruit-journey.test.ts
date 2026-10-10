@@ -34,7 +34,7 @@ test("fruits fall from above, sink once, rebound and settle into a small float",
   assert.ok(fruitSelectionOffset(1).y < -0.1);
   assert.ok(fruitSelectionOffset(1.5).y > 0);
   for (const seconds of [4, 5, 6, 8, 12]) assert.ok(Math.abs(fruitSelectionOffset(seconds).y) < 0.06);
-  for (const seconds of [0, 1, 5]) assert.deepEqual(fruitSelectionOffset(seconds, true), { y: 0, rotation: 0, ripple: 0 });
+  for (const seconds of [0, 1, 5]) assert.deepEqual(fruitSelectionOffset(seconds, true), { y: 0, rotation: 0 });
 });
 
 test("the camera stops centered on fruits, stays continuous and arrives at the same model framing for all choices", () => {
