@@ -1,6 +1,32 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createFruitPilePhysics } from "../utils/fruit-pile-physics";
+import { getFruitPileLayout } from "../utils/fruit-pile-layout";
+
+for (const [width, height] of [[320, 568], [390, 844], [427, 952]]) {
+  test(`entry fruits fill roughly half of a ${width}×${height} mobile screen`, () => {
+    let seed = 42;
+    const random = () => ((seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 4294967296);
+    const { diameter, count } = getFruitPileLayout(width, height, "entry");
+    const physics = createFruitPilePhysics(width, height, random);
+    for (let index = 0; index < count; index += 1) {
+      const radius = diameter * (0.78 + random() * 0.4) / 2;
+      physics.add(Array.from({ length: 16 }, (_, point) => ({
+        x: Math.cos(point / 8 * Math.PI) * radius,
+        y: Math.sin(point / 8 * Math.PI) * radius * 0.8,
+      })), index, count);
+    }
+    for (let step = 0; step < 3600 && !physics.settled; step += 1) physics.step();
+    assert.ok(physics.settled, "the denser pile settles");
+    const coverage = 1 - Math.min(...physics.fruits.map(({ body }) => body.bounds.min.y)) / height;
+    assert.ok(coverage >= 0.4 && coverage <= 0.62, `pile occupies ${Math.round(coverage * 100)}% of the height`);
+    for (const { body } of physics.fruits) {
+      assert.ok(body.bounds.min.x >= -2 && body.bounds.max.x <= width + 2, "fruits stay between the walls");
+      assert.ok(body.bounds.max.y <= height + 2, "fruits stay above the floor");
+    }
+    physics.dispose();
+  });
+}
 
 for (const [width, height] of [[1440, 900], [390, 844]]) {
   test(`fruit pile settles inside a ${width}×${height} viewport and survives resizing`, () => {

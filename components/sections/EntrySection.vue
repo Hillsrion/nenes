@@ -92,7 +92,7 @@
         />
 
         <div
-          class="absolute right-[7vw] top-[18vh] z-20 flex w-[min(48rem,56vw)] flex-col gap-6 max-md:left-6 max-md:right-6 max-md:w-auto"
+          class="entry-content absolute right-[7vw] top-[18vh] z-20 flex w-[min(48rem,56vw)] flex-col gap-6 max-md:left-6 max-md:right-6 max-md:w-auto"
         >
           <div
             v-for="(element, index) in contentElements"
@@ -264,6 +264,11 @@ onUnmounted(() => {
   opacity: 0;
   white-space: nowrap;
   will-change: transform, opacity;
+}
+
+@media (max-width: 767px) and (max-height: 700px) {
+  .entry-content { gap: 1rem; }
+  .entry-content p { font-size: clamp(1.125rem, 3.5vw, 1.375rem); }
 }
 
 @media (prefers-reduced-motion: reduce) {

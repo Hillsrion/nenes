@@ -13,6 +13,7 @@ import Matter from "matter-js";
 import { loadingFruitSequence } from "~/config/loading-fruits";
 import { createFruitModel } from "~/utils/loading-fruit-models";
 import { createFruitPilePhysics, FRUIT_PHYSICS_STEP } from "~/utils/fruit-pile-physics";
+import { getFruitPileLayout } from "~/utils/fruit-pile-layout";
 
 const props = withDefaults(defineProps<{
   active: boolean;
@@ -177,12 +178,7 @@ onMounted(async () => {
     if (disposed) return;
     if (!templates.length) throw new Error("No fruit models available");
     physics = createFruitPilePhysics(width, height, Math.random, props.entrance);
-    const diameter = Math.min(145, Math.max(64, width / 10));
-    const count = props.variant === "entry"
-      ? Math.min(64, Math.max(24, Math.round(width / diameter * 3.5)))
-      : props.entrance === "right"
-        ? Math.min(56, Math.max(28, Math.round(width / diameter * 4.2)))
-        : Math.min(36, Math.max(18, Math.round(width / diameter * 2.6)));
+    const { diameter, count } = getFruitPileLayout(width, height, props.variant, props.entrance);
     let bag: THREE.Group[] = [];
     for (let index = 0; index < count; index += 1) {
       if (!bag.length) {
