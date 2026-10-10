@@ -21,6 +21,7 @@ interface JourneyCameraContext {
   isDebug: () => boolean;
   getSelectedFruitIndex?: () => number;
   getPalpationProgress: () => number;
+  getPalpationFraming?: () => { center: THREE.Vector3; halfWidth: number } | null;
   getSymptomFocus: () => number;
   getCanvas: () => HTMLCanvasElement | null;
   refreshProfileContour: () => void;
@@ -34,6 +35,11 @@ export function createJourneyCamera(context: JourneyCameraContext) {
   const fruitCenter = new THREE.Vector3();
   const tmpTarget = new THREE.Vector3();
   let lastCameraProgress = -1;
+  const isMobileLayout = (camera: THREE.PerspectiveCamera) => {
+    const canvas = context.getCanvas();
+    const viewportWidth = canvas?.ownerDocument?.defaultView?.innerWidth ?? canvas?.clientWidth;
+    return viewportWidth !== undefined ? viewportWidth < 1024 : camera.aspect < 1;
+  };
   /**
    * Camera choreography. Matched eye and look-at curves travel directly past
    * the first bust's screen-right shoulder toward the second bust, without reversing
@@ -45,7 +51,7 @@ export function createJourneyCamera(context: JourneyCameraContext) {
     const { camera, firstBounds, secondPlacement, scene } = context.getSceneState();
     if (!camera || !secondPlacement) return;
     const aspect = camera.aspect;
-    const arrivalDistance = aspect < 1 ? 8.5 : ARRIVAL_DISTANCE;
+    const arrivalDistance = isMobileLayout(camera) ? 8.5 : ARRIVAL_DISTANCE;
     const halfFov = THREE.MathUtils.degToRad(CAMERA_FOV) / 2;
 
     const firstSize = firstBounds.getSize(new THREE.Vector3());
@@ -149,15 +155,36 @@ export function createJourneyCamera(context: JourneyCameraContext) {
     const modelProgress = THREE.MathUtils.smoothstep(clamped, 0.5, 1);
     const focus = context.getSymptomFocus() * modelProgress;
     const palpation = THREE.MathUtils.clamp(context.getPalpationProgress(), 0, 1) * modelProgress;
+    const mobile = isMobileLayout(camera);
+    const chest = context.getPalpationFraming?.();
+    const halfHeight = Math.tan(THREE.MathUtils.degToRad(CAMERA_FOV) / 2) * (mobile ? 8.5 : ARRIVAL_DISTANCE);
+    const symptomZoom = mobile ? Math.min(1.9, Math.max(1.35, camera.aspect * 3.8)) : SYMPTOMS_ZOOM;
+    // Crop the lower body and make the chest readable below the compact notes.
+    const chestFitZoom = chest && chest.halfWidth > 0
+      ? halfHeight * (1 - chest.center.z / 8.5) * camera.aspect * 0.9 / chest.halfWidth
+      : Infinity;
+    const palpationZoom = mobile
+      ? Math.min(3.25, Math.max(2.25, camera.aspect * 5.8), chestFitZoom)
+      : PALPATION_ZOOM;
     camera.zoom = THREE.MathUtils.lerp(
-      THREE.MathUtils.lerp(1, SYMPTOMS_ZOOM, focus), PALPATION_ZOOM, palpation
+      THREE.MathUtils.lerp(1, symptomZoom, focus), palpationZoom, palpation
     );
-    const offsetX = -ARRIVAL_CENTER_NDC_X * Math.tan(THREE.MathUtils.degToRad(CAMERA_FOV) / 2) * (camera.aspect < 1 ? 8.5 : ARRIVAL_DISTANCE) * camera.aspect;
-    const correctionX = offsetX * (1 - 1 / camera.zoom);
+    const offsetX = -ARRIVAL_CENTER_NDC_X * halfHeight * camera.aspect;
+    // Mobile centers the lower bust under the cards; desktop keeps its column.
+    const centerBlend = mobile ? focus * (camera.aspect < 1 ? 1 : palpation) : 0;
+    const correctionX = offsetX * (1 - (1 - centerBlend) / camera.zoom);
     camera.position.x -= correctionX;
     tmpTarget.x -= correctionX;
     camera.position.y -= 0.2 * focus;
     tmpTarget.y -= 0.2 * focus;
+    if (mobile && palpation > 0) {
+      const targetY = chest
+        ? chest.center.y + halfHeight / camera.zoom * 0.3 - chest.center.z * 0.8 / 8.5
+        : 0.6;
+      const offsetY = (targetY - tmpTarget.y) * palpation;
+      camera.position.y += offsetY;
+      tmpTarget.y += offsetY;
+    }
     camera.updateProjectionMatrix();
     camera.lookAt(tmpTarget);
     camera.updateMatrixWorld();

@@ -25,24 +25,6 @@
           </p>
         </div>
 
-        <!-- The mono-view model replaces the former desktop sidebar. On desktop
-             it lives inside the shared journey stage instead (see app.vue). -->
-        <div
-          ref="modelRef"
-          class="relative z-10 mx-auto mt-10 h-[48svh] w-full max-w-[34rem] lg:hidden"
-        >
-          <ThreeBustViewer
-            :model-url="monoviewModelUrl"
-            material-style="iridescent"
-            :auto-rotate="false"
-            :interactive="false"
-            :compact="true"
-            :model-scale="2.2"
-            :show-backdrop="false"
-            :show-loading-indicator="false"
-          />
-        </div>
-
         <!-- Desktop editorial layer: the former sidebar content becomes moving paper. -->
         <div
           class="pointer-events-none absolute inset-0 z-30 hidden lg:block"
@@ -117,8 +99,6 @@
 
 <script setup lang="ts">
 import { useScreeningScrollSequence } from "~/composables/screening/useScreeningScrollSequence";
-import ThreeBustViewer from "~/components/ui/ThreeBustViewer.vue";
-import { useDemoBustModelUrls } from "~/composables/useDemoBustModelUrls";
 import { useScreeningWarmup } from "~/composables/screening/useScreeningWarmup";
 
 interface SidebarElement {
@@ -141,14 +121,10 @@ const emit = defineEmits<{
   secondModelOpacityChange: [opacity: number];
 }>();
 
-const { monoviewFileName, getModelUrl } = useDemoBustModelUrls();
-const monoviewModelUrl = computed(() => getModelUrl(monoviewFileName));
-
 const trackRef = ref<HTMLElement | null>(null);
 const sectionRef = ref<HTMLElement | null>(null);
 const backgroundRef = ref<HTMLElement | null>(null);
 const titleRef = ref<HTMLElement | null>(null);
-const modelRef = ref<HTMLElement | null>(null);
 const screeningPolaroidRef = ref<HTMLElement | null>(null);
 const screeningNoteRef = ref<HTMLElement | null>(null);
 const selfExamPolaroidRef = ref<HTMLElement | null>(null);
@@ -157,25 +133,14 @@ const selfExamNoteRef = ref<HTMLElement | null>(null);
 const { setupScreeningPreloadObserver, cleanupWarmupObserver } =
   useScreeningWarmup({
     sectionRef,
-    modelUrl: monoviewModelUrl,
+    stepsToPreload: [],
     imageUrls: props.sidebarElements.map((element) =>
       element.image.replace(".jpg", "_regular.webp")
     ),
   });
 
-useHead(() => ({
-  link: [
-    {
-      rel: "preload",
-      href: monoviewModelUrl.value,
-      as: "fetch",
-      crossorigin: "anonymous",
-    },
-  ],
-}));
-
 useScreeningScrollSequence({
-  backgroundRef, trackRef, titleRef, modelRef, screeningPolaroidRef, screeningNoteRef, selfExamPolaroidRef, selfExamNoteRef,
+  backgroundRef, trackRef, titleRef, screeningPolaroidRef, screeningNoteRef, selfExamPolaroidRef, selfExamNoteRef,
   onSecondModelOpacityChange: (opacity) => emit("secondModelOpacityChange", opacity),
 });
 onMounted(setupScreeningPreloadObserver);

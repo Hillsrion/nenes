@@ -1,11 +1,11 @@
 <template>
   <section
-    class="lg:h-screen overflow-hidden py-9 bg-primary sticky top-0 z-30 transition-all duration-300 ease-out"
+    class="lg:h-[100svh] overflow-hidden py-9 bg-primary relative lg:sticky top-0 z-30 transition-[border-radius] duration-300 ease-out"
     :class="{ 'rounded-t-4xl': !isAtTop, '-mt-4': isIOS }"
     ref="sectionRef"
   >
     <div
-      class="container relative z-20 mx-auto px-6 xl:px-8 h-full flex flex-col ju stify-between"
+      class="container relative z-20 mx-auto px-6 xl:px-8 h-full flex flex-col justify-between"
     >
       <div
         class="flex flex-wrap items-center justify-between flex-1 lg:pt-15 md:flex-nowrap md:pt-10 sm:pt-6 pt-4"
@@ -34,7 +34,7 @@
                 {{ resource.description }}
               </p>
               <a
-                class="lg:text-xl text-secondary"
+                class="inline-block py-2 lg:text-xl text-secondary"
                 :title="`Appeler le numéro ${resource.phone}`"
                 v-if="resource.phone"
                 :href="`tel:${resource.phone}`"
@@ -45,7 +45,7 @@
                 >
               </a>
               <a
-                class="lg:text-xl text-secondary underline"
+                class="inline-block break-words py-2 lg:text-xl text-secondary underline"
                 :href="
                   resource.website.startsWith('http')
                     ? resource.website

@@ -1,4 +1,4 @@
-import { isConstrainedDevice, normalizeLoadedBust, registerBustSymptoms, addBustLighting } from "~/components/ui/three-bust/scene-utils";
+import { isConstrainedDevice, getRenderPixelRatio, normalizeLoadedBust, getBustChestFraming, registerBustSymptoms, addBustLighting } from "~/components/ui/three-bust/scene-utils";
 import { useBustSymptomPresentation } from "./useBustSymptomPresentation";
 import { createJourneyFruits } from "~/components/ui/three-bust/journey-fruits";
 import { createJourneyCamera, CAMERA_FOV } from "~/components/ui/three-bust/journey-camera";
@@ -44,12 +44,16 @@ export function useBustJourney(props: Required<BustJourneyProps>, emit: BustJour
   let secondPlacement: THREE.Group | null = null;
   let secondGroup: THREE.Group | null = null;
   let secondRoot: THREE.Object3D | null = null;
+  let chestFraming: ReturnType<typeof getBustChestFraming> = null;
   const secondBaseMaterials = new Map<THREE.Material, { opacity: number; transparent: boolean; depthWrite: boolean }>();
   let animationPlayback: ReturnType<typeof createPalpationPlayback> | null = null;
   const animationTime = ref(0);
   let previousAnimationTimestamp = 0;
   let reduceMotion = false;
-  let firstBounds = new THREE.Box3();
+  // Mobile skips the screening bust and keeps a virtual departure anchor
+  // until the fruit selection. Only desktop needs to load the first GLB.
+  let firstBounds = new THREE.Box3(new THREE.Vector3(-1, -1.4, -0.5), new THREE.Vector3(1, 1.82, 0.5));
+  let loadingFirstModel = false;
   const symptomEffects = createSymptomEffects(() => secondGroup);
   const presentation = useBustSymptomPresentation({
     getGroup: () => secondGroup, getRotation: () => props.secondRotationY,
@@ -143,6 +147,7 @@ export function useBustJourney(props: Required<BustJourneyProps>, emit: BustJour
     isDebug: () => props.debugPath,
     getSelectedFruitIndex: () => props.selectedFruitIndex,
     getPalpationProgress: () => props.palpationProgress,
+    getPalpationFraming: () => chestFraming,
     getSymptomFocus: () => symptomFraming.progress,
     getCanvas: () => canvasRef.value,
     refreshProfileContour,
@@ -168,6 +173,7 @@ export function useBustJourney(props: Required<BustJourneyProps>, emit: BustJour
     disposeRoot(secondRoot);
     secondGroup?.clear();
     secondRoot = null;
+    chestFraming = null;
     animationTime.value = 0;
     previousAnimationTimestamp = 0;
     profileContour.value = null;
@@ -190,6 +196,7 @@ export function useBustJourney(props: Required<BustJourneyProps>, emit: BustJour
       );
       secondRoot = secondScene;
       secondGroup.add(secondScene);
+      chestFraming = getBustChestFraming(secondScene);
       secondGroup.rotation.y = props.secondRotationY;
       registerBustSymptoms(secondScene, !!gltf?.animations.some(clip =>
         clip.tracks.some(track => track.name.includes("morphTargetInfluences"))
@@ -248,7 +255,6 @@ export function useBustJourney(props: Required<BustJourneyProps>, emit: BustJour
       return;
     }
     initialized = true;
-    const constrainedDevice = isConstrainedDevice();
     reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     scene = new THREE.Scene();
@@ -264,7 +270,7 @@ export function useBustJourney(props: Required<BustJourneyProps>, emit: BustJour
       powerPreference: "high-performance",
     });
     renderer.setSize(width, height, false);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, constrainedDevice ? 1 : 1.25));
+    renderer.setPixelRatio(getRenderPixelRatio());
     renderer.setClearColor(0x000000, 0);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 0.9;
@@ -286,7 +292,7 @@ export function useBustJourney(props: Required<BustJourneyProps>, emit: BustJour
 
     firstGroup = new THREE.Group();
     scene.add(firstGroup);
-    firstGroup.visible = width >= 1024;
+    firstGroup.visible = window.innerWidth >= 1024;
     secondPlacement = new THREE.Group();
     secondGroup = new THREE.Group();
     secondPlacement.add(secondGroup);
@@ -313,10 +319,14 @@ export function useBustJourney(props: Required<BustJourneyProps>, emit: BustJour
 
     const loadedSecondUrl = props.secondModelUrl;
     const [firstGLTF, secondGLTF] = await Promise.all([
-      loadBust(props.firstModelUrl),
+      window.innerWidth >= 1024 ? loadBust(props.firstModelUrl) : Promise.resolve(null),
       loadBust(loadedSecondUrl),
     ]);
-    if (disposed || !renderer || !scene || !camera) return;
+    if (disposed || !renderer || !scene || !camera) {
+      disposeRoot(firstGLTF?.scene ?? null);
+      disposeRoot(secondGLTF?.scene ?? null);
+      return;
+    }
 
     const firstScene = firstGLTF?.scene;
     if (firstScene && firstGroup) {
@@ -354,11 +364,28 @@ export function useBustJourney(props: Required<BustJourneyProps>, emit: BustJour
     if (!width || !height) return;
 
     camera.aspect = width / height;
-    if (firstGroup) firstGroup.visible = width >= 1024;
+    if (firstGroup) firstGroup.visible = window.innerWidth >= 1024;
+    // A tablet rotation or desktop resize can reveal the shared screening bust.
+    if (window.innerWidth >= 1024 && !isLoading.value && !firstRoot && !loadingFirstModel && loadBust) {
+      loadingFirstModel = true;
+      void loadBust(props.firstModelUrl).then(gltf => {
+        loadingFirstModel = false;
+        if (disposed || !firstGroup) { disposeRoot(gltf?.scene ?? null); return; }
+        if (!gltf) return;
+        firstRoot = gltf.scene;
+        firstBounds = normalizeLoadedBust(firstRoot, BASE_BUST_HEIGHT * FIRST_MODEL_SCALE);
+        applyBustMaterial(firstRoot, firstMaterial);
+        firstGroup.add(firstRoot);
+        const size = firstBounds.getSize(new THREE.Vector3());
+        secondPlacement?.position.set(size.x * 1.15 + 2.2, 0, -(size.y * 1.55 + 3.4));
+        handleResize();
+      });
+    }
     camera.updateProjectionMatrix();
     buildCameraPath();
     fruits?.place(journeyCamera.getFruitCenter(), camera.aspect, CAMERA_FOV);
     updateCameraForProgress(journeyCamera.progress >= 0 ? journeyCamera.progress : props.cameraProgress);
+    renderer.setPixelRatio(getRenderPixelRatio());
     renderer.setSize(width, height, false);
     refreshProfileContour();
     scheduleRender();

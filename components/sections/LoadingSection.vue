@@ -9,13 +9,13 @@
 
       <div
         ref="loadingRowRef"
-        class="grid w-full max-w-[38rem] grid-cols-[1fr_clamp(6rem,10vw,8.5rem)_1fr] items-center gap-5 opacity-0 sm:gap-10"
+        class="flex w-full max-w-[38rem] flex-col items-center justify-center gap-4 opacity-0 sm:grid sm:grid-cols-[1fr_clamp(6rem,10vw,8.5rem)_1fr] sm:gap-10"
       >
-        <p class="text-right text-xl font-medium uppercase tracking-[3.84px] lg:text-2xl">
+        <p class="text-center text-base font-medium uppercase tracking-[0.18em] sm:text-right sm:text-xl lg:text-2xl">
           Chargement
         </p>
 
-        <div class="aspect-square w-full" aria-live="polite">
+        <div class="aspect-square w-24 sm:w-full" aria-hidden="true">
           <ThreeFruitLoadingAnimator
             :progress="progress"
             :pair="true"
@@ -23,7 +23,7 @@
           />
         </div>
 
-        <p class="min-w-[5rem] text-left text-xl font-medium tabular-nums tracking-[3.84px] lg:text-2xl">
+        <p class="min-w-[5rem] text-center text-xl font-medium tabular-nums tracking-[0.18em] sm:text-left lg:text-2xl" role="progressbar" aria-label="Chargement" :aria-valuenow="displayProgress" :aria-valuemin="0" :aria-valuemax="100">
           {{ displayProgress }}%
         </p>
       </div>

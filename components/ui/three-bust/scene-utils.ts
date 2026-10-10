@@ -10,10 +10,16 @@ const isConstrainedDevice = () => {
   const currentNavigator = navigator as PerformanceNavigator;
   return (
     currentNavigator.connection?.saveData === true ||
+    window.innerWidth < 1024 ||
+    currentNavigator.maxTouchPoints > 0 ||
     (currentNavigator.deviceMemory ?? 8) <= 4 ||
     (currentNavigator.hardwareConcurrency ?? 8) <= 4
   );
 };
+
+// Apply the same pixel budget to the photo transitions, fruit scenes and busts.
+const getRenderPixelRatio = (maximum = 1.25) =>
+  Math.min(window.devicePixelRatio || 1, isConstrainedDevice() ? 1 : maximum);
 
 // Normalize a freshly loaded GLB exactly like ThreeBustViewer does: strip the
 // symptom skin helper, recenter, scale to the target height and lift slightly.
@@ -33,6 +39,26 @@ const normalizeLoadedBust = (root: THREE.Object3D, targetHeight: number, vertica
   root.position.y += 0.2 + verticalOffset;
   root.updateMatrixWorld(true);
   return new THREE.Box3().setFromObject(root);
+};
+
+// Neutral vertices and the existing symptom profile locate the chest without
+// including animated hands or large morph endpoints in the camera framing.
+const getBustChestFraming = (root: THREE.Object3D) => {
+  let body: THREE.Mesh | null = null;
+  root.traverse(child => {
+    if (child instanceof THREE.Mesh && child.userData.symptomProfile?.breast) body = child;
+  });
+  if (!body || !root.parent) return null;
+  const mesh = body as THREE.Mesh;
+  const bounds = new THREE.Box3().setFromBufferAttribute(mesh.geometry.getAttribute('position'));
+  const center = bounds.getCenter(new THREE.Vector3());
+  const half = bounds.getSize(new THREE.Vector3()).multiplyScalar(0.5);
+  const [breastX, breastY] = mesh.userData.symptomProfile.breast;
+  root.parent.updateWorldMatrix(true, true);
+  const toGroup = (point: THREE.Vector3) => root.parent!.worldToLocal(mesh.localToWorld(point));
+  const chest = toGroup(new THREE.Vector3(center.x, center.y + half.y * breastY, bounds.max.z));
+  const edge = toGroup(new THREE.Vector3(center.x + half.x * (Math.abs(breastX) + 0.25), center.y + half.y * breastY, bounds.max.z));
+  return { center: chest, halfWidth: Math.abs(edge.x - chest.x) };
 };
 
 const registerBustSymptoms = (root: THREE.Object3D, animated: boolean, symptomEffects: ReturnType<typeof createSymptomEffects>) => {
@@ -90,4 +116,4 @@ function addBustLighting(scene: THREE.Scene, useShadows = false) {
 
 }
 
-export { isConstrainedDevice, normalizeLoadedBust, registerBustSymptoms, addBustLighting };
+export { isConstrainedDevice, getRenderPixelRatio, normalizeLoadedBust, getBustChestFraming, registerBustSymptoms, addBustLighting };

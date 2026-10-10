@@ -9,6 +9,7 @@
 
 <script setup lang="ts">
 import * as THREE from "three";
+import { getRenderPixelRatio } from './three-bust/scene-utils';
 import Matter from "matter-js";
 import { loadingFruitSequence } from "~/config/loading-fruits";
 import { createFruitModel } from "~/utils/loading-fruit-models";
@@ -145,7 +146,7 @@ onMounted(async () => {
       antialias: true,
       powerPreference: "low-power",
     });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25));
+    renderer.setPixelRatio(getRenderPixelRatio());
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.1;

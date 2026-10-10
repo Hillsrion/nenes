@@ -1,6 +1,7 @@
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useLenis } from "lenis/vue";
+import { watch } from 'vue';
 
 export default defineNuxtPlugin(() => {
   gsap.registerPlugin(ScrollTrigger);
@@ -9,7 +10,10 @@ export default defineNuxtPlugin(() => {
   // This ensures Lenis is available for ScrollTrigger immediately
   const lenis = useLenis();
 
-  lenis.value?.on("scroll", ScrollTrigger.update);
+  const stopWatching = watch(lenis, (instance, previous) => {
+    previous?.off('scroll', ScrollTrigger.update);
+    instance?.on('scroll', ScrollTrigger.update);
+  }, { immediate: true });
 
   // normalize scroll
   ScrollTrigger.normalizeScroll(true);
@@ -17,14 +21,7 @@ export default defineNuxtPlugin(() => {
     ignoreMobileResize: true, // Prevents false refreshes from iOS address bar
   });
 
-  gsap.ticker.add((time) => {
-    lenis.value?.raf(time * 1000);
-  });
-
   gsap.ticker.lagSmoothing(0);
-
-  // iOS ScrollTrigger Fixes
-  ScrollTrigger.normalizeScroll(true); // Enables smooth scrolling and addresses iOS momentum scrolling
 
   // Configure ScrollTrigger to use Lenis as the scroller
   // ScrollTrigger.defaults({
@@ -35,9 +32,10 @@ export default defineNuxtPlugin(() => {
   ScrollTrigger.scrollerProxy(document.body, {
     scrollTop(value) {
       if (arguments.length) {
-        lenis.value?.scrollTo(value, { immediate: true });
+        if (lenis.value) lenis.value.scrollTo(value, { immediate: true });
+        else window.scrollTo(0, value);
       }
-      return lenis.value?.scroll.y; // Corrected: return lenis.scroll.y
+      return lenis.value?.scroll ?? window.scrollY;
     },
     getBoundingClientRect() {
       return {
@@ -61,8 +59,12 @@ export default defineNuxtPlugin(() => {
 
   // Refresh ScrollTrigger on orientation change
   if (import.meta.client) {
-    window.addEventListener("orientationchange", () => {
-      ScrollTrigger.refresh();
+    const refresh = () => ScrollTrigger.refresh();
+    window.addEventListener("orientationchange", refresh);
+    import.meta.hot?.dispose(() => {
+      window.removeEventListener('orientationchange', refresh);
+      lenis.value?.off('scroll', ScrollTrigger.update);
+      stopWatching();
     });
   }
 });

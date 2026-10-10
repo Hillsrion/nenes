@@ -92,7 +92,7 @@
         />
 
         <div
-          class="entry-content absolute right-[7vw] top-[18vh] z-20 flex w-[min(48rem,56vw)] flex-col gap-6 max-md:left-6 max-md:right-6 max-md:w-auto"
+          class="entry-content absolute right-[7vw] top-[18svh] z-20 flex w-[min(48rem,56vw)] flex-col gap-6 max-md:left-6 max-md:right-6 max-md:w-auto"
         >
           <div
             v-for="(element, index) in contentElements"
@@ -266,9 +266,16 @@ onUnmounted(() => {
   will-change: transform, opacity;
 }
 
+@media (max-width: 767px) {
+  .entry-content p { font-size: clamp(1.5rem, 5vw, 1.875rem); }
+}
 @media (max-width: 767px) and (max-height: 700px) {
   .entry-content { gap: 1rem; }
   .entry-content p { font-size: clamp(1.125rem, 3.5vw, 1.375rem); }
+}
+@media (max-width: 1023px) and (orientation: landscape) {
+  .entry-content { top: 18svh; gap: 1rem; }
+  .entry-content p { font-size: clamp(1.125rem, 3vw, 1.5rem); }
 }
 
 @media (prefers-reduced-motion: reduce) {

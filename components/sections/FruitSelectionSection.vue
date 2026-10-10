@@ -1,8 +1,7 @@
 <template>
   <section ref="sectionRef" id="choisir-un-gabarit" class="fruit-selection relative z-20 h-[100svh] text-primary" :class="{ 'is-active': active, 'is-continuing': continuing }" aria-labelledby="fruit-selection-title" :data-selected-fruit="selectedFruit" :data-model="modelFile">
     <header class="fruit-heading absolute inset-x-5 top-[16svh] text-center">
-      <p class="text-xs uppercase tracking-[0.2em]">À chaque poitrine, son gabarit</p>
-      <h2 id="fruit-selection-title" class="mx-auto mt-3 max-w-2xl text-3xl font-medium leading-tight sm:text-4xl">Choisis le modèle qui te ressemble.</h2>
+      <h2 id="fruit-selection-title" class="mx-auto max-w-2xl text-3xl font-medium leading-tight sm:text-4xl">Choisis le modèle qui te ressemble.</h2>
     </header>
     <div class="fruit-choices absolute inset-x-0 top-[32%] h-[42%]" role="group" aria-label="Choisir un gabarit de poitrine">
       <button v-for="(choice, index) in journeyFruitChoices" :key="choice.id" :ref="element => setChoiceButton(element, index)" type="button" class="fruit-choice absolute top-0 h-full w-[27%] -translate-x-1/2" :style="{ left: `${23 + index * 27}%` }" :class="{ 'is-selected': choice.id === selectedFruit }" :aria-pressed="choice.id === selectedFruit" :aria-label="`${choice.fruit}, ${choice.sizeLabel.toLowerCase()}`" :disabled="continuing || !sceneReady" @click="choose(choice.id, true)" @mouseenter="$emit('hover', choice.id)" @mouseleave="$emit('hover', null)" @focus="$emit('hover', choice.id)" @blur="$emit('hover', null)" @keydown="navigateChoices($event, index)">
@@ -45,5 +44,15 @@ defineExpose({ sectionRef });
 .fruit-heading, .fruit-label, .fruit-footer { transition: opacity 400ms, transform 500ms; }
 .is-continuing { pointer-events: none; }
 @media (max-width: 640px) { .fruit-heading { top: 14svh; } .fruit-heading h2 { font-size: 1.55rem; max-width: 20rem; } .fruit-glow { filter: blur(8px); width: 30vw; } }
+@media (max-width: 640px) and (max-height: 650px) {
+  .fruit-choices { top: 30%; height: 38%; }
+  .fruit-footer { bottom: 4svh; gap: 0.4rem; }
+}
+@media (max-width: 1023px) and (orientation: landscape) {
+  .fruit-heading { top: 21svh; }
+  .fruit-heading h2 { max-width: none; font-size: 1.25rem; }
+  .fruit-choices { top: 28%; height: 39%; }
+  .fruit-footer { bottom: 4svh; flex-direction: row; justify-content: center; gap: 0.5rem; }
+}
 @media (prefers-reduced-motion: reduce) { *, *::before { transition: none !important; } }
 </style>

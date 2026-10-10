@@ -2,7 +2,7 @@
   <!-- Text-only card (no image) -->
   <li
     v-if="!hasImage"
-    class="w-90 h-130 flex p-8 relative bg-secondary-light justify-center flex-col"
+    class="w-full min-h-80 flex p-6 relative bg-secondary-light justify-center flex-col sm:p-8"
   >
     <h3 class="relative z-1 leading-title text-primary text-2xl">
       {{ title }}
@@ -62,7 +62,7 @@ const hasImage = computed(() => !!image);
   background: #fff;
   box-shadow: 0 18px 36px rgb(42 82 194 / 16%);
   padding: 0.7rem 0.7rem 0;
-  width: 22.5rem;
+  width: 100%;
 }
 
 .symptom-polaroid__caption {

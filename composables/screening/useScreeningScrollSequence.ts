@@ -8,7 +8,6 @@ interface ScreeningSequenceOptions {
   backgroundRef: Ref<HTMLElement | null>;
   trackRef: Ref<HTMLElement | null>;
   titleRef: Ref<HTMLElement | null>;
-  modelRef: Ref<HTMLElement | null>;
   screeningPolaroidRef: Ref<HTMLElement | null>;
   screeningNoteRef: Ref<HTMLElement | null>;
   selfExamPolaroidRef: Ref<HTMLElement | null>;
@@ -17,7 +16,7 @@ interface ScreeningSequenceOptions {
 }
 
 export function useScreeningScrollSequence({
-  backgroundRef, trackRef, titleRef, modelRef, screeningPolaroidRef, screeningNoteRef, selfExamPolaroidRef, selfExamNoteRef, onSecondModelOpacityChange,
+  backgroundRef, trackRef, titleRef, screeningPolaroidRef, screeningNoteRef, selfExamPolaroidRef, selfExamNoteRef, onSecondModelOpacityChange,
 }: ScreeningSequenceOptions) {
   const store = useAnimationsStore();
   let scrollTimeline: gsap.core.Timeline | null = null;
@@ -30,7 +29,6 @@ export function useScreeningScrollSequence({
     const background = backgroundRef.value;
     const track = trackRef.value;
     const title = titleRef.value;
-    const model = modelRef.value;
     const screeningPolaroid = screeningPolaroidRef.value;
     const screeningNote = screeningNoteRef.value;
     const selfExamPolaroid = selfExamPolaroidRef.value;
@@ -40,7 +38,6 @@ export function useScreeningScrollSequence({
       !background ||
       !track ||
       !title ||
-      !model ||
       !screeningPolaroid ||
       !screeningNote ||
       !selfExamPolaroid ||
@@ -73,7 +70,6 @@ export function useScreeningScrollSequence({
     });
     const titleWords = titleSplit.words ?? [];
 
-    gsap.set(model, { autoAlpha: 0, y: 0, scale: 1 });
     gsap.set(paper, { autoAlpha: 0, y: 45, scale: 0.95 });
     gsap.set(titleWords, { opacity: 0.14 });
     paperRestingRotations.forEach((rotation, element) => {
@@ -108,7 +104,6 @@ export function useScreeningScrollSequence({
         },
         0.04
       )
-      .to(model, { autoAlpha: 1, duration: 0.2 }, 0.14)
       .to(
         screeningPolaroid,
         {
@@ -166,8 +161,10 @@ export function useScreeningScrollSequence({
       // The loose notes leave first, then their Polaroids, the main copy, and finally the bust.
       .to(notes, { autoAlpha: 0, y: "-24vh", duration: 0.16 }, 1.16)
       .to(polaroids, { autoAlpha: 0, y: "-18vh", duration: 0.14 }, 1.22)
-      .to(title, { autoAlpha: 0, y: "-10vh", duration: 0.16 }, 1.31)
-      .to(model, { autoAlpha: 0, duration: 0.17 }, 1.43);
+      .to(title, { autoAlpha: 0, y: "-10vh", duration: 0.16 }, 1.31);
+
+    // Preserve the desktop timing previously carried by the mobile viewer's fade.
+    scrollTimeline.to({}, { duration: 0.17 }, 1.43);
 
     scrollTrigger = ScrollTrigger.create({
       trigger: track,
@@ -188,15 +185,27 @@ export function useScreeningScrollSequence({
     hasInitializedScrollSequence = true;
 
     mediaQuery = gsap.matchMedia();
-    mediaQuery.add("(min-width: 1024px)", () => {
+    mediaQuery.add("(min-width: 1024px)", (context) => {
+      let cancelled = false;
       nextTick(() => {
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
-            initializeScrollSequence();
-            ScrollTrigger.refresh();
+            if (cancelled) return;
+            context.add(() => {
+              initializeScrollSequence();
+              ScrollTrigger.refresh();
+            });
           });
         });
       });
+      return () => {
+        cancelled = true;
+        scrollTrigger?.kill();
+        scrollTimeline?.kill();
+        titleSplit?.revert();
+        titleSplit = null;
+        onSecondModelOpacityChange(1);
+      };
     });
   };
 

@@ -1,5 +1,5 @@
 import { useViewerFraming } from "./useViewerFraming";
-import { isConstrainedDevice, normalizeLoadedBust, registerBustSymptoms, addBustLighting } from "~/components/ui/three-bust/scene-utils";
+import { isConstrainedDevice, getRenderPixelRatio, normalizeLoadedBust, registerBustSymptoms, addBustLighting } from "~/components/ui/three-bust/scene-utils";
 import { useBustSymptomPresentation } from "./useBustSymptomPresentation";
 import { computed, ref, onMounted, onUnmounted, watch, useId } from "vue";
 import { useBustPlayback } from "./useBustPlayback";
@@ -147,7 +147,7 @@ export function useBustViewer(props: Required<Omit<BustViewerProps, "animationSt
     });
     renderer.setSize(width, height, false);
     renderer.setPixelRatio(
-      Math.min(window.devicePixelRatio, constrainedDevice ? 1 : props.interactive ? 1.5 : 1.25)
+      getRenderPixelRatio(props.interactive ? 1.5 : 1.25)
     );
     // Non-glow scenes intentionally remain transparent: their host section owns
     // the background colour and it must not jump when the canvas fades in.
@@ -285,10 +285,13 @@ export function useBustViewer(props: Required<Omit<BustViewerProps, "animationSt
     const width = rect.width;
     const height = rect.height;
 
+    if (!width || !height) return;
+
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
     alignModelHorizontally();
 
+    renderer.setPixelRatio(getRenderPixelRatio(props.interactive ? 1.5 : 1.25));
     renderer.setSize(width, height, false);
     materials.resize(width, height);
     refreshProfileContour();

@@ -17,6 +17,7 @@
 <script setup lang="ts">
 import { gsap } from "gsap";
 import * as THREE from "three";
+import { getRenderPixelRatio } from './three-bust/scene-utils';
 import {
   loadingFruitSequence,
   type LoadingFruitDefinition,
@@ -61,6 +62,7 @@ let hasEmittedReady = false;
 let reducedMotion = false;
 let isVisible = true;
 let lastRenderTime = 0;
+let initialized = false;
 const frameInterval = 1000 / 30;
 
 const stopRendering = () => {
@@ -222,9 +224,10 @@ const handleVisibilityChange = () => {
 };
 
 const initThree = () => {
-  if (!canvasRef.value || !containerRef.value) return;
+  if (initialized || !canvasRef.value || !containerRef.value) return;
   const { width, height } = containerRef.value.getBoundingClientRect();
   if (!width || !height) return;
+  initialized = true;
 
   try {
     scene = new THREE.Scene();
@@ -238,7 +241,7 @@ const initThree = () => {
       antialias: true,
       powerPreference: "low-power",
     });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25));
+    renderer.setPixelRatio(getRenderPixelRatio());
     renderer.setSize(width, height, false);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -260,12 +263,6 @@ const initThree = () => {
     void transitionToFruit(getFruitIndex(props.progress), true);
     resizeObserver = new ResizeObserver(handleResize);
     resizeObserver.observe(containerRef.value);
-    intersectionObserver = new IntersectionObserver(([entry]) => {
-      isVisible = entry.isIntersecting;
-      if (isVisible) scheduleRender();
-      else stopRendering();
-    });
-    intersectionObserver.observe(containerRef.value);
     scheduleRender();
   } catch (error) {
     console.warn("3D loading fruit unavailable:", error);
@@ -291,11 +288,16 @@ onMounted(() => {
       ? createRandomLoaderIndexes()
       : Array.from({ length: loaderFruitCount }, (_, index) => index);
   }
-  const indexes =
-    props.fruitIndex === undefined ? loaderIndexes.value : [getFruitIndex(props.progress)];
-  const modelUrls = indexes.map((index) => loadingFruitSequence[index].modelUrl);
-  void preloadFruitModels([...new Set(modelUrls)]);
-  requestAnimationFrame(initThree);
+  intersectionObserver = new IntersectionObserver(([entry]) => {
+    isVisible = entry?.isIntersecting ?? false;
+    if (!isVisible) { stopRendering(); return; }
+    if (!initialized) {
+      const indexes = props.fruitIndex === undefined ? loaderIndexes.value : [getFruitIndex(props.progress)];
+      void preloadFruitModels([...new Set(indexes.map(index => loadingFruitSequence[index].modelUrl))]);
+      initThree();
+    } else scheduleRender();
+  });
+  if (containerRef.value) intersectionObserver.observe(containerRef.value);
 });
 
 onUnmounted(() => {

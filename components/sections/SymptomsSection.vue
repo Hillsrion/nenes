@@ -67,7 +67,7 @@
           class="w-[600%] aspect-square absolute top-1/2 -left-[250%] sm:w-[500%] sm:-left-[200%] lg:w-[300%] lg:-left-[100%]"
         >
           <div
-            class="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[25vw] min-w-[360px]"
+            class="symptom-card-slot absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2"
           >
             <SymptomCard
               :title="card.title"
@@ -240,4 +240,15 @@ onUnmounted(() => {
   cleanupCarouselAnimation();
   cleanupModelAnimation();
 });
-</script> 
+</script>
+
+<style scoped>
+.symptom-card-slot {
+  width: clamp(22.5rem, 25vw, 30rem);
+}
+@media (max-width: 1023px) {
+  .symptom-card-slot {
+    width: min(calc(100vw - 3rem), 22.5rem, 58svh);
+  }
+}
+</style>

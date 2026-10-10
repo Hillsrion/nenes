@@ -22,6 +22,7 @@
 <script setup lang="ts">
 import { INTRO_BACKGROUNDS, INTRO_CUTOUTS, getIntroState } from '~/utils/intro-sequence';
 import type { WebGLRenderer, Texture, ShaderMaterial, PlaneGeometry } from 'three';
+import { getRenderPixelRatio } from './three-bust/scene-utils';
 
 const root = ref<HTMLElement | null>(null);
 const canvas = ref<HTMLCanvasElement | null>(null);
@@ -206,7 +207,7 @@ onMounted(async () => {
     const THREE = await import('three');
     if (disposed) return;
     renderer = new THREE.WebGLRenderer({ canvas: canvas.value, alpha: true, antialias: false, powerPreference: 'low-power' });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25));
+    renderer.setPixelRatio(getRenderPixelRatio());
     const scene = new THREE.Scene();
     const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
     geometry = new THREE.PlaneGeometry(2, 2);
@@ -227,6 +228,7 @@ onMounted(async () => {
       if (!root.value || !renderer || !material) return;
       width = root.value.clientWidth;
       height = root.value.clientHeight;
+      renderer.setPixelRatio(getRenderPixelRatio());
       renderer.setSize(width, height, false);
       const ratio = (width / height) / (1366 / 768);
       material.uniforms.uCrop!.value.set(Math.min(ratio, 1), Math.min(1 / ratio, 1));
@@ -273,6 +275,7 @@ onBeforeUnmount(() => {
   material?.dispose();
   geometry?.dispose();
   renderer?.dispose();
+  renderer?.forceContextLoss();
 });
 </script>
 
