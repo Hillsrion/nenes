@@ -8,6 +8,7 @@ import { projectProfileContour } from "~/components/ui/three-bust/profile-contou
 import { createIridescentMaterial } from "~/components/ui/three-bust/materials";
 import * as THREE from "three";
 import { gsap } from "gsap";
+import { warmThreeScene } from "~/utils/warm-three-scene";
 import {
   createSymptomEffects,
 } from "~/components/ui/three-bust/symptom-effects";
@@ -101,6 +102,7 @@ export function useBustJourney(props: Required<BustJourneyProps>, emit: BustJour
     if (
       animationFrameId ||
       !renderer ||
+      isLoading.value ||
       !isVisible ||
       document.hidden ||
       disposed
@@ -344,13 +346,14 @@ export function useBustJourney(props: Required<BustJourneyProps>, emit: BustJour
     if (disposed) return;
     fruits.select(props.selectedFruitIndex, props.hoveredFruitIndex);
     fruits.setActive(props.fruitSelectionActive);
-    emit("fruitReady");
-
     buildCameraPath();
     fruits?.place(journeyCamera.getFruitCenter(), camera.aspect, CAMERA_FOV);
     updateCameraForProgress(props.cameraProgress);
     refreshProfileContour();
+    await warmThreeScene(renderer, scene, camera, () => disposed);
+    if (disposed) return;
     isLoading.value = false;
+    emit("fruitReady");
     if (props.secondModelUrl !== loadedSecondUrl) void replaceSecondModel(props.secondModelUrl);
     scheduleRender();
   };
@@ -433,6 +436,11 @@ export function useBustJourney(props: Required<BustJourneyProps>, emit: BustJour
       else scheduleRender();
     };
     document.addEventListener("visibilitychange", visibilityChangeHandler);
+
+    // Mounting already waits for the loading gate's exit. Use the long intro
+    // to prepare the scene, rather than doing GPU work at the fruit-pile exit.
+    // The observer still owns the render loop, which remains paused offscreen.
+    void initThree();
 
     viewportObserver = new IntersectionObserver(
       ([entry]) => {
