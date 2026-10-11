@@ -32,6 +32,7 @@ import { useBustJourney } from "~/composables/three-bust/useBustJourney";
 const emit = defineEmits<{
   framingReady: [];
   fruitReady: [];
+  fruitLanding: [count: number];
   modelReady: [url: string];
   symptomReady: [symptom: SymptomType];
 }>();

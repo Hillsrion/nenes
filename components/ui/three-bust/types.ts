@@ -57,5 +57,6 @@ export interface BustEvents {
 
 export interface BustJourneyEvents extends BustEvents {
   (event: "fruitReady"): void;
+  (event: "fruitLanding", count: number): void;
   (event: "modelReady", url: string): void;
 }

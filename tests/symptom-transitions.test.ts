@@ -86,6 +86,7 @@ test('both viewers keep rendering after the 150 ms wake-up until the symptom ble
       reduceMotion: false,
       presentation: { isRotating: false },
       controlsActive: false,
+      fruits: null,
       symptomEffects: effects,
     };
     assert.equal(runInNewContext(condition[1], context), true, `${viewer}: blend still needs frames`);

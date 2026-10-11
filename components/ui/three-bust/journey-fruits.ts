@@ -2,8 +2,8 @@ import * as THREE from "three";
 import { journeyFruitChoices } from "../../../config/bust-fruit-catalog";
 import { loadingFruitSequence } from "../../../config/loading-fruits";
 import { createFruitModel } from "../../../utils/loading-fruit-models";
-import { fruitSelectionOffset } from "../../../utils/fruit-selection-motion";
-import { FRUIT_COVER_PROGRESS, fruitFlightPosition } from "../../../utils/fruit-flight-motion";
+import { fruitSelectionOffset, fruitLandingCount, FRUIT_FALL_STAGGER } from "../../../utils/fruit-selection-motion";
+import { fruitFlightPosition } from "../../../utils/fruit-flight-motion";
 
 export const FRUIT_CAMERA_DISTANCE = 8;
 export const FRUIT_COLUMN_NDC = 0.54;
@@ -17,11 +17,14 @@ export function createJourneyFruits(scene: THREE.Scene, reducedMotion: boolean) 
   let disposed = false;
   let startTime = 0;
   let active = false;
+  let landedCount = 0;
   let selectedIndex = 1;
   let hoveredIndex = -1;
   let halfWidth = 3;
   let responsiveScale = 1;
-  let flight: { pivot: THREE.Group; start: THREE.Vector3; index: number } | null = null;
+  let flight: { pivot: THREE.Group; start: THREE.Vector3; rotation: THREE.Quaternion; index: number } | null = null;
+  const flightTurn = new THREE.Quaternion();
+  const flightUp = new THREE.Vector3(0, 1, 0);
   const ownedGeometries = new Set<THREE.BufferGeometry>();
   const definitions = [
     loadingFruitSequence[0],
@@ -47,6 +50,12 @@ export function createJourneyFruits(scene: THREE.Scene, reducedMotion: boolean) 
     model.rotation.set(0.12, -0.2 + index * 0.25, index === 0 ? -0.3 : 0.06);
     pivot.add(model);
     group.add(pivot);
+    // Keep the same shader variant throughout the entrance fade.
+    model.traverse(child => {
+      if (!(child instanceof THREE.Mesh)) return;
+      const materials = Array.isArray(child.material) ? child.material : [child.material];
+      materials.forEach(material => { material.transparent = true; });
+    });
     records.push({ pivot, index });
     layout();
   }));
@@ -91,26 +100,21 @@ export function createJourneyFruits(scene: THREE.Scene, reducedMotion: boolean) 
           const clone = material.clone();
           // Keep the viewport covered until the model is ready to be revealed.
           clone.side = THREE.DoubleSide;
-          clone.transparent = true;
+          clone.transparent = false;
           clone.opacity = 1;
-          clone.depthTest = clone.depthWrite = false;
+          clone.depthTest = clone.depthWrite = true;
           return clone;
         };
         child.material = Array.isArray(child.material) ? child.material.map(cloneMaterial) : cloneMaterial(child.material);
         child.renderOrder = 10000;
       });
       camera.add(pivot);
-      flight = { pivot, start, index: selectedIndex };
+      flight = { pivot, start, rotation: pivot.quaternion.clone(), index: selectedIndex };
     }
-    const position = fruitFlightPosition(progress, flight.start.x, flight.start.y);
+    const position = fruitFlightPosition(progress, flight.start.x, flight.start.y, Math.max(4, halfWidth));
     flight.pivot.position.set(position.x, position.y, position.z);
-    const opacity = 1 - THREE.MathUtils.smoothstep(progress, FRUIT_COVER_PROGRESS, 0.8);
-    flight.pivot.visible = opacity > 0;
-    flight.pivot.traverse(child => {
-      if (!(child instanceof THREE.Mesh)) return;
-      const materials = Array.isArray(child.material) ? child.material : [child.material];
-      materials.forEach(material => { material.opacity = opacity; });
-    });
+    flightTurn.setFromAxisAngle(flightUp, progress * Math.PI * 2);
+    flight.pivot.quaternion.copy(flightTurn).multiply(flight.rotation);
   }
   return {
     ready,
@@ -130,10 +134,11 @@ export function createJourneyFruits(scene: THREE.Scene, reducedMotion: boolean) 
       if (flightProgress !== null) opacity *= 1 - THREE.MathUtils.smoothstep(flightProgress, 0, 0.12);
       if (opacity > 0.001 && !group.visible) startTime = now;
       group.visible = opacity > 0.001;
-      if (!group.visible) return;
+      if (!group.visible) { landedCount = 0; return; }
+      landedCount = fruitLandingCount(now - startTime, reducedMotion);
       records.forEach(({ pivot, index }) => {
         pivot.visible = flightProgress === null || index !== selectedIndex;
-        const motion = fruitSelectionOffset(now - startTime - index * 0.14, reducedMotion);
+        const motion = fruitSelectionOffset(now - startTime - index * FRUIT_FALL_STAGGER, reducedMotion);
         pivot.position.y = motion.y;
         pivot.rotation.z = motion.rotation;
         pivot.rotation.y = reducedMotion ? 0 : Math.sin(now * 0.65 + index) * 0.12;
@@ -142,19 +147,17 @@ export function createJourneyFruits(scene: THREE.Scene, reducedMotion: boolean) 
           const materials = Array.isArray(child.material) ? child.material : [child.material];
           materials.forEach(material => {
             const standard = material as THREE.MeshStandardMaterial;
-            if (standard.transparent !== (opacity < 0.999)) {
-              standard.transparent = opacity < 0.999;
-              standard.needsUpdate = true;
-            }
             standard.opacity = opacity;
             standard.depthWrite = opacity >= 0.999;
-            standard.emissive?.set(index === selectedIndex || index === hoveredIndex ? 0x592015 : 0x000000);
+            standard.emissive?.set(index < landedCount && (index === selectedIndex || index === hoveredIndex) ? 0x592015 : 0x000000);
             standard.emissiveIntensity = 0.16;
           });
         });
       });
     },
     get active() { return active; },
+    get landedCount() { return landedCount; },
+    get isEntering() { return group.visible && landedCount < records.length && !reducedMotion; },
     dispose() {
       disposed = true;
       clearFlight();

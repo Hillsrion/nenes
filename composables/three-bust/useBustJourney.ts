@@ -26,6 +26,7 @@ export function useBustJourney(props: Required<BustJourneyProps>, emit: BustJour
   const isLoading = ref(true);
   const secondModelLoading = ref(true);
   let fruits: ReturnType<typeof createJourneyFruits> | null = null;
+  let notifiedFruitLandingCount = 0;
   let secondLoadVersion = 0;
   let loadBust: ((url: string) => Promise<import("three/examples/jsm/loaders/GLTFLoader.js").GLTF | null>) | null = null;
   const profileCurveId = `bust-contour-${useId()}`;
@@ -115,6 +116,7 @@ export function useBustJourney(props: Required<BustJourneyProps>, emit: BustJour
     presentation.isRotating ||
     symptomEffects.isTransitioning() ||
     props.symptomType === "nipple" ||
+    fruits?.isEntering ||
     (props.fruitSelectionActive === true && !reduceMotion) ||
     (props.fruitTransitionActive === true && !reduceMotion);
 
@@ -401,7 +403,7 @@ export function useBustJourney(props: Required<BustJourneyProps>, emit: BustJour
 
     const targetFps = isConstrainedDevice()
       ? 24
-      : props.fruitTransitionActive || presentation.isRotating
+      : props.fruitSelectionActive || props.fruitTransitionActive || fruits?.isEntering || presentation.isRotating
         ? 60
         : 30;
     if (timestamp - lastRenderTime < 1000 / targetFps) {
@@ -425,6 +427,11 @@ export function useBustJourney(props: Required<BustJourneyProps>, emit: BustJour
     notifyFramingReady();
     presentation.notifySymptomReady();
     renderer.render(scene, camera);
+    const landedCount = fruits?.landedCount ?? 0;
+    if (landedCount !== notifiedFruitLandingCount) {
+      notifiedFruitLandingCount = landedCount;
+      emit("fruitLanding", landedCount);
+    }
     if (needsContinuousRendering() || timestamp < renderUntil) scheduleRender();
   };
 

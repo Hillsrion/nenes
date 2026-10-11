@@ -59,6 +59,7 @@
                 :selected-fruit-index="selectedFruitIndex"
                 :hovered-fruit-index="hoveredFruitIndex"
                 @fruit-ready="journeySceneReady = true"
+                @fruit-landing="journeyFruitLandingCount = $event"
                 @model-ready="journeyReadyModelUrl = $event"
                 :animation-step="sharedPalpationStep"
                 :camera-progress="displayedJourneyCameraProgress"
@@ -89,6 +90,7 @@
             :hovered-index="hoveredFruitIndex"
             :model-file="selectedJourneyModelFile"
             :scene-ready="journeySceneReady"
+            :landed-count="journeyFruitLandingCount"
             @select="selectedFruit = $event"
             @hover="hoveredFruit = $event"
             @continue="continueFruitSelection"
@@ -252,6 +254,7 @@ const symptomsProfileProgress = ref(0);
 const fruitSelectionSectionRef = ref<InstanceType<typeof FruitSelectionSection> | null>(null);
 const fruitElementRef = computed(() => fruitSelectionSectionRef.value?.sectionRef ?? null);
 const journeySceneReady = ref(false);
+const journeyFruitLandingCount = ref(0);
 const journeyReadyModelUrl = ref("");
 const {
   selectedFruit, hoveredFruit,

@@ -99,10 +99,10 @@ export function useFruitJourneySelection(options: {
     else window.scrollTo(0, destinationY);
     ScrollTrigger.update();
     // The camera arrives while the fruit fills the viewport. Give the new model
-    // a rendered frame before the fruit clears the near plane behind the lens.
+    // a rendered frame before the fruit arcs sideways to reveal it.
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     flightTween = gsap.to(flight, {
-      progress: 1, delay: reducedMotion ? 0 : 0.3, duration: reducedMotion ? 0 : 0.75,
+      progress: 1, delay: reducedMotion ? 0 : 0.15, duration: reducedMotion ? 0 : 1.05,
       ease: "power1.in",
       onStart: () => { flightPhase.value = "reveal"; },
       onComplete: () => { continuing.value = false; flightPhase.value = "idle"; unlockScroll(); },
