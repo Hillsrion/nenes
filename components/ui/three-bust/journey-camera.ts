@@ -40,6 +40,14 @@ export function createJourneyCamera(context: JourneyCameraContext) {
     const viewportWidth = canvas?.ownerDocument?.defaultView?.innerWidth ?? canvas?.clientWidth;
     return viewportWidth !== undefined ? viewportWidth < 1024 : camera.aspect < 1;
   };
+  const usesChestCloseUp = (camera: THREE.PerspectiveCamera) => {
+    const canvas = context.getCanvas();
+    const width = canvas?.ownerDocument?.defaultView?.innerWidth ?? canvas?.clientWidth;
+    if (width === undefined) return camera.aspect < 1;
+    const height = width / camera.aspect;
+    // Include phones in either orientation and tablets up to 1024px in portrait.
+    return width <= 1024 && (camera.aspect < 1 || height < 600);
+  };
   /**
    * Camera choreography. Matched eye and look-at curves travel directly past
    * the first bust's screen-right shoulder toward the second bust, without reversing
@@ -51,7 +59,7 @@ export function createJourneyCamera(context: JourneyCameraContext) {
     const { camera, firstBounds, secondPlacement, scene } = context.getSceneState();
     if (!camera || !secondPlacement) return;
     const aspect = camera.aspect;
-    const arrivalDistance = isMobileLayout(camera) ? 8.5 : ARRIVAL_DISTANCE;
+    const arrivalDistance = isMobileLayout(camera) || usesChestCloseUp(camera) ? 8.5 : ARRIVAL_DISTANCE;
     const halfFov = THREE.MathUtils.degToRad(CAMERA_FOV) / 2;
 
     const firstSize = firstBounds.getSize(new THREE.Vector3());
@@ -155,35 +163,63 @@ export function createJourneyCamera(context: JourneyCameraContext) {
     const modelProgress = THREE.MathUtils.smoothstep(clamped, 0.5, 1);
     const focus = context.getSymptomFocus() * modelProgress;
     const palpation = THREE.MathUtils.clamp(context.getPalpationProgress(), 0, 1) * modelProgress;
-    const mobile = isMobileLayout(camera);
+    const closeUp = usesChestCloseUp(camera);
+    const mobile = isMobileLayout(camera) || closeUp;
     const chest = context.getPalpationFraming?.();
-    const halfHeight = Math.tan(THREE.MathUtils.degToRad(CAMERA_FOV) / 2) * (mobile ? 8.5 : ARRIVAL_DISTANCE);
-    const symptomZoom = mobile ? Math.min(1.9, Math.max(1.35, camera.aspect * 3.8)) : SYMPTOMS_ZOOM;
-    // Crop the lower body and make the chest readable below the compact notes.
+    const arrivalDistance = mobile ? 8.5 : ARRIVAL_DISTANCE;
+    const halfHeight = Math.tan(THREE.MathUtils.degToRad(CAMERA_FOV) / 2) * arrivalDistance;
+    const profileZoom = closeUp ? 2.7 : 1;
+    // Fill the view with the breasts, trimming the outer torso margin included
+    // in the framing anchor rather than keeping the hips in view.
     const chestFitZoom = chest && chest.halfWidth > 0
-      ? halfHeight * (1 - chest.center.z / 8.5) * camera.aspect * 0.9 / chest.halfWidth
+      ? halfHeight * (1 - chest.center.z / (closeUp ? arrivalDistance : 8.5)) * camera.aspect * (closeUp ? 1.25 : 0.9) / chest.halfWidth
       : Infinity;
+    const symptomZoom = closeUp ? Math.min(3.5, chestFitZoom)
+      : mobile ? Math.min(1.9, Math.max(1.35, camera.aspect * 3.8)) : SYMPTOMS_ZOOM;
     const palpationZoom = mobile
-      ? Math.min(3.25, Math.max(2.25, camera.aspect * 5.8), chestFitZoom)
+      ? closeUp ? Math.min(3.75, chestFitZoom) : Math.min(3.25, Math.max(2.25, camera.aspect * 5.8), chestFitZoom)
       : PALPATION_ZOOM;
-    camera.zoom = THREE.MathUtils.lerp(
-      THREE.MathUtils.lerp(1, symptomZoom, focus), palpationZoom, palpation
-    );
+    camera.zoom = closeUp ? THREE.MathUtils.lerp(
+      THREE.MathUtils.lerp(1, profileZoom, modelProgress),
+      THREE.MathUtils.lerp(symptomZoom, palpationZoom, palpation), focus
+    ) : THREE.MathUtils.lerp(THREE.MathUtils.lerp(1, symptomZoom, focus), palpationZoom, palpation);
     const offsetX = -ARRIVAL_CENTER_NDC_X * halfHeight * camera.aspect;
     // Mobile centers the lower bust under the cards; desktop keeps its column.
     const centerBlend = mobile ? focus * (camera.aspect < 1 ? 1 : palpation) : 0;
     const correctionX = offsetX * (1 - (1 - centerBlend) / camera.zoom);
     camera.position.x -= correctionX;
     tmpTarget.x -= correctionX;
-    camera.position.y -= 0.2 * focus;
-    tmpTarget.y -= 0.2 * focus;
-    if (mobile && palpation > 0) {
-      const targetY = chest
-        ? chest.center.y + halfHeight / camera.zoom * 0.3 - chest.center.z * 0.8 / 8.5
-        : 0.6;
-      const offsetY = (targetY - tmpTarget.y) * palpation;
+    // In profile, the forward chest anchor rotates toward screen left. Follow
+    // that anchor so the closer framing keeps the breast inside the viewport.
+    const chestX = closeUp && chest ? THREE.MathUtils.lerp(-chest.center.z, chest.center.x, focus) : 0;
+    camera.position.x += chestX * modelProgress;
+    tmpTarget.x += chestX * modelProgress;
+    // Leave room on the right for the contour label, with a small inset on
+    // the left. Blend back to the centered chest as the model turns forward.
+    const profileInset = closeUp ? 0.3 * halfHeight * camera.aspect / camera.zoom * (1 - focus) * modelProgress : 0;
+    camera.position.x += profileInset;
+    tmpTarget.x += profileInset;
+    // Aim at the actual chest from the first reveal, rather than the full-body
+    // origin. Raise the chest in the image as it turns toward the reader so
+    // the chin clears the top edge, including on narrow portrait screens.
+    if (closeUp) {
+      const chestY = chest?.center.y ?? 0.25;
+      const targetY = chestY - halfHeight / camera.zoom * (0.28 + 0.02 * focus - 0.1 * palpation)
+        - (chest?.center.z ?? 0) * 0.8 / arrivalDistance;
+      const offsetY = (targetY - tmpTarget.y) * modelProgress;
       camera.position.y += offsetY;
       tmpTarget.y += offsetY;
+    } else {
+      camera.position.y -= 0.2 * focus;
+      tmpTarget.y -= 0.2 * focus;
+      if (mobile && palpation > 0) {
+        const targetY = chest
+          ? chest.center.y + halfHeight / camera.zoom * 0.3 - chest.center.z * 0.8 / 8.5
+          : 0.6;
+        const offsetY = (targetY - tmpTarget.y) * palpation;
+        camera.position.y += offsetY;
+        tmpTarget.y += offsetY;
+      }
     }
     camera.updateProjectionMatrix();
     camera.lookAt(tmpTarget);

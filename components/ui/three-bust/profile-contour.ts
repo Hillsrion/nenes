@@ -46,13 +46,19 @@ export function projectProfileContour(root: THREE.Object3D, camera: THREE.Camera
   const gap = Math.max(9, Math.min(16, height * 0.012));
   // Stop on the upper chest, below the neck/shoulder cut of the asset.
   const abdomenEnd = Math.min(height, bottom - (bottom - top) * 0.12);
-  for (let row = Math.ceil((top + (bottom - top) * 0.29) / step); row * step <= abdomenEnd && row < rows.length; row++) {
+  // Keep the mobile label below the centered introduction while following
+  // the same silhouette.
+  const labelTop = Math.max(top + (bottom - top) * 0.29, width < 1024 ? height * 0.7 : -Infinity);
+  for (let row = Math.ceil(labelTop / step); row * step <= abdomenEnd && row < rows.length; row++) {
     if (!Number.isFinite(rows[row])) continue;
     let sum = 0, count = 0;
     for (let neighbor = Math.max(0, row - 2); neighbor <= Math.min(rows.length - 1, row + 2); neighbor++) {
       if (Number.isFinite(rows[neighbor])) { sum += rows[neighbor]; count++; }
     }
-    points.push({ x: sum / count + gap, y: row * step });
+    const contourX = sum / count + gap;
+    // A chest close-up may crop the outer arm. Keep the mobile label inside
+    // that visible edge instead of following the silhouette off screen.
+    points.push({ x: width < 1024 ? Math.min(contourX, width - gap * 3) : contourX, y: row * step });
   }
   if (points.length < 2) return null;
   const last = points[points.length - 1];
