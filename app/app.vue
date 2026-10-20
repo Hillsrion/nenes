@@ -27,6 +27,7 @@
 
         <!-- Unified Statistics and Content Section -->
         <EntrySection
+          data-analytics-section="entry"
           :statistics-text="statisticsText"
           :content-elements="mainContentElements"
         />
@@ -78,10 +79,12 @@
           </div>
 
           <ScreeningSection
+            data-analytics-section="screening"
             :sidebar-elements="screeningContentElements"
             :title="screeningMainTitle"
           />
           <FruitSelectionSection
+            data-analytics-section="model-selection"
             ref="fruitSelectionSectionRef"
             :active="fruitSelectionActive"
             :continuing="fruitContinuing"
@@ -98,6 +101,7 @@
           <div class="relative bg-white" ref="symptomsAndExaminationContainerRef">
             <div class="relative z-20">
               <SymptomsSection
+                data-analytics-section="symptoms"
                 ref="symptomsSectionRef"
                 :title="symptomsMainTitle"
                 :intro-card="symptomsIntroCard"
@@ -110,6 +114,7 @@
               />
 
               <SelfExaminationSection
+                data-analytics-section="self-examination"
                 :steps="selfExaminationSteps"
                 :use-shared-model="true"
                 :background-video-target="journeyVideoLayerRef"
@@ -123,7 +128,7 @@
         </div>
 
         <!-- Resources Section -->
-        <ResourcesSection />
+        <ResourcesSection data-analytics-section="resources" />
         <CursorImageSpawner
           v-if="isCursorImageSpawnerEnabled"
           :images="cursorImages"
@@ -161,6 +166,7 @@ import LinksPage from "~/components/ui/LinksPage.vue";
 import { useDemoBustModelUrls } from "~/composables/useDemoBustModelUrls";
 import { useAnimationsStore } from "~/stores";
 import { useContent } from "~/composables/useContent";
+import { useAudienceTracking } from "~/composables/useAudienceTracking";
 import { useLenis } from "lenis/vue";
 
 // Store
@@ -197,6 +203,8 @@ const {
 const isLoadingComplete = computed(
   () => store.sections.loading?.state === "isComplete"
 );
+
+useAudienceTracking(isLoadingComplete);
 
 // Prevent scroll during loading using useHead with Tailwind classes on both html and body
 useHead({
@@ -363,28 +371,6 @@ onMounted(async () => {
         });
       }, 150);
     });
-  }
-  // Matomo tracking code
-  const config = useRuntimeConfig();
-  const matomoUrl = config.public.matomoUrl;
-  const siteId = config.public.siteId;
-
-  if (process.client && matomoUrl && siteId) {
-    var _paq = (window._paq = window._paq || []);
-    _paq.push(["trackPageView"]);
-    _paq.push(["enableLinkTracking"]);
-    (function () {
-      var u = matomoUrl + "/";
-      _paq.push(["setTrackerUrl", u + "matomo.php"]);
-      _paq.push(["setSiteId", siteId]);
-      var d = document,
-        g = d.createElement("script"),
-        s = d.getElementsByTagName("script")[0];
-      g.type = "text/javascript";
-      g.async = true;
-      g.src = u + "matomo.js";
-      s.parentNode.insertBefore(g, s);
-    })();
   }
 });
 </script>

@@ -38,6 +38,7 @@
                 :title="`Appeler le numéro ${resource.phone}`"
                 v-if="resource.phone"
                 :href="`tel:${resource.phone}`"
+                :data-analytics-resource="`${resource.id}:phone`"
               >
                 {{ resource.phone }}
                 <span class="italic text-base"
@@ -52,6 +53,7 @@
                     : `https://${resource.website}`
                 "
                 target="_blank"
+                :data-analytics-resource="`${resource.id}:website`"
                 v-if="resource.website"
               >
                 {{ resource.website }}
@@ -151,24 +153,28 @@ onUnmounted(() => {
 
 const resources = [
   {
+    id: "cancer-info",
     title: "Numéro national Cancer Info",
     phone: "0 805 123 124",
     description:
       "Pour obtenir des informations fiables et échanger avec des spécialistes.",
   },
   {
+    id: "ruban-rose",
     title: "Ruban rose",
     website: "www.cancerdusein.org",
     description:
       "Association dédiée à la sensibilisation et au financement de la recherche.",
   },
   {
+    id: "ligue-cancer",
     title: "La Ligue contre le cancer",
     website: "www.ligue-cancer.net",
     description:
       "Informations, soutien psychologique, accompagnement et groupes de parole.",
   },
   {
+    id: "sante-publique",
     title: "Santé publique France",
     website: "www.santepubliquefrance.fr",
     description: "Recommandations officielles et ressources sur le dépistage.",

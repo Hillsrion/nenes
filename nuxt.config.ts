@@ -51,8 +51,9 @@ export default defineNuxtConfig({
     "@nuxtjs/google-fonts",
     "@pinia/nuxt",
     "lenis/nuxt",
-    // ["nuxt-matomo", { matomoUrl: "https://ismaelsebbane.matomo.cloud/", siteId: 1 }],
   ],
+
+  plugins: ["~/plugins/cloudflare-analytics.client"],
 
   typescript: {
     tsConfig: {
@@ -190,11 +191,12 @@ export default defineNuxtConfig({
         sourceComparisonEnabled:
           process.env.NUXT_PUBLIC_ENABLE_3D_SOURCE_COMPARISON === "true",
       },
-      // Matomo configuration
-      matomoUrl:
-        process.env.NUXT_PUBLIC_MATOMO_URL ||
-        "https://ismaelsebbane.matomo.cloud",
-      siteId: process.env.NUXT_PUBLIC_MATOMO_SITE_ID || "1",
+      // The Web Analytics site token is public; never put an API token here.
+      cloudflareAnalytics: {
+        token: process.env.NUXT_PUBLIC_CLOUDFLARE_ANALYTICS_TOKEN || "9a5621b4526f4a30b17d5cc38fe7786f",
+        hosts: process.env.NUXT_PUBLIC_CLOUDFLARE_ANALYTICS_HOSTS || "nenes.ismaelsebbane.com",
+        eventsEndpoint: process.env.NUXT_PUBLIC_CLOUDFLARE_ANALYTICS_EVENTS_ENDPOINT || "https://nenes-analytics.hypersensibles.workers.dev/events",
+      },
     },
   },
 });

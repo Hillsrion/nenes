@@ -179,6 +179,11 @@ const wrapped = wrap(0, 360, angleValue);
 
 ## 🛠️ Tech Stack
 
+Le suivi utilise Cloudflare Web Analytics pour l’audience, et Analytics Engine
+pour les sections atteintes et les clics sur les ressources. Voir
+[la configuration Cloudflare](docs/CLOUDFLARE_ANALYTICS.md) pour la publication
+et la consultation des statistiques du domaine public.
+
 - **Framework**: Nuxt 4 with Vue 3 Composition API
 - **Language**: TypeScript with strict typing
 - **Styling**: Tailwind CSS v4

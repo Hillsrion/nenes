@@ -6,7 +6,7 @@ import { createJourneyFruits, FRUIT_CAMERA_DISTANCE } from "../components/ui/thr
 import { journeyScrollProgress } from "../utils/journey-scroll-progress";
 import { fruitSelectionOffset, fruitLandingCount, FRUIT_FALL_DURATION, FRUIT_FALL_STAGGER } from "../utils/fruit-selection-motion";
 import { resolveJourneyFruitModel } from "../config/bust-fruit-catalog";
-import { FRUIT_COVER_PROGRESS, fruitFlightPosition } from "../utils/fruit-flight-motion";
+import { FRUIT_COVER_DEPTH, FRUIT_COVER_PROGRESS, fruitFlightPosition } from "../utils/fruit-flight-motion";
 import { journeyFruitChoices } from "../config/bust-fruit-catalog";
 
 test("the clicked fruit sweeps horizontally, covers desktop and mobile, then arcs out in front of the camera", () => {
@@ -39,7 +39,7 @@ test("the clicked fruit sweeps horizontally, covers desktop and mobile, then arc
       const p = FRUIT_COVER_PROGRESS + (1 - FRUIT_COVER_PROGRESS) * i / 100;
       const pose = fruitFlightPosition(p, 2, 0.04, radius);
       assert.ok(pose.x > previousX, "the fruit leaves toward the right");
-      assert.ok(Math.abs(pose.x ** 2 + (pose.z + 0.12 + radius) ** 2 - radius ** 2) < 1e-9);
+      assert.ok(Math.abs(pose.x ** 2 + (pose.z - FRUIT_COVER_DEPTH + radius) ** 2 - radius ** 2) < 1e-9);
       previousX = pose.x;
     }
     const exit = fruitFlightPosition(1, 2, 0.04, radius);

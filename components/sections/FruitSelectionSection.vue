@@ -10,8 +10,7 @@
       </button>
     </div>
     <footer class="fruit-footer absolute inset-x-5 bottom-[8svh] flex flex-col items-center gap-3 text-center">
-      <button type="button" class="rounded-full bg-primary px-7 py-3 text-sm font-medium text-white transition hover:bg-primary/85 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary disabled:opacity-60" :disabled="continuing || !sceneReady || selectedIndex >= landedCount" @click="continueJourney">{{ continuing ? 'Le modèle arrive…' : 'Continuer avec ce gabarit' }} <span aria-hidden="true">↗</span></button>
-      <p class="text-xs opacity-65">Trois repères de volume, à choisir librement.</p>
+      <button type="button" class="inline-flex items-center gap-4 rounded-full bg-primary px-7 py-3 text-sm font-medium text-white transition hover:bg-primary/85 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary disabled:opacity-60" :disabled="continuing || !sceneReady || selectedIndex >= landedCount" @click="continueJourney">{{ continuing ? 'Le modèle arrive…' : 'Continuer avec ce gabarit' }} <span aria-hidden="true">↗</span></button>
     </footer>
   </section>
 </template>

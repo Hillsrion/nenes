@@ -15,9 +15,3 @@ export type IntroCard = {
   title: string;
   description: string;
 };
-
-declare global {
-  interface Window {
-    _paq: Array<Array<string | number>>;
-  }
-}

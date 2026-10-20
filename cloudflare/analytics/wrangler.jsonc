@@ -1,0 +1,19 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "nenes-analytics",
+  "main": "worker.ts",
+  "account_id": "a503ff7440f0bf13c7058d387d84661d",
+  "compatibility_date": "2026-10-12",
+  "workers_dev": true,
+  "preview_urls": false,
+  "vars": {
+    "ALLOWED_ORIGIN": "https://nenes.ismaelsebbane.com"
+  },
+  "analytics_engine_datasets": [
+    { "binding": "EVENTS", "dataset": "nenes_interactions" }
+  ],
+  "ratelimits": [
+    { "name": "RATE_LIMITER", "namespace_id": "100000097", "simple": { "limit": 120, "period": 60 } }
+  ],
+  "observability": { "enabled": false }
+}
