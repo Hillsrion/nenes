@@ -176,6 +176,13 @@ visibles dans le gros plan mobile.
 Après une nouvelle calibration, reconstruire aussi la copie optimisée : elle
 est prioritaire dans le parcours lorsqu’elle est présente.
 
+La palpation d’Anaïs utilise `config/anais-full-palpation.json`. Les repères
+`breasts` centrent les passages larges ; les repères `nipples`, distincts pour
+chaque côté, centrent le pincement sur les mamelons. Ces coordonnées sont en
+unités du maillage préparé (contrairement au profil normalisé des symptômes).
+Contrôler l’alignement du pouce et de l’index pendant le pincement, puis
+relancer `model:palpation:check` après toute modification de ces repères.
+
 Pour reconstruire une nouvelle sortie, choisir des chemins privés encore
 inexistants et conserver toute sortie précédente avant de réutiliser le nom
 stable :

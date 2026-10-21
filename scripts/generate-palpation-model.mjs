@@ -75,7 +75,11 @@ for (const side of [1,-1]) {
   // Arm is down in the source scan: show its accessible anterior axillary fold
   // and the bridge toward the upper outer breast, without inventing an arm rig.
   for(const [x,y] of (profile?.axilla ?? [[0.247,0.31],[0.23,0.28],[0.205,0.25]]))specifications.push({x:x*side,y,side,kind:'axilla',duration:3.6});
-  specifications.push({x:cx,y:cy,side,kind:'nipple',duration:4});
+  // Breast centers guide the broad passes; nipple pinches need their own
+  // anatomical landmarks on full-body scans. Uncalibrated profiles keep the
+  // historical breast-center fallback. Coordinates are in source mesh units.
+  const [nx, ny] = profile?.nipples?.[side === 1 ? 0 : 1] ?? [cx, cy];
+  specifications.push({x:nx,y:ny,side,kind:'nipple',duration:4});
 }
 let sequenceTime=0;
 const stations = specifications.map(spec => {

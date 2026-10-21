@@ -1,26 +1,38 @@
 <template>
   <div ref="root" class="intro-photos" role="img" aria-label="Des femmes réunies, une succession de portraits et de moments partagés dans un salon">
     <div class="intro-backgrounds" aria-hidden="true">
-      <img
-        v-for="(src, index) in INTRO_BACKGROUNDS" :key="src"
-        :ref="element => { if (element) backgrounds[index] = element as HTMLImageElement }"
-        :src="src" alt="" :class="`intro-photo intro-photo-${index}`"
-        :style="{ opacity: index === 0 ? 1 : 0 }"
-        :fetchpriority="index === 0 ? 'high' : 'auto'" decoding="async"
-      />
+      <picture v-for="(src, index) in INTRO_BACKGROUNDS" :key="src">
+        <source :media="INTRO_MOBILE_MEDIA" :srcset="INTRO_MOBILE_BACKGROUNDS[index]" />
+        <img
+          :ref="element => { if (element) backgrounds[index] = element as HTMLImageElement }"
+          :src="src" :srcset="INTRO_BACKGROUND_SRCSETS[index]" :sizes="INTRO_DESKTOP_SIZES"
+          alt="" class="intro-photo" @load="onBackgroundLoad"
+          :style="{ opacity: index === 0 ? 1 : 0, '--mobile-photo-anchor': `${INTRO_MOBILE_ANCHORS[index] * 100}%` }"
+          :fetchpriority="index === 0 ? 'high' : 'auto'" decoding="async"
+        />
+      </picture>
     </div>
     <canvas ref="canvas" class="intro-canvas" :class="{ 'is-ready': webglReady }" aria-hidden="true" />
-    <img
-      v-for="(src, index) in INTRO_CUTOUTS" :key="src"
-      :ref="element => { if (element) cutouts[index] = element as HTMLImageElement }"
-      :src="src" alt="" :class="`intro-photo intro-cutout intro-photo-${index + 1}`"
-      aria-hidden="true" decoding="async" draggable="false"
-    />
+    <picture v-for="(src, index) in INTRO_CUTOUTS" :key="src" aria-hidden="true">
+      <source :media="INTRO_MOBILE_MEDIA" :srcset="INTRO_MOBILE_CUTOUTS[index]" />
+      <img
+        :ref="element => { if (element) cutouts[index] = element as HTMLImageElement }"
+        :src="src" :srcset="INTRO_CUTOUT_SRCSETS[index]" :sizes="INTRO_DESKTOP_SIZES"
+        alt="" class="intro-photo intro-cutout"
+        :style="{ '--mobile-photo-anchor': `${INTRO_MOBILE_ANCHORS[index + 1] * 100}%` }"
+        decoding="async" draggable="false"
+      />
+    </picture>
   </div>
 </template>
 
 <script setup lang="ts">
-import { INTRO_BACKGROUNDS, INTRO_CUTOUTS, getIntroState } from '~/utils/intro-sequence';
+import {
+  INTRO_BACKGROUNDS, INTRO_CUTOUTS, INTRO_MOBILE_MEDIA,
+  INTRO_MOBILE_BACKGROUNDS, INTRO_MOBILE_CUTOUTS, INTRO_MOBILE_ANCHORS,
+  INTRO_BACKGROUND_SRCSETS, INTRO_CUTOUT_SRCSETS, INTRO_DESKTOP_SIZES,
+  getIntroCrop, getIntroState,
+} from '~/utils/intro-sequence';
 import type { WebGLRenderer, Texture, ShaderMaterial, PlaneGeometry } from 'three';
 import { getRenderPixelRatio } from './three-bust/scene-utils';
 
@@ -41,6 +53,11 @@ let disposed = false;
 let renderScene: (() => void) | undefined;
 let width = 1;
 let height = 1;
+let photoMediaQuery: MediaQueryList | undefined;
+let textureLoadVersion = 0;
+let textureSources: string[] = [];
+let loadPhotoTextures: (() => Promise<void>) | undefined;
+let resizeScene: (() => void) | undefined;
 
 const curtainSeeds = [2.4, 8.7, 15.2] as const;
 
@@ -160,7 +177,7 @@ function paint() {
     });
   }
   if (material && textures.length === 4 && !renderer?.getContext().isContextLost()) {
-    const anchors = width <= 768 ? [0.55, 0.60, 0.50, 0.30] : [0.5, 0.5, 0.5, 0.5];
+    const anchors = photoMediaQuery?.matches ? INTRO_MOBILE_ANCHORS : [0.5, 0.5, 0.5, 0.5];
     const seed = curtainSeeds[Math.min(state.from, curtainSeeds.length - 1)]!;
     material.uniforms.uFrom!.value = textures[state.from];
     material.uniforms.uTo!.value = textures[state.to];
@@ -196,6 +213,17 @@ function onContextRestored() {
   webglReady.value = true;
   schedulePaint();
 }
+function onPhotoFormatChange() {
+  // The picture elements switch immediately; keep the DOM visible until the
+  // matching WebGL textures are loaded, including during a phone rotation.
+  webglReady.value = false;
+  resizeScene?.();
+  void loadPhotoTextures?.();
+}
+function onBackgroundLoad() {
+  // A resize or a display-density change can select a different srcset candidate.
+  void loadPhotoTextures?.();
+}
 defineExpose({ setProgress });
 
 onMounted(async () => {
@@ -203,6 +231,7 @@ onMounted(async () => {
   paint();
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   document.addEventListener('visibilitychange', onVisibilityChange);
+  photoMediaQuery = window.matchMedia(INTRO_MOBILE_MEDIA);
   try {
     const THREE = await import('three');
     if (disposed) return;
@@ -230,32 +259,54 @@ onMounted(async () => {
       height = root.value.clientHeight;
       renderer.setPixelRatio(getRenderPixelRatio());
       renderer.setSize(width, height, false);
-      const ratio = (width / height) / (1366 / 768);
-      material.uniforms.uCrop!.value.set(Math.min(ratio, 1), Math.min(1 / ratio, 1));
+      const crop = getIntroCrop(width, height, photoMediaQuery?.matches ?? false);
+      material.uniforms.uCrop!.value.set(crop.x, crop.y);
       material.uniforms.uPixel!.value = 1 / (height * renderer.getPixelRatio());
       material.uniforms.uAspect!.value = width / height;
       schedulePaint();
     };
+    resizeScene = resize;
     resizeObserver = new ResizeObserver(resize);
     resizeObserver.observe(root.value);
     resize();
     const loader = new THREE.TextureLoader();
-    const loaded = await Promise.allSettled(INTRO_BACKGROUNDS.map(src => loader.loadAsync(src)));
-    const successful = loaded.flatMap(result => result.status === 'fulfilled' ? [result.value] : []);
-    if (disposed || successful.length !== 4) {
-      successful.forEach(texture => texture.dispose());
-      return;
-    }
-    textures = successful;
-    textures.forEach(texture => {
-      texture.minFilter = THREE.LinearFilter;
-      texture.magFilter = THREE.LinearFilter;
-      texture.generateMipmaps = false;
-    });
-    webglReady.value = true;
-    schedulePaint();
+    loadPhotoTextures = async () => {
+      const version = ++textureLoadVersion;
+      await Promise.allSettled(backgrounds.map(image => image.decode()));
+      if (disposed || version !== textureLoadVersion) return;
+      const mobile = photoMediaQuery?.matches ?? false;
+      const fallbacks = mobile ? INTRO_MOBILE_BACKGROUNDS : INTRO_BACKGROUNDS;
+      const sources = fallbacks.map((src, index) => backgrounds[index]?.currentSrc || src);
+      // A picture's selection may follow its media-query event. Its load event
+      // retries once the new format is ready, keeping the DOM fallback visible.
+      if (sources.some(src => src.includes('/intro/mobile/') !== mobile)) return;
+      if (sources.every((src, index) => src === textureSources[index])) {
+        webglReady.value = true;
+        schedulePaint();
+        return;
+      }
+      const loaded = await Promise.allSettled(sources.map(src => loader.loadAsync(src)));
+      const successful = loaded.flatMap(result => result.status === 'fulfilled' ? [result.value] : []);
+      if (disposed || version !== textureLoadVersion || successful.length !== sources.length) {
+        successful.forEach(texture => texture.dispose());
+        return;
+      }
+      const previous = textures;
+      textures = successful;
+      textureSources = sources;
+      textures.forEach(texture => {
+        texture.minFilter = THREE.LinearFilter;
+        texture.magFilter = THREE.LinearFilter;
+        texture.generateMipmaps = false;
+      });
+      previous.forEach(texture => texture.dispose());
+      webglReady.value = true;
+      schedulePaint();
+    };
+    photoMediaQuery.addEventListener('change', onPhotoFormatChange);
     canvas.value?.addEventListener('webglcontextlost', onContextLost);
     canvas.value?.addEventListener('webglcontextrestored', onContextRestored);
+    await loadPhotoTextures();
   } catch (error) {
     // The same DOM sequence remains available on devices without WebGL.
     console.warn('Photo curtain unavailable; using the image transition.', error);
@@ -268,6 +319,7 @@ onBeforeUnmount(() => {
   disposed = true;
   cancelAnimationFrame(frame);
   resizeObserver?.disconnect();
+  photoMediaQuery?.removeEventListener('change', onPhotoFormatChange);
   document.removeEventListener('visibilitychange', onVisibilityChange);
   canvas.value?.removeEventListener('webglcontextlost', onContextLost);
   canvas.value?.removeEventListener('webglcontextrestored', onContextRestored);
@@ -292,10 +344,7 @@ onBeforeUnmount(() => {
 .intro-canvas.is-ready { opacity: 1; }
 .intro-cutout { z-index: 2; visibility: hidden; pointer-events: none; will-change: transform; }
 @media (max-width: 768px) {
-  .intro-photo-0 { object-position: 55% center; }
-  .intro-photo-1 { object-position: 60% center; }
-  .intro-photo-2 { object-position: 50% center; }
-  .intro-photo-3 { object-position: 30% center; }
+  .intro-photo { object-position: var(--mobile-photo-anchor) center; }
 }
 @media (prefers-reduced-motion: reduce) {
   .intro-cutout { will-change: auto; }
