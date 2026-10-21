@@ -3,6 +3,7 @@ import { writeFile } from 'node:fs/promises';
 // Bake brush pressure into filled SVG outlines: the line stays organic at every
 // card size, without a uniform SVG stroke or any browser-side drawing code.
 const color = '#ffd1e2';
+const brushWidthScale = 0.85;
 const output = new URL('../public/images/symptoms/updated/', import.meta.url);
 const format = (n) => Number(n.toFixed(1));
 const coordinate = ([x, y]) => `${format(x)} ${format(y)}`;
@@ -58,7 +59,7 @@ function brush(path, width, phase = 0, closed = false) {
         + 0.22 * Math.sin(t * Math.PI * 5 + phase)
         + 0.1 * Math.sin(t * Math.PI * 9 + phase * 0.7);
     const taper = closed ? 1 : 0.18 + 0.82 * Math.min(1, t / 0.09, (1 - t) / 0.09);
-    const radius = width / 2 * pressure * taper;
+    const radius = width * brushWidthScale / 2 * pressure * taper;
     edges[0].push([x - dy / length * radius, y + dx / length * radius]);
     edges[1].push([x + dy / length * radius, y - dx / length * radius]);
   });
