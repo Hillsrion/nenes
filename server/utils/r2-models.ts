@@ -1,5 +1,12 @@
 import { ListObjectsV2Command, S3Client } from "@aws-sdk/client-s3";
 import type { H3Event } from "h3";
+import { bustFruitModels, journeyFruitChoices } from "~/config/bust-fruit-catalog";
+import { probePublicBustModelFiles } from "./public-bust-models";
+
+const listKnownPublicModels = defineCachedFunction(probePublicBustModelFiles, {
+  name: "public-bust-model-files",
+  maxAge: 60,
+});
 
 type R2ModelsConnection = {
   bucketName: string;
@@ -48,7 +55,16 @@ const getR2ModelsConnection = (event: H3Event): R2ModelsConnection | null => {
 
 export const listPublishedR2ModelFiles = async (event: H3Event): Promise<string[]> => {
   const connection = getR2ModelsConnection(event);
-  if (!connection) return [];
+  if (!connection) {
+    const { r2 } = useRuntimeConfig(event).public;
+    return listKnownPublicModels(String(r2.modelsPublicUrl || ""), [
+      ...bustFruitModels.map(model => model.fileName),
+      ...journeyFruitChoices.map(choice => choice.modelBinding),
+      String(r2.demoMonoviewModel || ""),
+      String(r2.demoMultiviewModel || ""),
+      String(r2.palpationModel || ""),
+    ]);
+  }
 
   const files: string[] = [];
   let continuationToken: string | undefined;

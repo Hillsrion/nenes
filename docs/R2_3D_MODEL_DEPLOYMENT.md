@@ -112,6 +112,14 @@ CLOUDFLARE_R2_3D_ACCESS_KEY_ID=<clé-r2-limitée>
 CLOUDFLARE_R2_3D_SECRET_ACCESS_KEY=<secret-r2-limité>
 ```
 
+Sans ces identifiants, l’API vérifie par requêtes publiques `HEAD` les noms
+connus du catalogue fruit, leurs liaisons de parcours et les modèles de
+démonstration configurés. Seuls les fichiers publiés sont renvoyés, avec leur
+copie optimisée lorsqu’elle existe. Le résultat est mis en cache une minute.
+Ainsi, les choix moyen et gros gardent leurs modèles distincts sur les branch
+deploys sans accès privé au bucket. Les autres modèles nécessitent toujours
+les identifiants de listage pour être découverts automatiquement.
+
 Pour éviter toute ambiguïté de cache lors d'une refonte importante, utiliser
 un nouveau nom versionné, par exemple `bust-multiview-v3-symptoms.glb`.
 
