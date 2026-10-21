@@ -12,15 +12,41 @@ const fragmentShader = /* glsl */ `
   uniform float uPointCount;
   varying vec2 vUv;
 
+  float blobHash(vec2 position) {
+    position = fract(position * vec2(123.34, 456.21));
+    position += dot(position, position + 45.32);
+    return fract(position.x * position.y);
+  }
+
+  float blobNoise(vec2 position) {
+    vec2 cell = floor(position);
+    vec2 fraction = fract(position);
+    vec2 blend = fraction * fraction * (3.0 - 2.0 * fraction);
+    return mix(
+      mix(blobHash(cell), blobHash(cell + vec2(1.0, 0.0)), blend.x),
+      mix(blobHash(cell + vec2(0.0, 1.0)), blobHash(cell + vec2(1.0)), blend.x),
+      blend.y
+    );
+  }
+
   float animatedPoint(vec2 position, vec4 point, float rotation, float seed) {
-    vec2 center = point.xy + vec2(sin(uTime * .85 + seed), cos(uTime * .7 + seed)) * 1.4;
-    vec2 delta = position - center;
+    // Anchor the stain to the baked point. Only its rim flows and deforms.
+    vec2 delta = position - point.xy;
     float c = cos(rotation), s = sin(rotation);
     vec2 local = vec2(c * delta.x + s * delta.y, -s * delta.x + c * delta.y) / point.zw;
+    float radius = length(local);
+    // Keep the fully opaque core and avoid noise work outside the moving rim.
+    if (radius < 1.04) return 1.0;
+    if (radius > 1.7) return 0.0;
     float angle = atan(local.y, local.x);
-    float edge = 1.13 + .045 * sin(angle * 3.0 + uTime * 1.3 + seed)
-      + .03 * cos(angle * 5.0 - uTime * .85) + .02 * sin(angle * 7.0 + uTime * .6);
-    return 1.0 - smoothstep(edge - .025, edge + .025, length(local));
+    // Sampling noise around a circle keeps the edge continuous at 0 / 2π.
+    // Two flowing scales make uneven ink lobes rather than a pulsing ellipse.
+    vec2 ring = vec2(cos(angle), sin(angle));
+    float broad = blobNoise(ring * 1.65 + vec2(seed * 2.1, uTime * .55));
+    float detail = blobNoise(ring * 4.2 + vec2(-uTime * .32, seed * 1.7));
+    float edge = max(1.07, 1.29 + .48 * (broad - .5) + .20 * (detail - .5)
+      + .04 * sin(angle * 2.0 + uTime * .8 + seed));
+    return 1.0 - smoothstep(edge - .025, edge + .025, radius);
   }
 
   void main() {
