@@ -9,6 +9,7 @@ export type Card = {
 
 export type SymptomCardData = Card & {
   symptom: Exclude<SymptomType, "none">;
+  illustration: string;
 };
 
 export type IntroCard = {

@@ -49,23 +49,27 @@ export const useContent = () => {
   const symptomsCards = [
     {
       title: "Modification de la taille, de la forme ou de la symétrie.",
-      image: "/images/symptoms/symptoms-01.avif",
+      image: "/images/symptoms/updated/symptoms-01.webp",
+      illustration: "/images/symptoms/updated/symptoms-01.svg",
       symptom: "asymmetry",
     },
     {
       title: "Changement d'aspect de la peau",
       subtitle: `rougeur, aspect de "peau d'orange", plis`,
-      image: "/images/symptoms/symptoms-02.avif",
+      image: "/images/symptoms/updated/symptoms-02.webp",
+      illustration: "/images/symptoms/updated/symptoms-02.svg",
       symptom: "skin",
     },
     {
       title: "Apparition de fossettes ou de croûtes",
-      image: "/images/symptoms/symptoms-03.avif",
+      image: "/images/symptoms/updated/symptoms-03.webp",
+      illustration: "/images/symptoms/updated/symptoms-03.svg",
       symptom: "dimpling",
     },
     {
       title: "Écoulement ou modification du mamelon",
-      image: "/images/symptoms/symptoms-04.avif",
+      image: "/images/symptoms/updated/symptoms-04.webp",
+      illustration: "/images/symptoms/updated/symptoms-04.svg",
       symptom: "nipple",
     },
   ] satisfies SymptomCardData[];

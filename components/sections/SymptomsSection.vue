@@ -74,6 +74,7 @@
               :subtitle="card.subtitle"
               :description="card.description"
               :image="card.image"
+              :illustration="card.illustration"
             />
           </div>
         </div>
