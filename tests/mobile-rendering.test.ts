@@ -84,7 +84,7 @@ test("desktop and landscape tablets retain their original zoom and camera positi
   journey.dispose();
 });
 
-test("mobile palpation zooms into the chest below the instruction cards", () => {
+test("mobile symptoms and palpation enlarge the screen-right breast below the instruction cards", () => {
   for (const chest of [
     { center: new THREE.Vector3(0, 0.4, 0.5), halfWidth: 0.49 },
     { center: new THREE.Vector3(0, -0.11, 0.45), halfWidth: 0.68 },
@@ -105,26 +105,22 @@ test("mobile palpation zooms into the chest below the instruction cards", () => 
       journey.updateCameraForProgress(1);
       // The full-body gabarits have different chest heights and breast widths.
       const center = placement.position.clone().add(chest.center);
-      if (width! < height!) {
-        assert.ok(Math.abs(center.clone().project(camera).x) < 0.01);
-        // The anchor includes outer torso margins beyond the breast itself.
-        for (const side of [-chest.halfWidth * 0.75, chest.halfWidth * 0.75]) {
-          const breast = center.clone().add(new THREE.Vector3(side, 0, 0)).project(camera);
-          assert.ok(Math.abs(breast.x) < 1, `both breasts fit at ${width}×${height}`);
-        }
-      }
+      const selectedBreast = center.clone().add(new THREE.Vector3(chest.halfWidth * 0.55, 0, 0));
       const observationZoom = camera.zoom;
-      palpation = 1;
-      journey.updateCameraForProgress(1);
-      assert.ok(camera.zoom >= observationZoom, `palpation keeps chest detail at ${width}×${height}`);
-      assert.ok(observationZoom > 1.8, `symptoms already use a chest close-up at ${width}×${height}`);
-      const demonstration = center.clone().project(camera);
-      assert.ok(Math.abs(demonstration.x) < 0.01, `mobile centers the chest and gesture at ${width}×${height}`);
-      for (const side of [-chest.halfWidth * 0.75, chest.halfWidth * 0.75]) {
-        const breast = center.clone().add(new THREE.Vector3(side, 0, 0)).project(camera);
-        assert.ok(Math.abs(breast.x) < 1, `both breasts stay in the close-up at ${width}×${height}`);
+      assert.ok(observationZoom > 2.5, `symptoms show more detail at ${width}×${height}`);
+      // Check forward and reverse transitions: the same breast stays centered.
+      for (palpation of [0, 0.5, 1, 0.5, 0]) {
+        journey.updateCameraForProgress(1);
+        assert.ok(camera.zoom >= observationZoom, `palpation keeps chest detail at ${width}×${height}`);
+        const demonstration = selectedBreast.clone().project(camera);
+        assert.ok(Math.abs(demonstration.x) < 0.01, `the model's left breast is centered at ${width}×${height}`);
+        assert.ok(center.clone().project(camera).x < -0.1, "the view moves toward screen right");
+        for (const side of [0.15, 0.95]) {
+          const edge = center.clone().add(new THREE.Vector3(chest.halfWidth * side, 0, 0)).project(camera);
+          assert.ok(Math.abs(edge.x) < 1, `the selected breast and gesture fit at ${width}×${height}`);
+        }
+        assert.ok(demonstration.y > 0 && demonstration.y < 0.4, `the breast stays below the upper notes at ${width}×${height}`);
       }
-      assert.ok(demonstration.y > 0 && demonstration.y < 0.4, `the chest stays visible below the upper notes at ${width}×${height}`);
       const head = placement.position.clone().add(new THREE.Vector3(0, 1.3, 0)).project(camera);
       assert.ok(head.y > 1, `the head stays above the viewport at ${width}×${height}`);
       const lowerBody = placement.position.clone().add(new THREE.Vector3(0, -2.5, 0)).project(camera);

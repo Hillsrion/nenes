@@ -170,29 +170,31 @@ export function createJourneyCamera(context: JourneyCameraContext) {
     const arrivalDistance = mobile ? 8.5 : ARRIVAL_DISTANCE;
     const halfHeight = Math.tan(THREE.MathUtils.degToRad(CAMERA_FOV) / 2) * arrivalDistance;
     const profileZoom = closeUp ? 2.7 : 1;
-    // Fill the view with the breasts, trimming the outer torso margin included
-    // in the framing anchor rather than keeping the hips in view.
+    // On phones, enlarge one breast so symptoms and hand movements are legible.
+    // The chest anchor includes outer torso margins beyond the breast itself.
     const chestFitZoom = chest && chest.halfWidth > 0
-      ? halfHeight * (1 - chest.center.z / (closeUp ? arrivalDistance : 8.5)) * camera.aspect * (closeUp ? 1.25 : 0.9) / chest.halfWidth
+      ? halfHeight * (1 - chest.center.z / (closeUp ? arrivalDistance : 8.5)) * camera.aspect * (closeUp ? 1.75 : 0.9) / chest.halfWidth
       : Infinity;
-    const symptomZoom = closeUp ? Math.min(3.5, chestFitZoom)
+    const symptomZoom = closeUp ? Math.min(5, chestFitZoom)
       : mobile ? Math.min(1.9, Math.max(1.35, camera.aspect * 3.8)) : SYMPTOMS_ZOOM;
     const palpationZoom = mobile
-      ? closeUp ? Math.min(3.75, chestFitZoom) : Math.min(3.25, Math.max(2.25, camera.aspect * 5.8), chestFitZoom)
+      ? closeUp ? Math.min(5.25, chestFitZoom) : Math.min(3.25, Math.max(2.25, camera.aspect * 5.8), chestFitZoom)
       : PALPATION_ZOOM;
     camera.zoom = closeUp ? THREE.MathUtils.lerp(
       THREE.MathUtils.lerp(1, profileZoom, modelProgress),
       THREE.MathUtils.lerp(symptomZoom, palpationZoom, palpation), focus
     ) : THREE.MathUtils.lerp(THREE.MathUtils.lerp(1, symptomZoom, focus), palpationZoom, palpation);
     const offsetX = -ARRIVAL_CENTER_NDC_X * halfHeight * camera.aspect;
-    // Mobile centers the lower bust under the cards; desktop keeps its column.
-    const centerBlend = mobile ? focus * (camera.aspect < 1 ? 1 : palpation) : 0;
+    // Phone close-ups follow the breast in either orientation; desktop keeps its column.
+    const centerBlend = closeUp ? focus : mobile ? focus * (camera.aspect < 1 ? 1 : palpation) : 0;
     const correctionX = offsetX * (1 - (1 - centerBlend) / camera.zoom);
     camera.position.x -= correctionX;
     tmpTarget.x -= correctionX;
-    // In profile, the forward chest anchor rotates toward screen left. Follow
-    // that anchor so the closer framing keeps the breast inside the viewport.
-    const chestX = closeUp && chest ? THREE.MathUtils.lerp(-chest.center.z, chest.center.x, focus) : 0;
+    // Follow the profile, then aim at screen right (the model's left breast).
+    // Scale the offset with the selected bust, blending it in with the close-up.
+    const chestX = closeUp && chest ? THREE.MathUtils.lerp(
+      -chest.center.z, chest.center.x + chest.halfWidth * 0.55, focus
+    ) : 0;
     camera.position.x += chestX * modelProgress;
     tmpTarget.x += chestX * modelProgress;
     // Leave room on the right for the contour label, with a small inset on
