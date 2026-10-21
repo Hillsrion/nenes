@@ -166,6 +166,15 @@ Le sélecteur du parcours lie l’orange au fichier local stable
 Les bras restent fixes ; une main séparée montre les chapitres sein, aisselle,
 mamelon et autre côté. Les symptômes utilisent les repères propres à ce scan
 complet dans `config/anais-full-symptoms.json`, différents du profil multivue.
+Les centres et les `radii` sont exprimés en fractions des demi-dimensions du
+maillage neutre. Les rayons propres au scan complet limitent les effets aux
+seins ; les rayons par défaut des bustes tronqués débordent sur le thorax et
+le ventre. Le viewer reprend ces mêmes rayons pour la coloration.
+Les fossettes et croûtes restent sur le même sein que la rougeur et
+l’écoulement (X positif, à droite pour la personne qui regarde), pour rester
+visibles dans le gros plan mobile.
+Après une nouvelle calibration, reconstruire aussi la copie optimisée : elle
+est prioritaire dans le parcours lorsqu’elle est présente.
 
 Pour reconstruire une nouvelle sortie, choisir des chemins privés encore
 inexistants et conserver toute sortie précédente avant de réutiliser le nom

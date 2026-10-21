@@ -178,8 +178,8 @@ const addMorphTargets = (mesh) => {
         vertex.y,
         rightCenter.x,
         rightCenter.y,
-        half.x * 0.38,
-        half.y * 0.28
+        half.x * (profile?.radii?.breast?.[0] ?? 0.38),
+        half.y * (profile?.radii?.breast?.[1] ?? 0.28)
       ) * frontWeight;
     const leftWeight =
       gaussian2D(
@@ -187,8 +187,8 @@ const addMorphTargets = (mesh) => {
         vertex.y,
         leftCenter.x,
         leftCenter.y,
-        half.x * 0.38,
-        half.y * 0.28
+        half.x * (profile?.radii?.breast?.[0] ?? 0.38),
+        half.y * (profile?.radii?.breast?.[1] ?? 0.28)
       ) * frontWeight;
 
     // One breast gains volume while the other changes only slightly. The visual
@@ -209,11 +209,11 @@ const addMorphTargets = (mesh) => {
         vertex.y,
         center.x + half.x * (profile?.skin?.[0] ?? 0.35),
         center.y + half.y * (profile?.skin?.[1] ?? 0.17),
-        half.x * 0.31,
-        half.y * 0.23
+        half.x * (profile?.radii?.skin?.[0] ?? 0.31),
+        half.y * (profile?.radii?.skin?.[1] ?? 0.23)
       ) * frontWeight;
-    const skinX = (vertex.x - (center.x + half.x * (profile?.skin?.[0] ?? 0.35))) / (half.x * 0.31);
-    const skinY = (vertex.y - (center.y + half.y * (profile?.skin?.[1] ?? 0.17))) / (half.y * 0.23);
+    const skinX = (vertex.x - (center.x + half.x * (profile?.skin?.[0] ?? 0.35))) / (half.x * (profile?.radii?.skin?.[0] ?? 0.31));
+    const skinY = (vertex.y - (center.y + half.y * (profile?.skin?.[1] ?? 0.17))) / (half.y * (profile?.radii?.skin?.[1] ?? 0.23));
     // Jittered cells avoid the previous rows of identical pinholes.
     let pore = 0;
     const cellX = Math.floor(skinX * 6);
@@ -247,16 +247,16 @@ const addMorphTargets = (mesh) => {
         vertex.y,
         dimpleX,
         dimpleY,
-        half.x * 0.058,
-        half.y * 0.046
+        half.x * (profile?.radii?.dimple?.[0] ?? 0.058),
+        half.y * (profile?.radii?.dimple?.[1] ?? 0.046)
       );
       const outer = gaussian2D(
         vertex.x,
         vertex.y,
         dimpleX,
         dimpleY,
-        half.x * 0.105,
-        half.y * 0.082
+        half.x * (profile?.radii?.dimpleRim?.[0] ?? 0.105),
+        half.y * (profile?.radii?.dimpleRim?.[1] ?? 0.082)
       );
       const raisedRim = Math.max(0, outer - inner);
       dimpleOffset +=

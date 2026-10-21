@@ -214,8 +214,9 @@ export const createSymptomEffects = (
     const bounds = new THREE.Box3().setFromBufferAttribute(positions);
     const center = bounds.getCenter(new THREE.Vector3());
     const half = bounds.getSize(new THREE.Vector3()).multiplyScalar(0.5);
-    const targetX = center.x + half.x * 0.35;
-    const targetY = center.y + half.y * 0.17;
+    const profile = mesh.userData.symptomProfile;
+    const targetX = center.x + half.x * (profile?.skin?.[0] ?? 0.35);
+    const targetY = center.y + half.y * (profile?.skin?.[1] ?? 0.17);
     const delta = new Float32Array(positions.count * 3);
 
     for (let index = 0; index < positions.count; index += 1) {
@@ -224,9 +225,9 @@ export const createSymptomEffects = (
       const z = positions.getZ(index);
       const frontWeight = smoothstep(center.z, center.z + half.z * 0.9, z);
       const skinWeight =
-        gaussian(x, y, targetX, targetY, half.x * 0.31, half.y * 0.23) * frontWeight;
-      const skinX = (x - targetX) / (half.x * 0.31);
-      const skinY = (y - targetY) / (half.y * 0.23);
+        gaussian(x, y, targetX, targetY, half.x * (profile?.radii?.skin?.[0] ?? 0.31), half.y * (profile?.radii?.skin?.[1] ?? 0.23)) * frontWeight;
+      const skinX = (x - targetX) / (half.x * (profile?.radii?.skin?.[0] ?? 0.31));
+      const skinY = (y - targetY) / (half.y * (profile?.radii?.skin?.[1] ?? 0.23));
       const cellularWave =
         Math.sin(skinX * 18.5 + Math.sin(skinY * 3.1) * 0.8) *
         Math.sin(skinY * 20.5 - Math.sin(skinX * 2.7) * 0.7);
@@ -296,9 +297,9 @@ export const createSymptomEffects = (
       const z = positions.getZ(index);
       const frontWeight = smoothstep(center.z, center.z + half.z * 0.9, z);
       const skinWeight =
-        gaussian(x, y, skinCenterX, skinCenterY, half.x * 0.31, half.y * 0.23) * frontWeight;
-      const skinX = (x - skinCenterX) / (half.x * 0.31);
-      const skinY = (y - skinCenterY) / (half.y * 0.23);
+        gaussian(x, y, skinCenterX, skinCenterY, half.x * (profile?.radii?.skin?.[0] ?? 0.31), half.y * (profile?.radii?.skin?.[1] ?? 0.23)) * frontWeight;
+      const skinX = (x - skinCenterX) / (half.x * (profile?.radii?.skin?.[0] ?? 0.31));
+      const skinY = (y - skinCenterY) / (half.y * (profile?.radii?.skin?.[1] ?? 0.23));
       const cellularWave =
         Math.sin(skinX * 18.5 + Math.sin(skinY * 3.1) * 0.8) *
         Math.sin(skinY * 20.5 - Math.sin(skinX * 2.7) * 0.7);
@@ -316,7 +317,7 @@ export const createSymptomEffects = (
       dimpleCenters.forEach(([dimpleX, dimpleY]) => {
         dimpleWeight = Math.max(
           dimpleWeight,
-          gaussian(x, y, dimpleX, dimpleY, half.x * 0.11, half.y * 0.085) * frontWeight
+          gaussian(x, y, dimpleX, dimpleY, half.x * (profile?.radii?.dimpleTint?.[0] ?? 0.11), half.y * (profile?.radii?.dimpleTint?.[1] ?? 0.085)) * frontWeight
         );
       });
       const irregularity = 0.72 + Math.sin(x * 83 + y * 57) * 0.12;

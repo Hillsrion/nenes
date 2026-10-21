@@ -299,3 +299,90 @@ test('reduced motion keeps the meniscus and pendant drop static, then hides the 
   assert.equal(group.getObjectByName('symptom-nipple')!.visible, false);
   assert.equal((source.material as THREE.Material).opacity, 0);
 });
+
+test('full-body calibration keeps skin relief and tint on the breast', async t => {
+  setReducedMotion(t, true);
+  const { readFile } = await import('node:fs/promises');
+  const profile = JSON.parse(await readFile(new URL('../config/anais-full-symptoms.json', import.meta.url), 'utf8'));
+  const group = new THREE.Group();
+  const geometry = new THREE.BoxGeometry(0.73, 2, 0.45, 60, 200, 1);
+  const body = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial());
+  body.userData.symptomProfile = profile;
+  group.add(body);
+  const effects = createSymptomEffects(() => group);
+  effects.registerMesh(body, true);
+  effects.build(group, 'skin');
+  const positions = geometry.getAttribute('position');
+  const colors = geometry.getAttribute('color');
+  const relief = geometry.morphAttributes.position[body.morphTargetDictionary!.skin];
+  let chestRelief = 0, outsideRelief = 0, chestTint = 0, outsideTint = 0;
+  for (let i = 0; i < positions.count; i++) {
+    const strength = Math.hypot(relief.getX(i), relief.getY(i), relief.getZ(i));
+    const tint = Math.hypot(1 - colors.getX(i), 1 - colors.getY(i), 1 - colors.getZ(i));
+    if (positions.getY(i) < 0.15 || positions.getY(i) > 0.53) {
+      outsideRelief = Math.max(outsideRelief, strength);
+      outsideTint = Math.max(outsideTint, tint);
+    } else {
+      chestRelief = Math.max(chestRelief, strength);
+      chestTint = Math.max(chestTint, tint);
+    }
+  }
+  assert.ok(chestRelief > 0.001, 'visible relief at the calibrated breast');
+  assert.ok(chestTint > 0.1, 'visible redness at the calibrated breast');
+  assert.ok(outsideRelief < chestRelief * 0.001, 'no relief on abdomen or upper chest');
+  assert.ok(outsideTint < chestTint * 0.001, 'redness follows the same calibrated extent');
+  effects.dispose(); geometry.dispose(); body.material.dispose();
+});
+
+test('medium-model dimples share the breast shown in the mobile close-up', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const profile = JSON.parse(await readFile(new URL('../config/anais-full-symptoms.json', import.meta.url), 'utf8'));
+  const side = Math.sign(profile.nipple[0]);
+  assert.equal(side, 1, 'the journey close-up shows screen right');
+  for (const [x] of profile.dimples) assert.equal(Math.sign(x), side);
+  assert.equal(Math.sign(profile.skin[0]), side);
+});
+
+test('generated medium-model crusts fit inside the phone camera', async t => {
+  setReducedMotion(t, true);
+  const { readFile } = await import('node:fs/promises');
+  let bytes: Buffer;
+  try { bytes = await readFile(new URL('../public/models/bust-anais-full-hi3d-palpation.glb', import.meta.url)); }
+  catch { t.skip('Generated assets stay local and ignored.'); return; }
+  const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader.js');
+  const { normalizeLoadedBust, getBustChestFraming } = await import('../components/ui/three-bust/scene-utils.ts');
+  const { createJourneyCamera, CAMERA_FOV } = await import('../components/ui/three-bust/journey-camera.ts');
+  const model = await new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength), '');
+  const scene = new THREE.Scene(), placement = new THREE.Group(), group = new THREE.Group();
+  scene.add(placement); placement.add(group); group.add(model.scene);
+  normalizeLoadedBust(model.scene, 2.8 * 1.65); model.scene.position.y -= 0.48;
+  const effects = createSymptomEffects(() => group);
+  model.scene.traverse(child => {
+    if (child instanceof THREE.Mesh && child.userData.symptomProfile) effects.registerMesh(child);
+  });
+  effects.build(model.scene, 'dimpling');
+  const chest = getBustChestFraming(model.scene);
+  for (const [width, height] of [[375, 667], [390, 844], [430, 932], [844, 390]]) {
+    const camera = new THREE.PerspectiveCamera(CAMERA_FOV, width / height, 0.1, 100);
+    const journey = createJourneyCamera({
+      getSceneState: () => ({ camera, firstBounds: new THREE.Box3(new THREE.Vector3(-1, -1.4, -0.5), new THREE.Vector3(1, 1.82, 0.5)), secondPlacement: placement, scene }),
+      isDebug: () => false, getPalpationProgress: () => 0, getPalpationFraming: () => chest,
+      getSymptomFocus: () => 1, getCanvas: () => ({ clientWidth: width }) as HTMLCanvasElement,
+      refreshProfileContour: () => {},
+    });
+    journey.buildCameraPath(); journey.updateCameraForProgress(1);
+    group.updateWorldMatrix(true, true);
+    const crusts = group.getObjectByName('integrated-crusts')!;
+    assert.ok(crusts.children.length > 0);
+    for (const patch of crusts.children) {
+      assert.ok(patch.position.x > chest!.center.x, 'crust stays on the breast at screen right');
+      const vertices = (patch as THREE.Mesh).geometry.getAttribute('position');
+      for (let i = 0; i < vertices.count; i++) {
+        const projected = patch.localToWorld(new THREE.Vector3().fromBufferAttribute(vertices, i)).project(camera);
+        assert.ok(Math.abs(projected.x) < 0.95 && Math.abs(projected.y) < 0.95 && projected.z < 1, `${width}×${height}: crust must stay in frame`);
+      }
+    }
+  }
+  effects.dispose();
+  model.scene.traverse(child => { if (child instanceof THREE.Mesh) { child.geometry.dispose(); (Array.isArray(child.material) ? child.material : [child.material]).forEach(material => material.dispose()); } });
+});
