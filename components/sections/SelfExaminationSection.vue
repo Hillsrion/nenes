@@ -71,7 +71,7 @@
             </h2>
           </div>
 
-          <!-- Mobile puts the background video behind the model and the cards over its head. -->
+          <!-- Mobile keeps the notes below the chest close-up, above the video toggle. -->
           <div class="palpation-demonstration relative z-20 mt-4 sm:mt-5 w-full">
             <ExaminationSteps
               :steps="steps"
@@ -243,9 +243,10 @@ onUnmounted(() => {
   .palpation-content { width: 100%; padding-top: 0; }
   .palpation-intro { position: absolute; inset-block: 0; left: 24px; width: calc(100% - 48px); display: flex; align-items: center; }
   .palpation-content h2 { font-size: clamp(1.5rem, 4vw, 2rem); line-height: 1.35; }
-  .palpation-demonstration { position: absolute; top: max(48px, calc(env(safe-area-inset-top, 0px) + 32px)); left: 28px; width: calc(100% - 56px); margin-top: 0; }
+  .palpation-demonstration { position: absolute; top: auto; bottom: calc(96px + env(safe-area-inset-bottom, 0px)); left: 28px; width: calc(100% - 56px); margin-top: 0; }
   .palpation-view-toggle { right: max(20px, calc(env(safe-area-inset-right, 0px) + 16px)); bottom: max(24px, calc(env(safe-area-inset-bottom, 0px) + 16px)); }
-  .palpation-content :deep(.examination-cards) { position: relative; top: 0; left: 0; width: 100%; max-width: none; margin: 0; min-height: clamp(160px, 22svh, 210px); }
+  .palpation-content :deep(.examination-cards) { position: relative; top: 0; left: 0; display: grid; width: 100%; max-width: none; margin: 0; min-height: clamp(160px, 22svh, 210px); }
+  .palpation-content :deep(.examination-card) { position: relative; grid-area: 1 / 1; }
   .palpation-content :deep(.examination-postit) { min-height: clamp(160px, 22svh, 210px); }
   .palpation-content :deep(.postit-content) { padding: 1rem 1rem 1rem 2rem; }
   .palpation-content :deep(p) { font-size: clamp(0.875rem, 2.35vw, 1.125rem); line-height: 1.5; }
@@ -257,7 +258,8 @@ onUnmounted(() => {
 }
 @media (max-width: 1023px) and (orientation: landscape) {
   .palpation-content h2 { font-size: clamp(1.125rem, 2.4vw, 1.5rem); }
-  .palpation-demonstration { left: 50%; width: min(420px, 70vw); transform: translateX(-50%); }
+  .palpation-demonstration { bottom: calc(24px + env(safe-area-inset-bottom, 0px)); left: 50%; width: min(420px, 70vw); transform: translateX(-50%); }
+  .palpation-view-toggle { top: max(20px, calc(env(safe-area-inset-top, 0px) + 16px)); bottom: auto; }
   .palpation-content :deep(.examination-cards), .palpation-content :deep(.examination-postit) { min-height: 140px; }
   .palpation-content :deep(.postit-content) { padding: 0.75rem 0.65rem 0.75rem 1.7rem; }
   .palpation-content :deep(p) { font-size: 0.75rem; line-height: 1.4; }

@@ -248,7 +248,8 @@ onUnmounted(() => {
 }
 @media (max-width: 1023px) {
   .symptom-card-slot {
-    width: min(calc(100vw - 3rem), 22.5rem, 58svh);
+    top: 6svh;
+    width: min(calc(80vw - 2.4rem), 18rem, 46svh);
   }
 }
 </style>
