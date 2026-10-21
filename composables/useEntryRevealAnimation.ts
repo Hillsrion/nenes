@@ -283,7 +283,7 @@ export const useEntryRevealAnimation = ({
     timeline = null;
 
     animationsStore.updateLogoColor(true);
-    animationsStore.updateLogoOpacity(1);
+    animationsStore.updateLogoOpacity(0);
     animationsStore.updateCoverCornerRadius(32);
     animationsStore.updateCoverScaling(false);
     logoIsPrimary = null;

@@ -5,13 +5,17 @@
       class="pointer-events-none sticky top-0 z-0 hidden h-0 lg:block"
       aria-hidden="true"
     >
-      <div class="absolute inset-x-0 top-0 h-[100svh] overflow-hidden rounded-t-4xl bg-white">
+      <div
+        class="absolute inset-x-0 top-0 h-[100svh] overflow-hidden bg-white transition-[border-radius] duration-500 ease-out"
+        :class="{ 'rounded-t-4xl': !hasReachedTop }"
+      >
         <div ref="backgroundRef" class="absolute inset-0 bg-primary" />
       </div>
     </div>
     <section
       ref="sectionRef"
-      class="relative z-30 overflow-hidden rounded-t-4xl bg-primary text-primary lg:sticky lg:top-0 lg:h-[100svh] lg:bg-transparent"
+      class="relative z-30 overflow-hidden bg-primary text-primary transition-[border-radius] duration-500 ease-out lg:sticky lg:top-0 lg:h-[100svh] lg:bg-transparent"
+      :class="{ 'rounded-t-4xl': !hasReachedTop }"
     >
       <div
         class="relative z-10 mx-auto min-h-[100svh] max-w-[1366px] px-5 py-24 sm:px-10 lg:h-full lg:px-12 lg:py-0"
@@ -100,6 +104,7 @@
 <script setup lang="ts">
 import { useScreeningScrollSequence } from "~/composables/screening/useScreeningScrollSequence";
 import { useScreeningWarmup } from "~/composables/screening/useScreeningWarmup";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 interface SidebarElement {
   title: string;
@@ -129,6 +134,8 @@ const screeningPolaroidRef = ref<HTMLElement | null>(null);
 const screeningNoteRef = ref<HTMLElement | null>(null);
 const selfExamPolaroidRef = ref<HTMLElement | null>(null);
 const selfExamNoteRef = ref<HTMLElement | null>(null);
+const hasReachedTop = ref(false);
+let topEdgeTrigger: ScrollTrigger | null = null;
 
 const { setupScreeningPreloadObserver, cleanupWarmupObserver } =
   useScreeningWarmup({
@@ -144,7 +151,29 @@ useScreeningScrollSequence({
   onSecondModelOpacityChange: (opacity) => emit("secondModelOpacityChange", opacity),
 });
 onMounted(setupScreeningPreloadObserver);
-onUnmounted(cleanupWarmupObserver);
+onMounted(() => {
+  if (!trackRef.value) return;
+
+  topEdgeTrigger = ScrollTrigger.create({
+    trigger: trackRef.value,
+    start: "top top",
+    end: "bottom top",
+    onEnter: () => {
+      hasReachedTop.value = true;
+    },
+    onEnterBack: () => {
+      hasReachedTop.value = true;
+    },
+    onLeaveBack: () => {
+      hasReachedTop.value = false;
+    },
+  });
+});
+onUnmounted(() => {
+  topEdgeTrigger?.kill();
+  topEdgeTrigger = null;
+  cleanupWarmupObserver();
+});
 </script>
 
 <style scoped>

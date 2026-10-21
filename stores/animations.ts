@@ -40,7 +40,7 @@ export const useAnimationsStore = defineStore("animations", {
     sections: sections || {},
     logo: {
       isPrimary: true,
-      opacity: 1,
+      opacity: 0,
     },
     cover: {
       isScaling: false,
