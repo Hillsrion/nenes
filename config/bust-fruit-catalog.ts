@@ -43,21 +43,21 @@ export const bustFruitModels = [
 
 export type BustFruitId = (typeof bustFruitModels)[number]["id"];
 
-/** The three journey choices share the stable volume catalog filenames. */
+/** The journey offers the medium and large volumes from the stable catalog. */
 export const journeyFruitChoices = [
-  { ...bustFruitModels[0], modelBinding: "", visualScale: 0.43 },
   { ...bustFruitModels[1], modelBinding: "bust-anais-full-hi3d-palpation.glb", visualScale: 0.60 },
   { ...bustFruitModels[2], modelBinding: "bust-zou-full-multiview-hi3d-palpation.glb", visualScale: 0.79 },
 ] as const;
 export type JourneyFruitId = (typeof journeyFruitChoices)[number]["id"];
 
 export function resolveJourneyFruitModel(
-  id: JourneyFruitId,
+  id: BustFruitId,
   availableFiles: readonly string[],
   fallbackFile: string,
 ) {
-  const choice = journeyFruitChoices.find(choice => choice.id === id)!;
+  const choice = bustFruitModels.find(choice => choice.id === id)!;
   if (availableFiles.includes(choice.fileName)) return choice.fileName;
-  if (choice.modelBinding && availableFiles.includes(choice.modelBinding)) return choice.modelBinding;
+  const binding = journeyFruitChoices.find(choice => choice.id === id)?.modelBinding;
+  if (binding && availableFiles.includes(binding)) return binding;
   return fallbackFile;
 }

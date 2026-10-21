@@ -4,9 +4,8 @@
       <h2 id="fruit-selection-title" class="mx-auto max-w-2xl text-3xl font-medium leading-tight sm:text-4xl">Choisis le modèle qui te ressemble.</h2>
     </header>
     <div class="fruit-choices absolute inset-x-0 top-[32%] h-[42%]" role="group" aria-label="Choisir un gabarit de poitrine">
-      <button v-for="(choice, index) in journeyFruitChoices" :key="choice.id" :ref="element => setChoiceButton(element, index)" type="button" class="fruit-choice absolute top-0 h-full w-[27%] -translate-x-1/2" :style="{ left: `${23 + index * 27}%` }" :class="{ 'is-selected': choice.id === selectedFruit, 'has-landed': index < landedCount }" :aria-pressed="choice.id === selectedFruit" :aria-label="`${choice.fruit}, ${choice.sizeLabel.toLowerCase()}`" :disabled="continuing || !sceneReady || index >= landedCount" @click="choose(choice.id, true)" @mouseenter="$emit('hover', choice.id)" @mouseleave="$emit('hover', null)" @focus="$emit('hover', choice.id)" @blur="$emit('hover', null)" @keydown="navigateChoices($event, index)">
+      <button v-for="(choice, index) in journeyFruitChoices" :key="choice.id" :ref="element => setChoiceButton(element, index)" type="button" class="fruit-choice absolute top-0 h-full w-[40%] -translate-x-1/2" :style="{ left: `${50 + fruitSelectionColumn(index) * 50}%` }" :class="{ 'is-selected': choice.id === selectedFruit, 'has-landed': index < landedCount }" :aria-pressed="choice.id === selectedFruit" :aria-label="`Gabarit ${choice.sizeLabel.toLowerCase()}`" :disabled="continuing || !sceneReady || index >= landedCount" @click="choose(choice.id, true)" @mouseenter="$emit('hover', choice.id)" @mouseleave="$emit('hover', null)" @focus="$emit('hover', choice.id)" @blur="$emit('hover', null)" @keydown="navigateChoices($event, index)">
         <span class="fruit-glow" aria-hidden="true" />
-        <span class="fruit-label z-10 absolute inset-x-0 bottom-0 text-sm font-medium sm:text-base">{{ choice.fruit }}<span class="mt-1 block text-[10px] font-normal uppercase tracking-[0.14em] opacity-70 sm:text-xs">{{ choice.sizeLabel }}</span></span>
       </button>
     </div>
     <footer class="fruit-footer absolute inset-x-5 bottom-[8svh] flex flex-col items-center gap-3 text-center">
@@ -17,6 +16,7 @@
 <script setup lang="ts">
 import type { ComponentPublicInstance } from "vue";
 import { journeyFruitChoices, type JourneyFruitId } from "~/config/bust-fruit-catalog";
+import { fruitSelectionColumn } from "~/utils/fruit-selection-motion";
 defineProps<{ active: boolean; continuing: boolean; selectedFruit: JourneyFruitId; selectedIndex: number; hoveredIndex: number; modelFile: string; sceneReady: boolean; landedCount: number }>();
 const emit = defineEmits<{ select: [fruit: JourneyFruitId]; hover: [fruit: JourneyFruitId | null]; continue: [] }>();
 const sectionRef = ref<HTMLElement | null>(null);
@@ -30,7 +30,8 @@ function continueJourney() { emit("continue"); }
 function navigateChoices(event: KeyboardEvent, index: number) {
   if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
   event.preventDefault();
-  const next = event.key === "Home" ? 0 : event.key === "End" ? 2 : (index + (event.key === "ArrowRight" ? 1 : 2)) % 3;
+  const count = journeyFruitChoices.length;
+  const next = event.key === "Home" ? 0 : event.key === "End" ? count - 1 : (index + (event.key === "ArrowRight" ? 1 : count - 1)) % count;
   choiceButtons[next]?.focus(); choose(journeyFruitChoices[next].id);
 }
 defineExpose({ sectionRef });
@@ -40,7 +41,7 @@ defineExpose({ sectionRef });
 .fruit-choice.has-landed.is-selected .fruit-glow, .fruit-choice.has-landed:hover .fruit-glow, .fruit-choice.has-landed:focus-visible .fruit-glow { opacity: 1; }
 .fruit-choice { border-radius: 50%; outline: none; }
 .fruit-choice:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 6px; }
-.fruit-heading, .fruit-label, .fruit-footer { transition: opacity 400ms, transform 500ms; }
+.fruit-heading, .fruit-footer { transition: opacity 400ms, transform 500ms; }
 .is-continuing { pointer-events: none; }
 @media (max-width: 640px) { .fruit-heading { top: 14svh; } .fruit-heading h2 { font-size: 1.55rem; max-width: 20rem; } .fruit-glow { width: 30vw; } }
 @media (max-width: 640px) and (max-height: 650px) {

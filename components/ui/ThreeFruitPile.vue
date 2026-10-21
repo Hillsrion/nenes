@@ -9,12 +9,13 @@
 
 <script setup lang="ts">
 import * as THREE from "three";
-import { getRenderPixelRatio } from './three-bust/scene-utils';
+import { getRenderPixelRatio, isConstrainedDevice } from './three-bust/scene-utils';
 import Matter from "matter-js";
 import { loadingFruitSequence } from "~/config/loading-fruits";
 import { createFruitModel } from "~/utils/loading-fruit-models";
-import { createFruitPilePhysics, FRUIT_PHYSICS_STEP } from "~/utils/fruit-pile-physics";
+import { createFruitPilePhysics, simplifyFruitHull } from "~/utils/fruit-pile-physics";
 import { getFruitPileLayout } from "~/utils/fruit-pile-layout";
+import { warmThreeScene } from "~/utils/warm-three-scene";
 
 const props = withDefaults(defineProps<{
   active: boolean;
@@ -40,6 +41,7 @@ let ready = false;
 let disposed = false;
 let width = 0;
 let height = 0;
+let mobile = false;
 const templates: THREE.Group[] = [];
 const fruits: { model: THREE.Group; body: Matter.Body }[] = [];
 
@@ -56,15 +58,20 @@ const getHull = (model: THREE.Group) => {
       points.push({ x: vertex.x, y: -vertex.y });
     }
   });
-  return Matter.Vertices.hull(points);
+  const hull = Matter.Vertices.hull(points);
+  return mobile ? simplifyFruitHull(hull) : hull;
 };
 
-const render = () => {
-  if (!renderer || !scene || !camera) return;
+const syncModels = () => {
   fruits.forEach(({ model, body }) => {
     model.position.set(body.position.x - width / 2, height / 2 - body.position.y, 0);
     model.rotation.z = -body.angle;
   });
+};
+
+const render = () => {
+  if (!renderer || !scene || !camera) return;
+  syncModels();
   renderer.render(scene, camera);
 };
 
@@ -72,24 +79,35 @@ const pause = () => {
   cancelAnimationFrame(frame);
   frame = 0;
   lastTime = 0;
+  accumulator = 0;
 };
 
 const tick = (time: number) => {
   frame = 0;
-  if (!physics || disposed || !visible || document.hidden) return;
-  accumulator += lastTime ? Math.min(time - lastTime, 50) : FRUIT_PHYSICS_STEP;
+  if (!physics || disposed || !props.active || !visible || document.hidden) return;
+  const stepMs = physics.stepMs;
+  // Avoid a slow frame scheduling more physics work than the next frame can
+  // afford. Mobile needs at most two 60 Hz updates, even on a 120 Hz display.
+  accumulator += lastTime ? Math.min(time - lastTime, mobile ? stepMs * 2 : 50) : stepMs;
   lastTime = time;
-  while (accumulator >= FRUIT_PHYSICS_STEP) {
+  let advanced = false;
+  while (accumulator >= stepMs) {
     physics.step();
-    accumulator -= FRUIT_PHYSICS_STEP;
+    accumulator -= stepMs;
+    advanced = true;
   }
-  render();
+  // A 120 Hz phone must not redraw the same 60 Hz physics state twice.
+  if (advanced) render();
   if (!physics.settled) frame = requestAnimationFrame(tick);
   else lastTime = 0;
 };
 
 const resume = () => {
-  if (!ready || !props.active || !physics || !visible || disposed || document.hidden) return;
+  if (!props.active) {
+    pause();
+    return;
+  }
+  if (!ready || !physics || !visible || disposed || document.hidden) return;
   if (motionQuery?.matches) {
     // Compute a resting pile without displaying any fall or bounce.
     pause();
@@ -133,6 +151,7 @@ const disposeMaterials = (model: THREE.Group) => {
 
 onMounted(async () => {
   if (!containerRef.value || !canvasRef.value) return;
+  mobile = isConstrainedDevice();
   motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
   motionQuery.addEventListener("change", resume);
   document.addEventListener("visibilitychange", handleVisibility);
@@ -143,7 +162,7 @@ onMounted(async () => {
     renderer = new THREE.WebGLRenderer({
       canvas: canvasRef.value,
       alpha: true,
-      antialias: true,
+      antialias: !mobile,
       powerPreference: "low-power",
     });
     renderer.setPixelRatio(getRenderPixelRatio());
@@ -169,7 +188,7 @@ onMounted(async () => {
 
     await Promise.all(loadingFruitSequence.map(async (definition) => {
       try {
-        const model = await createFruitModel(definition);
+        const model = await createFruitModel(definition, mobile);
         if (disposed) disposeMaterials(model);
         else templates.push(model);
       } catch (error) {
@@ -178,7 +197,7 @@ onMounted(async () => {
     }));
     if (disposed) return;
     if (!templates.length) throw new Error("No fruit models available");
-    physics = createFruitPilePhysics(width, height, Math.random, props.entrance);
+    physics = createFruitPilePhysics(width, height, Math.random, props.entrance, mobile);
     const { diameter, count } = getFruitPileLayout(width, height, props.variant, props.entrance);
     let bag: THREE.Group[] = [];
     for (let index = 0; index < count; index += 1) {
@@ -201,6 +220,9 @@ onMounted(async () => {
       scene!.add(model);
       fruits.push({ model, body });
     }
+    syncModels();
+    await warmThreeScene(renderer!, scene!, camera!, () => disposed);
+    if (disposed) return;
     ready = true;
     render();
     resume();

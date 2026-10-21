@@ -43,7 +43,7 @@ const props = withDefaults(defineProps<BustJourneyProps>(), {
   fruitTransitionActive: false,
   fruitTransitionProgress: 0,
   fruitTransitionPhase: "idle",
-  selectedFruitIndex: 1,
+  selectedFruitIndex: 0,
   hoveredFruitIndex: -1,
   firstModelUrl: "",
   secondModelUrl: "",

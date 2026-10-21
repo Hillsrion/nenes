@@ -2,23 +2,22 @@ import * as THREE from "three";
 import { journeyFruitChoices } from "../../../config/bust-fruit-catalog";
 import { loadingFruitSequence } from "../../../config/loading-fruits";
 import { createFruitModel } from "../../../utils/loading-fruit-models";
-import { fruitSelectionOffset, fruitLandingCount, FRUIT_FALL_STAGGER } from "../../../utils/fruit-selection-motion";
+import { fruitSelectionOffset, fruitLandingCount, fruitSelectionColumn, FRUIT_FALL_STAGGER } from "../../../utils/fruit-selection-motion";
 import { fruitFlightPosition } from "../../../utils/fruit-flight-motion";
 
 export const FRUIT_CAMERA_DISTANCE = 8;
-export const FRUIT_COLUMN_NDC = 0.54;
 
-export function createJourneyFruits(scene: THREE.Scene, reducedMotion: boolean) {
+export function createJourneyFruits(scene: THREE.Scene, reducedMotion: boolean, lightweight = false) {
   const group = new THREE.Group();
   group.name = "journey-fruit-selection";
   group.visible = false;
   scene.add(group);
-  const records: Array<{ pivot: THREE.Group; index: number }> = [];
+  const records: Array<{ pivot: THREE.Group; index: number; materials: THREE.MeshStandardMaterial[] }> = [];
   let disposed = false;
   let startTime = 0;
   let active = false;
   let landedCount = 0;
-  let selectedIndex = 1;
+  let selectedIndex = 0;
   let hoveredIndex = -1;
   let halfWidth = 3;
   let responsiveScale = 1;
@@ -27,43 +26,45 @@ export function createJourneyFruits(scene: THREE.Scene, reducedMotion: boolean) 
   const flightUp = new THREE.Vector3(0, 1, 0);
   const ownedGeometries = new Set<THREE.BufferGeometry>();
   const definitions = [
-    loadingFruitSequence[0],
     loadingFruitSequence[4],
     { ...loadingFruitSequence[4], name: "pamplemousse", color: "#efad56", highlight: "#ffe7aa" },
   ];
   const ready = Promise.all(definitions.map(async (definition, index) => {
     let model: THREE.Group;
     try {
-      model = await createFruitModel(definition);
+      model = await createFruitModel(definition, lightweight);
     } catch {
       // Keep a recognizable choice even if a fruit asset cannot be fetched.
       model = new THREE.Group();
       const geometry = new THREE.SphereGeometry(1, 32, 24);
       ownedGeometries.add(geometry);
-      geometry.scale(index === 0 ? 1.15 : 1, index === 0 ? 0.72 : 1, 1);
       model.add(new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ color: definition.color, roughness: 0.6 })));
     }
     if (disposed) { disposeMaterials(model); return; }
     const pivot = new THREE.Group();
     model.scale.setScalar(journeyFruitChoices[index].visualScale);
-    if (index > 0) model.scale.y *= 0.82;
-    model.rotation.set(0.12, -0.2 + index * 0.25, index === 0 ? -0.3 : 0.06);
+    model.scale.y *= 0.82;
+    model.rotation.set(0.12, 0.05 + index * 0.25, 0.06);
     pivot.add(model);
     group.add(pivot);
     // Keep the same shader variant throughout the entrance fade.
+    const materials: THREE.MeshStandardMaterial[] = [];
     model.traverse(child => {
       if (!(child instanceof THREE.Mesh)) return;
-      const materials = Array.isArray(child.material) ? child.material : [child.material];
-      materials.forEach(material => { material.transparent = true; });
+      const meshMaterials = Array.isArray(child.material) ? child.material : [child.material];
+      meshMaterials.forEach(material => {
+        material.transparent = true;
+        materials.push(material as THREE.MeshStandardMaterial);
+      });
     });
-    records.push({ pivot, index });
+    records.push({ pivot, index, materials });
     layout();
   }));
 
   function layout() {
     records.forEach(({ pivot, index }) => {
       pivot.scale.setScalar(responsiveScale);
-      pivot.position.x = (index - 1) * FRUIT_COLUMN_NDC * halfWidth;
+      pivot.position.x = fruitSelectionColumn(index) * halfWidth;
     });
   }
   function disposeMaterials(root: THREE.Object3D) {
@@ -136,22 +137,17 @@ export function createJourneyFruits(scene: THREE.Scene, reducedMotion: boolean) 
       group.visible = opacity > 0.001;
       if (!group.visible) { landedCount = 0; return; }
       landedCount = fruitLandingCount(now - startTime, reducedMotion);
-      records.forEach(({ pivot, index }) => {
+      records.forEach(({ pivot, index, materials }) => {
         pivot.visible = flightProgress === null || index !== selectedIndex;
         const motion = fruitSelectionOffset(now - startTime - index * FRUIT_FALL_STAGGER, reducedMotion);
         pivot.position.y = motion.y;
         pivot.rotation.z = motion.rotation;
         pivot.rotation.y = reducedMotion ? 0 : Math.sin(now * 0.65 + index) * 0.12;
-        pivot.traverse(child => {
-          if (!(child instanceof THREE.Mesh)) return;
-          const materials = Array.isArray(child.material) ? child.material : [child.material];
-          materials.forEach(material => {
-            const standard = material as THREE.MeshStandardMaterial;
-            standard.opacity = opacity;
-            standard.depthWrite = opacity >= 0.999;
-            standard.emissive?.set(index < landedCount && (index === selectedIndex || index === hoveredIndex) ? 0x592015 : 0x000000);
-            standard.emissiveIntensity = 0.16;
-          });
+        materials.forEach(material => {
+          material.opacity = opacity;
+          material.depthWrite = opacity >= 0.999;
+          material.emissive?.set(index < landedCount && (index === selectedIndex || index === hoveredIndex) ? 0x592015 : 0x000000);
+          material.emissiveIntensity = 0.16;
         });
       });
     },

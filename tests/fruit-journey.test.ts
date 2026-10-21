@@ -4,7 +4,7 @@ import * as THREE from "three";
 import { createJourneyCamera, CAMERA_FOV } from "../components/ui/three-bust/journey-camera";
 import { createJourneyFruits, FRUIT_CAMERA_DISTANCE } from "../components/ui/three-bust/journey-fruits";
 import { journeyScrollProgress } from "../utils/journey-scroll-progress";
-import { fruitSelectionOffset, fruitLandingCount, FRUIT_FALL_DURATION, FRUIT_FALL_STAGGER } from "../utils/fruit-selection-motion";
+import { fruitSelectionOffset, fruitLandingCount, fruitSelectionColumn, FRUIT_FALL_DURATION, FRUIT_FALL_STAGGER } from "../utils/fruit-selection-motion";
 import { resolveJourneyFruitModel } from "../config/bust-fruit-catalog";
 import { FRUIT_COVER_DEPTH, FRUIT_COVER_PROGRESS, fruitFlightPosition } from "../utils/fruit-flight-motion";
 import { journeyFruitChoices } from "../config/bust-fruit-catalog";
@@ -27,7 +27,7 @@ test("the clicked fruit sweeps horizontally, covers desktop and mobile, then arc
       for (const x of [-1, 0, 1]) for (const y of [-1, 0, 1]) {
         const halfHeight = Math.tan(THREE.MathUtils.degToRad(CAMERA_FOV / 2));
         const direction = new THREE.Vector3(x * halfHeight * aspect, y * halfHeight, -1).normalize();
-        const hit = new THREE.Ray(new THREE.Vector3(), direction).intersectSphere(core, new THREE.Vector3());
+        const hit = new THREE.Ray(direction.clone().multiplyScalar(0.1 / -direction.z), direction).intersectSphere(core, new THREE.Vector3());
         assert.ok(hit && hit.z < -0.1, `${fruit.id} must mask viewport corner ${x},${y} at aspect ${aspect}`);
       }
     }
@@ -85,21 +85,26 @@ test("fruits fall from above, sink once, rebound and settle into a small float",
 
 test("each selection lights up only after its own staggered landing", () => {
   assert.equal(fruitLandingCount(-1), 0);
-  for (let index = 0; index < 3; index++) {
+  for (let index = 0; index < journeyFruitChoices.length; index++) {
     const landing = FRUIT_FALL_DURATION + index * FRUIT_FALL_STAGGER;
     assert.equal(fruitLandingCount(landing - 0.001), index);
     assert.equal(fruitLandingCount(landing + 0.001), index + 1);
     assert.equal(fruitSelectionOffset(landing - index * FRUIT_FALL_STAGGER).y, 0);
   }
-  assert.equal(fruitLandingCount(10), 3);
-  assert.equal(fruitLandingCount(0, true), 3);
+  assert.equal(fruitLandingCount(10), journeyFruitChoices.length);
+  assert.equal(fruitLandingCount(0, true), journeyFruitChoices.length);
 });
 
 test("the entrance keeps rendering before the scroll gate and never switches shader variants at landing", async () => {
   const scene = new THREE.Scene();
-  const fruits = createJourneyFruits(scene, false);
+  const fruits = createJourneyFruits(scene, false, true);
   await fruits.ready;
   try {
+    fruits.place(new THREE.Vector3(), 390 / 844, CAMERA_FOV);
+    const group = scene.getObjectByName("journey-fruit-selection")!;
+    assert.equal(group.children.length, 2);
+    assert.ok(Math.abs(group.children[0]!.position.x + group.children[1]!.position.x) < 1e-8);
+    assert.ok(group.children[0]!.position.x < 0 && group.children[1]!.position.x > 0);
     const materials: THREE.MeshStandardMaterial[] = [];
     scene.traverse(child => {
       if (child instanceof THREE.Mesh) materials.push(child.material as THREE.MeshStandardMaterial);
@@ -113,7 +118,7 @@ test("the entrance keeps rendering before the scroll gate and never switches sha
     fruits.tick(10.8, 0.8);
     assert.equal(fruits.landedCount, 1);
     fruits.tick(11.1, 1);
-    assert.equal(fruits.landedCount, 3);
+    assert.equal(fruits.landedCount, journeyFruitChoices.length);
     assert.equal(fruits.isEntering, false);
     assert.deepEqual(materials.map(material => material.version), versions);
     fruits.tick(12, 0);
@@ -138,7 +143,7 @@ test("the camera stops centered on fruits, stays continuous and arrives at the s
   });
   let arrival: THREE.Vector3 | null = null;
   const departure = [];
-  for (selected = 0; selected < 3; selected++) {
+  for (selected = 0; selected < journeyFruitChoices.length; selected++) {
     journey.buildCameraPath();
     journey.updateCameraForProgress(0.5);
     const center = journey.getFruitCenter();
@@ -156,7 +161,7 @@ test("the camera stops centered on fruits, stays continuous and arrives at the s
     if (arrival) assert.ok(arrival.distanceTo(camera.position) < 1e-7);
     arrival = camera.position.clone();
   }
-  assert.ok(departure[0] < departure[1] && departure[1] < departure[2]);
+  assert.ok(departure[0] < departure[1]);
   focus = palpation = 1;
   journey.updateCameraForProgress(0.5);
   assert.equal(camera.zoom, 1);
@@ -178,4 +183,10 @@ test("the local Anaïs journey asset contains all symptoms and hand chapters wit
     assert.ok(step && gltf.animations.some((clip: any) => clip.name === step.clipName));
   }
   assert.ok(gltf.animations.every((clip: any) => clip.channels.filter((channel: any) => channel.target.node === bodyNode).every((channel: any) => channel.target.path === "weights")));
+});
+
+
+test("only medium and large remain, centered on the same positions as their hit areas", () => {
+  assert.deepEqual(journeyFruitChoices.map(choice => choice.id), ["orange", "pamplemousse"]);
+  assert.deepEqual(journeyFruitChoices.map((_, index) => 50 + fruitSelectionColumn(index) * 50), [30, 70]);
 });

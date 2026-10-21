@@ -3,8 +3,36 @@ import Matter from "matter-js";
 const { Bodies, Body, Composite, Engine, Sleeping } = Matter;
 export const FRUIT_PHYSICS_STEP = 1000 / 120;
 
-export const createFruitPilePhysics = (initialWidth: number, initialHeight: number, random = Math.random, entrance: "rain" | "right" = "rain") => {
-  const engine = Engine.create({ enableSleeping: true, positionIterations: 10, velocityIterations: 8 });
+// Remove the least significant corners first, keeping a convex silhouette rather
+// than testing collisions against every detail of a scanned fruit.
+export const simplifyFruitHull = (vertices: Matter.Vector[], maximumVertices = 20) => {
+  const hull = vertices.slice();
+  while (hull.length > Math.max(3, maximumVertices)) {
+    let smallestDistance = Infinity;
+    let remove = 0;
+    for (let index = 0; index < hull.length; index += 1) {
+      const previous = hull[(index + hull.length - 1) % hull.length]!;
+      const current = hull[index]!;
+      const next = hull[(index + 1) % hull.length]!;
+      const dx = next.x - previous.x;
+      const dy = next.y - previous.y;
+      const cross = dx * (current.y - previous.y) - dy * (current.x - previous.x);
+      const distance = cross * cross / (dx * dx + dy * dy || 1);
+      if (distance < smallestDistance) {
+        smallestDistance = distance;
+        remove = index;
+      }
+    }
+    hull.splice(remove, 1);
+  }
+  return hull;
+};
+
+export const createFruitPilePhysics = (initialWidth: number, initialHeight: number, random = Math.random, entrance: "rain" | "right" = "rain", mobile = false) => {
+  const stepMs = mobile ? 1000 / 60 : FRUIT_PHYSICS_STEP;
+  // A larger time step needs stronger positional correction to support the dense
+  // pile. It still performs fewer solver iterations per second than desktop.
+  const engine = Engine.create({ enableSleeping: true, positionIterations: mobile ? 12 : 10, velocityIterations: mobile ? 6 : 8 });
   engine.gravity.y = 1.65;
   let width = initialWidth;
   let height = initialHeight;
@@ -26,6 +54,7 @@ export const createFruitPilePhysics = (initialWidth: number, initialHeight: numb
 
   return {
     fruits,
+    stepMs,
     add(vertices: Matter.Vector[], index: number, count: number) {
       const radius = Math.max(...vertices.map((point) => Math.hypot(point.x, point.y)));
       const body = Bodies.fromVertices(
@@ -52,7 +81,7 @@ export const createFruitPilePhysics = (initialWidth: number, initialHeight: numb
       return body;
     },
     step() {
-      elapsed += FRUIT_PHYSICS_STEP;
+      elapsed += stepMs;
       for (const fruit of fruits) {
         if (!fruit.added && elapsed >= fruit.delay) {
           Composite.add(engine.world, fruit.body);
@@ -63,7 +92,7 @@ export const createFruitPilePhysics = (initialWidth: number, initialHeight: numb
           fruit.body.collisionFilter.mask = 0xFFFFFFFF;
         }
       }
-      Engine.update(engine, FRUIT_PHYSICS_STEP);
+      Engine.update(engine, stepMs);
     },
     get settled() {
       return fruits.length > 0 && fruits.every(({ added, body }) => added && body.isSleeping);

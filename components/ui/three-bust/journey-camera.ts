@@ -1,5 +1,6 @@
 import * as THREE from "three";
-import { FRUIT_CAMERA_DISTANCE, FRUIT_COLUMN_NDC } from "./journey-fruits";
+import { FRUIT_CAMERA_DISTANCE } from "./journey-fruits";
+import { fruitSelectionColumn } from "../../../utils/fruit-selection-motion";
 
 const CAMERA_FOV = 40;
 /** Keep the symptoms bust slightly left of center to clear the cards. */
@@ -114,8 +115,8 @@ export function createJourneyCamera(context: JourneyCameraContext) {
       p0, eye1.clone().lerp(fruitEye, 0.25), fruitEye.clone().add(new THREE.Vector3(-0.8, 0.65, -0.5)), fruitEye,
     );
     targetCurve = new THREE.CubicBezierCurve3(t0, look1, fruitCenter.clone().add(new THREE.Vector3(-0.5, 0, 0)), fruitCenter.clone());
-    const selectedOffset = ((context.getSelectedFruitIndex?.() ?? 1) - 1)
-      * FRUIT_COLUMN_NDC * Math.tan(halfFov) * FRUIT_CAMERA_DISTANCE * aspect;
+    const selectedOffset = fruitSelectionColumn(context.getSelectedFruitIndex?.() ?? 0)
+      * Math.tan(halfFov) * FRUIT_CAMERA_DISTANCE * aspect;
     const selectedCenter = fruitCenter.clone().add(new THREE.Vector3(selectedOffset, 0, 0));
     departurePosition = new THREE.CubicBezierCurve3(
       fruitEye, fruitEye.clone().add(new THREE.Vector3(selectedOffset * 0.5, 0.6, -2.8)), eye2, arrival,

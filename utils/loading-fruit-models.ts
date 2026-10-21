@@ -31,12 +31,13 @@ export const preloadFruitModels = async (urls: string[]) => {
 
 const createStylizedMaterial = (
   sourceMaterial: THREE.Material,
-  definition: LoadingFruitDefinition
+  definition: LoadingFruitDefinition,
+  lightweight: boolean,
 ) => {
   const source = sourceMaterial as THREE.MeshStandardMaterial;
   const normalStrength = definition.normalStrength ?? 0.26;
 
-  return new THREE.MeshPhysicalMaterial({
+  const parameters: THREE.MeshStandardMaterialParameters = {
     color: definition.color,
     normalMap: source.normalMap,
     normalScale: new THREE.Vector2(normalStrength, normalStrength),
@@ -45,6 +46,12 @@ const createStylizedMaterial = (
     aoMap: source.aoMap,
     aoMapIntensity: 0.65,
     metalness: 0,
+  };
+  // The small falling fruits retain their color and surface detail without
+  // evaluating clearcoat and sheen for every pixel on a phone.
+  if (lightweight) return new THREE.MeshStandardMaterial(parameters);
+  return new THREE.MeshPhysicalMaterial({
+    ...parameters,
     clearcoat: 0.08,
     clearcoatRoughness: 0.72,
     sheen: 0.08,
@@ -53,7 +60,7 @@ const createStylizedMaterial = (
   });
 };
 
-export const createFruitModel = async (definition: LoadingFruitDefinition) => {
+export const createFruitModel = async (definition: LoadingFruitDefinition, lightweight = false) => {
   const source = await loadSourceModel(definition.modelUrl);
   const sourceObject = definition.nodeName
     ? source.getObjectByName(definition.nodeName)
@@ -71,8 +78,8 @@ export const createFruitModel = async (definition: LoadingFruitDefinition) => {
     child.receiveShadow = true;
     if (!child.geometry.getAttribute("normal")) child.geometry.computeVertexNormals();
     child.material = Array.isArray(child.material)
-      ? child.material.map((material) => createStylizedMaterial(material, definition))
-      : createStylizedMaterial(child.material, definition);
+      ? child.material.map((material) => createStylizedMaterial(material, definition, lightweight))
+      : createStylizedMaterial(child.material, definition, lightweight);
   });
 
   const bounds = new THREE.Box3().setFromObject(model);

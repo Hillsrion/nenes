@@ -9,6 +9,7 @@ import { createIridescentMaterial } from "~/components/ui/three-bust/materials";
 import * as THREE from "three";
 import { gsap } from "gsap";
 import { warmThreeScene } from "~/utils/warm-three-scene";
+import { getJourneyRenderFps, nextJourneyRenderTime } from "~/utils/journey-rendering";
 import {
   createSymptomEffects,
 } from "~/components/ui/three-bust/symptom-effects";
@@ -52,6 +53,7 @@ export function useBustJourney(props: Required<BustJourneyProps>, emit: BustJour
   const animationTime = ref(0);
   let previousAnimationTimestamp = 0;
   let reduceMotion = false;
+  let constrainedDevice = false;
   // Mobile skips the screening bust and keeps a virtual departure anchor
   // until the fruit selection. Only desktop needs to load the first GLB.
   let firstBounds = new THREE.Box3(new THREE.Vector3(-1, -1.4, -0.5), new THREE.Vector3(1, 1.82, 0.5));
@@ -112,7 +114,7 @@ export function useBustJourney(props: Required<BustJourneyProps>, emit: BustJour
   };
 
   const needsContinuousRendering = () =>
-    (animationPlayback?.active && !reduceMotion) ||
+    (secondPlacement?.visible && animationPlayback?.active && !reduceMotion) ||
     presentation.isRotating ||
     symptomEffects.isTransitioning() ||
     props.symptomType === "nipple" ||
@@ -260,6 +262,7 @@ export function useBustJourney(props: Required<BustJourneyProps>, emit: BustJour
     }
     initialized = true;
     reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    constrainedDevice = isConstrainedDevice();
 
     scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(CAMERA_FOV, width / height, 0.1, 100);
@@ -343,7 +346,7 @@ export function useBustJourney(props: Required<BustJourneyProps>, emit: BustJour
     attachSecondModel(secondGLTF);
     if (secondGLTF) emit("modelReady", loadedSecondUrl);
 
-    fruits = createJourneyFruits(scene, reduceMotion);
+    fruits = createJourneyFruits(scene, reduceMotion, constrainedDevice);
     await fruits.ready;
     if (disposed) return;
     fruits.select(props.selectedFruitIndex, props.hoveredFruitIndex);
@@ -401,29 +404,30 @@ export function useBustJourney(props: Required<BustJourneyProps>, emit: BustJour
     if (!renderer || !scene || !camera) return;
     if (!isVisible || document.hidden || disposed) return;
 
-    const targetFps = isConstrainedDevice()
-      ? 24
-      : props.fruitSelectionActive || props.fruitTransitionActive || fruits?.isEntering || presentation.isRotating
-        ? 60
-        : 30;
-    if (timestamp - lastRenderTime < 1000 / targetFps) {
+    const fruitMotion = props.fruitSelectionActive || props.fruitTransitionActive || !!fruits?.isEntering;
+    const targetFps = getJourneyRenderFps(constrainedDevice, fruitMotion, presentation.isRotating);
+    const renderTime = nextJourneyRenderTime(timestamp, lastRenderTime, targetFps);
+    if (renderTime === null) {
       scheduleRender();
       return;
     }
-    lastRenderTime = timestamp;
+    lastRenderTime = renderTime;
 
     const elapsedTime = timestamp / 1000;
-    if (animationPlayback?.active && !reduceMotion) {
-      animationPlayback.update(previousAnimationTimestamp ? Math.min((timestamp - previousAnimationTimestamp) / 1000, 0.1) : 0);
-      animationTime.value = animationPlayback.time;
-    }
-    previousAnimationTimestamp = timestamp;
-
     const fruitOpacity = props.cameraProgress < 0.5
       ? THREE.MathUtils.smoothstep(props.cameraProgress, 0.38, 0.5)
       : 1 - THREE.MathUtils.smoothstep(props.cameraProgress, 0.5, 0.68);
+    const fruitsOnly = fruitOpacity >= 0.999 || props.fruitSelectionActive;
+    if (firstGroup) firstGroup.visible = window.innerWidth >= 1024 && !fruitsOnly;
+    if (secondPlacement) secondPlacement.visible = props.secondModelOpacity > 0 && !fruitsOnly;
+    if (secondPlacement?.visible && animationPlayback?.active && !reduceMotion) {
+      animationPlayback.update(previousAnimationTimestamp ? Math.min((timestamp - previousAnimationTimestamp) / 1000, 0.1) : 0);
+      animationTime.value = animationPlayback.time;
+    }
+    previousAnimationTimestamp = secondPlacement?.visible ? timestamp : 0;
+
     fruits?.tick(elapsedTime, fruitOpacity, props.fruitTransitionActive ? props.fruitTransitionProgress : null, camera);
-    symptomEffects.tick(elapsedTime);
+    if (secondPlacement?.visible) symptomEffects.tick(elapsedTime);
     notifyFramingReady();
     presentation.notifySymptomReady();
     renderer.render(scene, camera);

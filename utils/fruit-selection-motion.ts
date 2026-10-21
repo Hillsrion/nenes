@@ -1,10 +1,17 @@
+import { journeyFruitChoices } from "../config/bust-fruit-catalog";
+
 export const FRUIT_FALL_DURATION = 0.78;
 export const FRUIT_FALL_STAGGER = 0.14;
 
+/** Shared screen positions for the hit areas, meshes and departure camera. */
+export function fruitSelectionColumn(index: number) {
+  return (index - (journeyFruitChoices.length - 1) / 2) * 0.8;
+}
+
 export function fruitLandingCount(seconds: number, reducedMotion = false) {
-  if (reducedMotion) return 3;
+  if (reducedMotion) return journeyFruitChoices.length;
   if (seconds < FRUIT_FALL_DURATION) return 0;
-  return Math.min(3, 1 + Math.floor((seconds - FRUIT_FALL_DURATION) / FRUIT_FALL_STAGGER));
+  return Math.min(journeyFruitChoices.length, 1 + Math.floor((seconds - FRUIT_FALL_DURATION) / FRUIT_FALL_STAGGER));
 }
 
 /** A short fall followed by the damped displacement of a buoyant object. */
