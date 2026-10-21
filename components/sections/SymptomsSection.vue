@@ -75,6 +75,7 @@
               :description="card.description"
               :image="card.image"
               :illustration="card.illustration"
+              :symptom="card.symptom"
             />
           </div>
         </div>

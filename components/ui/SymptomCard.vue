@@ -30,6 +30,13 @@
         height="960"
         loading="lazy"
         class="symptom-polaroid__illustration"
+        :class="{ 'is-animated': animationReady }"
+      />
+      <SymptomPhotoAnimation
+        v-if="symptom && illustration"
+        :symptom="symptom"
+        :illustration="illustration"
+        @ready="animationReady = $event"
       />
     </div>
     <div class="symptom-polaroid__caption">
@@ -48,6 +55,9 @@
 
 <script setup lang="ts">
 import CardContent from "~/components/ui/CardContent.vue";
+import SymptomPhotoAnimation from "~/components/ui/SymptomPhotoAnimation.vue";
+import { computed, ref, type PropType } from 'vue';
+import type { PhotoSymptom } from '~/utils/symptom-photo-animation';
 
 const { image } = defineProps({
   title: {
@@ -68,8 +78,12 @@ const { image } = defineProps({
     type: String,
     default: "",
   },
+  symptom: {
+    type: String as PropType<PhotoSymptom>,
+  },
 });
 
+const animationReady = ref(false);
 const hasImage = computed(() => !!image);
 </script>
 
@@ -100,4 +114,5 @@ const hasImage = computed(() => !!image);
   pointer-events: none;
   filter: drop-shadow(0 1px 1px rgb(128 48 76 / 24%));
 }
+.symptom-polaroid__illustration.is-animated { opacity: 0; }
 </style>

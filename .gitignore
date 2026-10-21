@@ -34,3 +34,8 @@ logs
 /0D2A*.[jJ][pP][gG]
 /0D2A*.[jJ][pP][eE][gG]
 /session-ses_*.md
+
+# Local symptom photo sources and photo/video exports
+/public/images/symptoms/new/
+/exports/
+/.cache/exports/
