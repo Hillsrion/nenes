@@ -76,6 +76,7 @@ export function useBustJourney(props: Required<BustJourneyProps>, emit: BustJour
     depthWrite: secondMaterial.depthWrite,
   };
   const symptomFraming = { progress: props.focusSymptoms || props.palpationProgress > 0 ? 1 : 0 };
+  const otherSideFraming = { progress: props.animationStep === "other-side" ? 1 : 0 };
   let framingNotified = false;
   const notifyFramingReady = () => {
     if (!framingNotified && isVisible && props.focusSymptoms && symptomFraming.progress >= 0.999 &&
@@ -153,6 +154,7 @@ export function useBustJourney(props: Required<BustJourneyProps>, emit: BustJour
     isDebug: () => props.debugPath,
     getSelectedFruitIndex: () => props.selectedFruitIndex,
     getPalpationProgress: () => props.palpationProgress,
+    getOtherSideProgress: () => otherSideFraming.progress,
     getPalpationFraming: () => chestFraming,
     getSymptomFocus: () => symptomFraming.progress,
     getCanvas: () => canvasRef.value,
@@ -477,6 +479,7 @@ export function useBustJourney(props: Required<BustJourneyProps>, emit: BustJour
     ++secondLoadVersion;
     disposed = true;
     gsap.killTweensOf(symptomFraming);
+    gsap.killTweensOf(otherSideFraming);
     viewportObserver?.disconnect();
     resizeObserver?.disconnect();
     if (visibilityChangeHandler) {
@@ -540,6 +543,16 @@ export function useBustJourney(props: Required<BustJourneyProps>, emit: BustJour
     animationPlayback?.selectStep(step);
     animationTime.value = animationPlayback?.time ?? 0;
     previousAnimationTimestamp = 0;
+    gsap.to(otherSideFraming, {
+      progress: step === "other-side" ? 1 : 0,
+      duration: reduceMotion ? 0 : 0.9,
+      ease: "power2.inOut",
+      overwrite: true,
+      onUpdate: () => {
+        updateCameraForProgress(props.cameraProgress);
+        scheduleRender();
+      },
+    });
     scheduleRender();
   });
 

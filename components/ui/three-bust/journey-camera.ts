@@ -22,6 +22,7 @@ interface JourneyCameraContext {
   isDebug: () => boolean;
   getSelectedFruitIndex?: () => number;
   getPalpationProgress: () => number;
+  getOtherSideProgress?: () => number;
   getPalpationFraming?: () => { center: THREE.Vector3; halfWidth: number } | null;
   getSymptomFocus: () => number;
   getCanvas: () => HTMLCanvasElement | null;
@@ -192,8 +193,9 @@ export function createJourneyCamera(context: JourneyCameraContext) {
     tmpTarget.x -= correctionX;
     // Follow the profile, then aim at screen right (the model's left breast).
     // Scale the offset with the selected bust, blending it in with the close-up.
+    const otherSide = THREE.MathUtils.clamp(context.getOtherSideProgress?.() ?? 0, 0, 1) * palpation;
     const chestX = closeUp && chest ? THREE.MathUtils.lerp(
-      -chest.center.z, chest.center.x + chest.halfWidth * 0.55, focus
+      -chest.center.z, chest.center.x + chest.halfWidth * THREE.MathUtils.lerp(0.55, -0.55, otherSide), focus
     ) : 0;
     camera.position.x += chestX * modelProgress;
     tmpTarget.x += chestX * modelProgress;
