@@ -1,5 +1,5 @@
 import type { Ref } from "vue";
-import { INTRO_END, INTRO_TIMELINE_DURATION } from "~/utils/intro-sequence";
+import { INTRO_END, INTRO_TIMELINE_DURATION, INTRO_MOBILE_END, INTRO_MOBILE_TIMELINE_DURATION, INTRO_SHORT_MOBILE_MEDIA } from "~/utils/intro-sequence";
 import { useAnimationsStore } from "~/stores";
 
 declare const useNuxtApp: () => { $gsap: any };
@@ -33,6 +33,8 @@ export const useEntryRevealAnimation = ({
   let timeline: any = null;
   let logoIsPrimary: boolean | null = null;
   let scrollIndicatorIsHidden: boolean | null = null;
+  const getPhotoDuration = () => window.matchMedia(INTRO_SHORT_MOBILE_MEDIA).matches
+    ? INTRO_MOBILE_TIMELINE_DURATION : INTRO_TIMELINE_DURATION;
   const smoothStep = (start: number, end: number, value: number) => {
     const amount = Math.max(0, Math.min(1, (value - start) / (end - start)));
     return amount * amount * (3 - 2 * amount);
@@ -44,9 +46,10 @@ export const useEntryRevealAnimation = ({
     );
 
   const updateGlobalState = (progress: number) => {
-    const statisticsProgress = (progress * (INTRO_TIMELINE_DURATION + 1.2) - INTRO_TIMELINE_DURATION) / 1.2;
-    const timelinePosition = progress * (INTRO_TIMELINE_DURATION + 1.2);
-    const fadeIn = smoothStep(3.72, 4.12, timelinePosition);
+    const photoDuration = getPhotoDuration();
+    const statisticsProgress = (progress * (photoDuration + 1.2) - photoDuration) / 1.2;
+    const timelinePosition = progress * (photoDuration + 1.2);
+    const fadeIn = smoothStep(photoDuration + 0.52, photoDuration + 0.92, timelinePosition);
     const shouldUsePrimaryLogo = statisticsProgress >= 0.57;
     const shouldHideScrollIndicator = progress > 0.015;
 
@@ -185,7 +188,8 @@ export const useEntryRevealAnimation = ({
     const { $gsap } = useNuxtApp();
     const holdState = { progress: 0 };
     const photoState = { progress: 0 };
-    const photoEnd = INTRO_TIMELINE_DURATION;
+    const shortMobileSequence = window.matchMedia(INTRO_SHORT_MOBILE_MEDIA).matches;
+    const photoEnd = shortMobileSequence ? INTRO_MOBILE_TIMELINE_DURATION : INTRO_TIMELINE_DURATION;
 
     prepareInitialState();
 
@@ -205,7 +209,7 @@ export const useEntryRevealAnimation = ({
     });
 
     timeline.to(photoState, {
-      progress: INTRO_END,
+      progress: shortMobileSequence ? INTRO_MOBILE_END : INTRO_END,
       duration: photoEnd,
       onUpdate: () => onPhotoProgress(photoState.progress),
     }, 0);

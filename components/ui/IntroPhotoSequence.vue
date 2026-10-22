@@ -31,7 +31,7 @@ import {
   INTRO_BACKGROUNDS, INTRO_CUTOUTS, INTRO_MOBILE_MEDIA,
   INTRO_MOBILE_BACKGROUNDS, INTRO_MOBILE_CUTOUTS, INTRO_MOBILE_ANCHORS,
   INTRO_BACKGROUND_SRCSETS, INTRO_CUTOUT_SRCSETS, INTRO_DESKTOP_SIZES,
-  getIntroCrop, getIntroState,
+  getIntroCrop, getIntroState, INTRO_SHORT_MOBILE_MEDIA,
 } from '~/utils/intro-sequence';
 import type { WebGLRenderer, Texture, ShaderMaterial, PlaneGeometry } from 'three';
 import { getRenderPixelRatio } from './three-bust/scene-utils';
@@ -54,6 +54,7 @@ let renderScene: (() => void) | undefined;
 let width = 1;
 let height = 1;
 let photoMediaQuery: MediaQueryList | undefined;
+let shortSequenceMediaQuery: MediaQueryList | undefined;
 let textureLoadVersion = 0;
 let textureSources: string[] = [];
 let loadPhotoTextures: (() => Promise<void>) | undefined;
@@ -161,7 +162,7 @@ void main() {
 function paint() {
   frame = 0;
   if (disposed) return;
-  const state = getIntroState(position);
+  const state = getIntroState(position, shortSequenceMediaQuery?.matches);
   if (position !== paintedPosition) {
     paintedPosition = position;
     backgrounds.forEach((image, index) => {
@@ -220,6 +221,10 @@ function onPhotoFormatChange() {
   resizeScene?.();
   void loadPhotoTextures?.();
 }
+function onSequenceLengthChange() {
+  paintedPosition = Number.NaN;
+  schedulePaint();
+}
 function onBackgroundLoad() {
   // A resize or a display-density change can select a different srcset candidate.
   void loadPhotoTextures?.();
@@ -232,6 +237,8 @@ onMounted(async () => {
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   document.addEventListener('visibilitychange', onVisibilityChange);
   photoMediaQuery = window.matchMedia(INTRO_MOBILE_MEDIA);
+  shortSequenceMediaQuery = window.matchMedia(INTRO_SHORT_MOBILE_MEDIA);
+  shortSequenceMediaQuery.addEventListener('change', onSequenceLengthChange);
   try {
     const THREE = await import('three');
     if (disposed) return;
@@ -320,6 +327,7 @@ onBeforeUnmount(() => {
   cancelAnimationFrame(frame);
   resizeObserver?.disconnect();
   photoMediaQuery?.removeEventListener('change', onPhotoFormatChange);
+  shortSequenceMediaQuery?.removeEventListener('change', onSequenceLengthChange);
   document.removeEventListener('visibilitychange', onVisibilityChange);
   canvas.value?.removeEventListener('webglcontextlost', onContextLost);
   canvas.value?.removeEventListener('webglcontextrestored', onContextRestored);

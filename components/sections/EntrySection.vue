@@ -2,7 +2,7 @@
   <section ref="sectionRef" class="relative w-full bg-white">
     <div
       ref="revealTrackRef"
-      class="entry-reveal-track relative h-[960svh] w-full"
+      class="entry-reveal-track relative h-[960svh] w-full max-[768px]:h-[640svh]"
     >
       <div
         ref="revealStageRef"
@@ -110,7 +110,7 @@
     </div>
 
     <div
-      class="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 font-serif text-serif-size text-secondary transition-opacity duration-500 xs:bottom-6 sm:bottom-8"
+      class="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 font-serif text-serif-size text-primary transition-opacity duration-500 xs:bottom-6 sm:bottom-8"
       :class="{
         'pointer-events-none opacity-0': animationsStore.cover.isScaling,
       }"

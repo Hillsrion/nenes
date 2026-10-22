@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import sharp from 'sharp';
 import {
-  getIntroState, INTRO_END, INTRO_MOBILE_BACKGROUNDS, INTRO_MOBILE_CUTOUTS,
+  getIntroState, INTRO_END, INTRO_MOBILE_END, INTRO_MOBILE_BACKGROUNDS, INTRO_MOBILE_CUTOUTS,
   INTRO_BACKGROUND_SRCSETS, INTRO_CUTOUT_SRCSETS,
 } from '../utils/intro-sequence.ts';
 
@@ -29,10 +29,23 @@ test('the latest cutout stays fully settled throughout each background transitio
 });
 test('reverse scrolling and jumps restore the exact same frames without stale layers', () => {
   const times = [0, 0.7, 1.65, 2.7, 3.7, 4.7, 5.8, INTRO_END];
-  const forward = times.map(getIntroState);
+  const forward = times.map(time => getIntroState(time));
   for (let i = times.length - 1; i >= 0; i--) assert.deepEqual(getIntroState(times[i]!), forward[i]);
   assert.deepEqual(getIntroState(-1), getIntroState(0));
   assert.deepEqual(getIntroState(NaN), getIntroState(0));
+});
+
+test('mobile stops after the second photo, including when scrolling past the end', () => {
+  const settled = getIntroState(INTRO_MOBILE_END, true);
+  assert.equal(settled.to, 1);
+  assert.equal(settled.progress, 1);
+  assert.deepEqual(settled.cutouts, [
+    { visible: true, arrival: 1 },
+    { visible: false, arrival: 0 },
+    { visible: false, arrival: 0 },
+  ]);
+  assert.deepEqual(getIntroState(INTRO_END, true), settled);
+  assert.equal(getIntroState(1.65, true).to, 1);
 });
 
 test('mobile cutouts keep the full portrait canvas of their arrival photo and real transparency', async () => {
