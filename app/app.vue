@@ -100,7 +100,9 @@
             @continue="continueFruitSelection"
             @continue-without-model="continueWithoutFruitModel"
           />
-          <div class="relative bg-white" ref="symptomsAndExaminationContainerRef">
+          <!-- iPad uses fixed frames for these sections. Keep their invisible
+               descendants out of hit testing until the fruit reveal finishes. -->
+          <div class="relative bg-white" ref="symptomsAndExaminationContainerRef" :inert="displayedJourneyCameraProgress < 1 || fruitContinuing">
             <div class="relative z-20">
               <SymptomsSection
                 data-analytics-section="symptoms"
