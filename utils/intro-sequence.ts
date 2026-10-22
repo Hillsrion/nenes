@@ -19,7 +19,8 @@ export const INTRO_BACKGROUND_SRCSETS = INTRO_BACKGROUNDS.map((src, index) =>
   desktopSrcset(src, index === 0 ? 1366 : 1920),
 );
 export const INTRO_CUTOUT_SRCSETS = INTRO_CUTOUTS.map(src => desktopSrcset(src, 1920));
-export const INTRO_MOBILE_MEDIA = '(max-width: 768px)';
+// Use the portrait exports on phones and portrait tablets, including large iPads.
+export const INTRO_MOBILE_MEDIA = '(max-width: 768px), (max-width: 1366px) and (orientation: portrait)';
 export const INTRO_MOBILE_BACKGROUNDS = [1, 2, 3, 4].map(
   (index) => `/images/intro/mobile/background-0${index}.webp`,
 );

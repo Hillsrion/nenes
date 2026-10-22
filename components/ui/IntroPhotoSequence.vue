@@ -215,7 +215,7 @@ function onContextRestored() {
 }
 function onPhotoFormatChange() {
   // The picture elements switch immediately; keep the DOM visible until the
-  // matching WebGL textures are loaded, including during a phone rotation.
+  // matching WebGL textures are loaded, including during a phone or tablet rotation.
   webglReady.value = false;
   resizeScene?.();
   void loadPhotoTextures?.();
@@ -343,7 +343,8 @@ onBeforeUnmount(() => {
 .intro-canvas { z-index: 1; opacity: 0; pointer-events: none; transition: opacity 180ms ease-out; }
 .intro-canvas.is-ready { opacity: 1; }
 .intro-cutout { z-index: 2; visibility: hidden; pointer-events: none; will-change: transform; }
-@media (max-width: 768px) {
+/* Keep this condition aligned with INTRO_MOBILE_MEDIA for the WebGL crop. */
+@media (max-width: 768px), (max-width: 1366px) and (orientation: portrait) {
   .intro-photo { object-position: var(--mobile-photo-anchor) center; }
 }
 @media (prefers-reduced-motion: reduce) {
