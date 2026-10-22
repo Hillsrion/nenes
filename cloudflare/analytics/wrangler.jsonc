@@ -2,7 +2,6 @@
   "$schema": "../../node_modules/wrangler/config-schema.json",
   "name": "nenes-analytics",
   "main": "worker.ts",
-  "account_id": "a503ff7440f0bf13c7058d387d84661d",
   "compatibility_date": "2026-10-12",
   "workers_dev": true,
   "preview_urls": false,

@@ -24,9 +24,15 @@ par défaut dans Nuxt. L’audience et les interactions démarreront après publ
 **domaine exact**. Les branch deploys Netlify et localhost restent exclus.
 
 Le site Web Analytics est créé et configuré pour l’installation manuelle :
-[gérer le site dans Cloudflare](https://dash.cloudflare.com/a503ff7440f0bf13c7058d387d84661d/web-analytics/edit/c7c8d9939cb44f738925831235ff883d).
+[gérer le site dans Cloudflare](https://dash.cloudflare.com/?to=/:account/web-analytics).
 Le token public intégré est `9a5621b4526f4a30b17d5cc38fe7786f` ; ce n’est pas
 un jeton API et il ne donne aucun droit d’administration.
+
+Le compte Cloudflare est fourni par `CLOUDFLARE_ACCOUNT_ID` dans le fichier
+`.env` local ignoré par Git. `pnpm analytics:deploy` charge ce fichier pour
+Wrangler. Ne pas recopier cet identifiant dans les exemples, les liens ou la
+configuration suivie : Netlify le traite comme une variable secrète et bloque
+le déploiement si sa valeur apparaît dans le dépôt.
 
 ## Activer l’audience
 
@@ -97,7 +103,7 @@ Un rapport local est fourni :
 2. Le conserver uniquement dans `.env` ignoré par Git :
 
    ```dotenv
-   CLOUDFLARE_ACCOUNT_ID=a503ff7440f0bf13c7058d387d84661d
+   CLOUDFLARE_ACCOUNT_ID=<identifiant-du-compte-cloudflare>
    CLOUDFLARE_ANALYTICS_READ_TOKEN=<token-prive-de-lecture>
    ```
 
