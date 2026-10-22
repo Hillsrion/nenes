@@ -1,6 +1,6 @@
 <template>
   <!-- Text-only card (no image) -->
-  <li
+  <div
     v-if="!hasImage"
     class="w-full min-h-80 flex p-6 relative bg-secondary-light justify-center flex-col sm:p-8"
   >
@@ -8,10 +8,10 @@
       {{ title }}
     </h3>
     <CardContent v-if="description" :content="description" class="mt-2" />
-  </li>
+  </div>
 
   <!-- Polaroid card (with image) -->
-  <li v-else class="symptom-polaroid">
+  <div v-else class="symptom-polaroid">
     <div class="symptom-polaroid__photo">
       <img
         :src="image"
@@ -50,7 +50,7 @@
         {{ subtitle }}
       </p>
     </div>
-  </li>
+  </div>
 </template>
 
 <script setup lang="ts">
