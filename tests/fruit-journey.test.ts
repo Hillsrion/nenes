@@ -6,24 +6,28 @@ import { createJourneyFruits, FRUIT_CAMERA_DISTANCE } from "../components/ui/thr
 import { journeyScrollProgress } from "../utils/journey-scroll-progress";
 import { fruitSelectionOffset, fruitLandingCount, fruitSelectionColumn, FRUIT_FALL_DURATION, FRUIT_FALL_STAGGER } from "../utils/fruit-selection-motion";
 import { resolveJourneyFruitModel } from "../config/bust-fruit-catalog";
-import { FRUIT_COVER_DEPTH, FRUIT_COVER_PROGRESS, fruitFlightPosition } from "../utils/fruit-flight-motion";
+import { FRUIT_COVER_DEPTH, FRUIT_COVER_PROGRESS, fruitFlightPosition, fruitFlightScale } from "../utils/fruit-flight-motion";
 import { journeyFruitChoices } from "../config/bust-fruit-catalog";
 
 test("the clicked fruit sweeps horizontally, covers desktop and mobile, then arcs out in front of the camera", () => {
   assert.deepEqual(fruitFlightPosition(0, 2, 0.04), { x: 2, y: 0.04, z: -8 });
   for (let i = 0; i <= 100; i++) {
     const pose = fruitFlightPosition(i / 100, 2, 0.04);
-    assert.ok(pose.z < -0.1, "the fruit never crosses the lens");
-    if (i / 100 > FRUIT_COVER_PROGRESS) assert.equal(pose.y, 0, "the circular exit stays horizontal");
+    assert.ok(pose.z <= -3, "the fruit center stays at least three units from the lens");
+    if (i / 100 > FRUIT_COVER_PROGRESS) assert.equal(pose.y, 0, "the exit arc stays horizontal");
   }
   const covered = fruitFlightPosition(FRUIT_COVER_PROGRESS, 2, 0.04);
   assert.ok(Math.abs(covered.x) < 1e-12);
   assert.equal(covered.y, 0, "even a fruit selected during its entrance centers before the reveal");
   assert.equal(fruitFlightPosition(FRUIT_COVER_PROGRESS, -2, 8).y, 0);
-  for (const aspect of [1440 / 900, 390 / 844]) {
+  for (const aspect of [1440 / 900, 390 / 844, 844 / 390, 21 / 9]) {
     for (const fruit of journeyFruitChoices) {
+      const radius = fruit.visualScale * Math.min(1, aspect);
+      assert.equal(fruitFlightScale(0, aspect, CAMERA_FOV, radius), 1);
+      assert.equal(fruitFlightScale(1, aspect, CAMERA_FOV, radius), 1);
+      const scale = fruitFlightScale(FRUIT_COVER_PROGRESS, aspect, CAMERA_FOV, radius);
       // A conservative core radius, smaller than the normalized citrus meshes.
-      const core = new THREE.Sphere(new THREE.Vector3(covered.x, covered.y, covered.z), fruit.visualScale * Math.min(1, aspect) * 0.65);
+      const core = new THREE.Sphere(new THREE.Vector3(covered.x, covered.y, covered.z), radius * scale * 0.65);
       for (const x of [-1, 0, 1]) for (const y of [-1, 0, 1]) {
         const halfHeight = Math.tan(THREE.MathUtils.degToRad(CAMERA_FOV / 2));
         const direction = new THREE.Vector3(x * halfHeight * aspect, y * halfHeight, -1).normalize();
@@ -39,7 +43,7 @@ test("the clicked fruit sweeps horizontally, covers desktop and mobile, then arc
       const p = FRUIT_COVER_PROGRESS + (1 - FRUIT_COVER_PROGRESS) * i / 100;
       const pose = fruitFlightPosition(p, 2, 0.04, radius);
       assert.ok(pose.x > previousX, "the fruit leaves toward the right");
-      assert.ok(Math.abs(pose.x ** 2 + (pose.z - FRUIT_COVER_DEPTH + radius) ** 2 - radius ** 2) < 1e-9);
+      assert.ok(Math.abs(pose.x ** 2 + ((pose.z - FRUIT_COVER_DEPTH) / 0.25 + radius) ** 2 - radius ** 2) < 1e-9);
       previousX = pose.x;
     }
     const exit = fruitFlightPosition(1, 2, 0.04, radius);

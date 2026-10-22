@@ -3,7 +3,7 @@ import { journeyFruitChoices } from "../../../config/bust-fruit-catalog";
 import { loadingFruitSequence } from "../../../config/loading-fruits";
 import { createFruitModel } from "../../../utils/loading-fruit-models";
 import { fruitSelectionOffset, fruitLandingCount, fruitSelectionColumn, FRUIT_FALL_STAGGER } from "../../../utils/fruit-selection-motion";
-import { fruitFlightPosition } from "../../../utils/fruit-flight-motion";
+import { fruitFlightPosition, fruitFlightScale } from "../../../utils/fruit-flight-motion";
 
 export const FRUIT_CAMERA_DISTANCE = 8;
 
@@ -21,7 +21,7 @@ export function createJourneyFruits(scene: THREE.Scene, reducedMotion: boolean, 
   let hoveredIndex = -1;
   let halfWidth = 3;
   let responsiveScale = 1;
-  let flight: { pivot: THREE.Group; start: THREE.Vector3; rotation: THREE.Quaternion; index: number } | null = null;
+  let flight: { pivot: THREE.Group; start: THREE.Vector3; rotation: THREE.Quaternion; scale: THREE.Vector3; index: number } | null = null;
   const flightTurn = new THREE.Quaternion();
   const flightUp = new THREE.Vector3(0, 1, 0);
   const ownedGeometries = new Set<THREE.BufferGeometry>();
@@ -110,10 +110,14 @@ export function createJourneyFruits(scene: THREE.Scene, reducedMotion: boolean, 
         child.renderOrder = 10000;
       });
       camera.add(pivot);
-      flight = { pivot, start, rotation: pivot.quaternion.clone(), index: selectedIndex };
+      flight = { pivot, start, rotation: pivot.quaternion.clone(), scale: pivot.scale.clone(), index: selectedIndex };
     }
     const position = fruitFlightPosition(progress, flight.start.x, flight.start.y, Math.max(4, halfWidth));
     flight.pivot.position.set(position.x, position.y, position.z);
+    flight.pivot.scale.copy(flight.scale).multiplyScalar(fruitFlightScale(
+      progress, camera.aspect, camera.getEffectiveFOV(),
+      journeyFruitChoices[flight.index].visualScale * flight.scale.x,
+    ));
     flightTurn.setFromAxisAngle(flightUp, progress * Math.PI * 2);
     flight.pivot.quaternion.copy(flightTurn).multiply(flight.rotation);
   }

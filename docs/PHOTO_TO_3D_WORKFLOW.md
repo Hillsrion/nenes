@@ -248,7 +248,11 @@ Après validation d'un GLB, créer une copie sans perte dans le dossier ignoré
 `public/models/optimized/`, en gardant son nom stable :
 
     pnpm model:optimize -- public/models/bust-anais-full-hi3d-palpation.glb
-    pnpm model:optimize -- public/models/bust-anais-full-pose-hi3d.glb
+    pnpm model:optimize -- public/models/bust-anais-full-hi3d-pose-latest.glb
+
+Le modèle de pose d’Anaïs utilisé par défaut pour l’observation est
+`bust-anais-full-hi3d-pose-latest.glb`. Il est distinct du modèle de palpation
+et sa copie optimisée porte le même nom dans `public/models/optimized/`.
 
 Cette étape ne relance pas l'inférence et ne modifie ni la topologie, ni les
 coordonnées, ni les symptômes, ni les animations. Le script encode les buffers

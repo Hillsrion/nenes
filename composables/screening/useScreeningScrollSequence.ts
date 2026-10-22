@@ -138,7 +138,9 @@ export function useScreeningScrollSequence({
           duration: 0.22,
           ease: "power2.out",
         },
-        0.78
+        // The screening note is fully visible at 0.9. Leave a reading interval
+        // before the next photograph moves over it.
+        1.4
       )
       .to(
         selfExamNote,
@@ -150,21 +152,21 @@ export function useScreeningScrollSequence({
           duration: 0.2,
           ease: "power2.out",
         },
-        0.84
+        1.46
       )
       .to(secondModelReveal, {
         opacity: 1,
         duration: 0.2,
         ease: "power2.out",
         onUpdate: () => onSecondModelOpacityChange(secondModelReveal.opacity),
-      }, 0.84)
+      }, 1.46)
       // The loose notes leave first, then their Polaroids, the main copy, and finally the bust.
-      .to(notes, { autoAlpha: 0, y: "-24vh", duration: 0.16 }, 1.16)
-      .to(polaroids, { autoAlpha: 0, y: "-18vh", duration: 0.14 }, 1.22)
-      .to(title, { autoAlpha: 0, y: "-10vh", duration: 0.16 }, 1.31);
+      .to(notes, { autoAlpha: 0, y: "-24vh", duration: 0.16 }, 1.78)
+      .to(polaroids, { autoAlpha: 0, y: "-18vh", duration: 0.14 }, 1.84)
+      .to(title, { autoAlpha: 0, y: "-10vh", duration: 0.16 }, 1.93);
 
     // Preserve the desktop timing previously carried by the mobile viewer's fade.
-    scrollTimeline.to({}, { duration: 0.17 }, 1.43);
+    scrollTimeline.to({}, { duration: 0.17 }, 2.05);
 
     scrollTrigger = ScrollTrigger.create({
       trigger: track,

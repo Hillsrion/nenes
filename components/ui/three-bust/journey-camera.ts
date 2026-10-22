@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { FRUIT_CAMERA_DISTANCE } from "./journey-fruits";
 import { fruitSelectionColumn } from "../../../utils/fruit-selection-motion";
+import { journeyFruitChoices } from "../../../config/bust-fruit-catalog";
 
 const CAMERA_FOV = 40;
 /** Keep the symptoms bust slightly left of center to clear the cards. */
@@ -170,7 +171,9 @@ export function createJourneyCamera(context: JourneyCameraContext) {
     const chest = context.getPalpationFraming?.();
     const arrivalDistance = mobile ? 8.5 : ARRIVAL_DISTANCE;
     const halfHeight = Math.tan(THREE.MathUtils.degToRad(CAMERA_FOV) / 2) * arrivalDistance;
-    const profileZoom = closeUp ? 2.7 : 1;
+    // Give the larger torso room so the scrolling label follows the visible back.
+    const selectedChoice = journeyFruitChoices[context.getSelectedFruitIndex?.() ?? 0] ?? journeyFruitChoices[0];
+    const profileZoom = closeUp ? selectedChoice.profileZoom : 1;
     // On phones, enlarge one breast so symptoms and hand movements are legible.
     // The chest anchor includes outer torso margins beyond the breast itself.
     const chestFitZoom = chest && chest.halfWidth > 0

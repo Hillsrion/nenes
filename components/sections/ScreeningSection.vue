@@ -1,5 +1,5 @@
 <template>
-  <div ref="trackRef" class="relative lg:h-[470svh]">
+  <div ref="trackRef" class="relative lg:h-[620svh]">
     <!-- Keep the background below the shared canvas and the editorial content above it. -->
     <div
       class="pointer-events-none sticky top-0 z-0 hidden h-0 lg:block"

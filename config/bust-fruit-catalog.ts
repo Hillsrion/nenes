@@ -45,8 +45,8 @@ export type BustFruitId = (typeof bustFruitModels)[number]["id"];
 
 /** The journey offers the medium and large volumes from the stable catalog. */
 export const journeyFruitChoices = [
-  { ...bustFruitModels[1], modelBinding: "bust-anais-full-hi3d-palpation.glb", visualScale: 0.60 },
-  { ...bustFruitModels[2], modelBinding: "bust-zou-full-multiview-hi3d-palpation.glb", visualScale: 0.79 },
+  { ...bustFruitModels[1], modelBinding: "bust-anais-full-hi3d-palpation.glb", visualScale: 0.60, profileZoom: 2.7 },
+  { ...bustFruitModels[2], modelBinding: "bust-zou-full-multiview-hi3d-palpation.glb", visualScale: 0.79, profileZoom: 2.3 },
 ] as const;
 export type JourneyFruitId = (typeof journeyFruitChoices)[number]["id"];
 
