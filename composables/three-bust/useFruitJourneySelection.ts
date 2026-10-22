@@ -20,6 +20,7 @@ export function useFruitJourneySelection(options: {
   const hoveredFruit = ref<JourneyFruitId | null>(null);
   const selectionActive = ref(false);
   const continuing = ref(false);
+  const modelWaitExpired = ref(false);
   const flight = reactive({ progress: 0 });
   const flightPhase = ref<"idle" | "approach" | "covered" | "reveal">("idle");
   const selectionVisited = ref(false);
@@ -35,12 +36,21 @@ export function useFruitJourneySelection(options: {
   let disposed = false;
   let normalizerWasEnabled = false;
   let selectionScrollY = 0;
+  let modelWaitTimer: ReturnType<typeof setTimeout> | undefined;
+  function clearModelWait() {
+    clearTimeout(modelWaitTimer);
+    modelWaitTimer = undefined;
+    modelWaitExpired.value = false;
+  }
   const holdSelectionPosition = () => {
     if (!selectionActive.value || Math.abs(window.scrollY - selectionScrollY) < 1) return;
     if (lenis.value) lenis.value.scrollTo(selectionScrollY, { immediate: true, force: true });
     else window.scrollTo({ top: selectionScrollY, behavior: "instant" });
   };
   const preventScroll = (event: Event) => {
+    // This section locks native panning with touch-action instead. Cancelling
+    // touchmove here also suppresses the click after a slightly moving tap.
+    if (event.type === "touchmove" && options.sectionRef.value && event.composedPath().includes(options.sectionRef.value)) return;
     if ((selectionActive.value || continuing.value) && event.cancelable) event.preventDefault();
   };
   const preventScrollKey = (event: KeyboardEvent) => {
@@ -76,7 +86,12 @@ export function useFruitJourneySelection(options: {
     holdSelectionPosition();
   }
   function continueSelection() {
-    if (!selectionActive.value || continuing.value) return;
+    if (disposed || continuing.value) return;
+    // The fruit hit areas can already be visible before the section reaches
+    // the scroll gate, especially on a short mobile swipe.
+    if (!selectionActive.value) enterSelection();
+    if (!selectionActive.value) return;
+    clearModelWait();
     continuing.value = true;
     selectionActive.value = false;
     hoveredFruit.value = null;
@@ -86,11 +101,18 @@ export function useFruitJourneySelection(options: {
       progress: FRUIT_COVER_PROGRESS,
       duration: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 1.05,
       ease: "none",
-      onComplete: () => { flightPhase.value = "covered"; revealModel(); },
+      onComplete: () => {
+        flightPhase.value = "covered";
+        modelWaitTimer = setTimeout(() => {
+          modelWaitExpired.value = continuing.value && flightPhase.value === "covered";
+        }, 12000);
+        revealModel();
+      },
     });
   }
-  function revealModel() {
-    if (!continuing.value || flightPhase.value !== "covered" || !modelReady.value) return;
+  function revealModel(withoutModel = false) {
+    if (!continuing.value || flightPhase.value !== "covered" || (!modelReady.value && !withoutModel)) return;
+    clearModelWait();
     const destination = options.destinationRef.value;
     if (!destination) { continuing.value = false; flightPhase.value = "idle"; unlockScroll(); return; }
     // Cross the gate fully even when browser zoom rounds fractional CSS pixels.
@@ -108,7 +130,7 @@ export function useFruitJourneySelection(options: {
       onComplete: () => { continuing.value = false; flightPhase.value = "idle"; unlockScroll(); },
     });
   }
-  watch(modelReady, revealModel);
+  watch(modelReady, () => revealModel());
   watch(options.ready, async ready => {
     if (!ready || gate) return;
     await nextTick();
@@ -130,9 +152,11 @@ export function useFruitJourneySelection(options: {
     disposed = true;
     gate?.kill();
     flightTween?.kill();
+    clearModelWait();
     if (selectionActive.value || continuing.value) unlockScroll();
   });
   return { selectedFruit, hoveredFruit, selectedIndex, hoveredIndex, modelFile, modelUrl,
-    selectionActive, selectionVisited, continuing, flightPhase,
+    selectionActive, selectionVisited, continuing, flightPhase, modelWaitExpired,
+    continueWithoutModel: () => { if (modelWaitExpired.value) revealModel(true); },
     flightProgress: computed(() => flight.progress), continueSelection };
 }

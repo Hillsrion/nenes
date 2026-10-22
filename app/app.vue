@@ -88,6 +88,7 @@
             ref="fruitSelectionSectionRef"
             :active="fruitSelectionActive"
             :continuing="fruitContinuing"
+            :model-wait-expired="fruitModelWaitExpired"
             :selected-fruit="selectedFruit"
             :selected-index="selectedFruitIndex"
             :hovered-index="hoveredFruitIndex"
@@ -97,6 +98,7 @@
             @select="selectedFruit = $event"
             @hover="hoveredFruit = $event"
             @continue="continueFruitSelection"
+            @continue-without-model="continueWithoutFruitModel"
           />
           <div class="relative bg-white" ref="symptomsAndExaminationContainerRef">
             <div class="relative z-20">
@@ -271,6 +273,7 @@ const {
   selectionActive: fruitSelectionActive, continuing: fruitContinuing,
   flightProgress: fruitFlightProgress, flightPhase: fruitFlightPhase,
   continueSelection: continueFruitSelection,
+  modelWaitExpired: fruitModelWaitExpired, continueWithoutModel: continueWithoutFruitModel,
 } = useFruitJourneySelection({
   sectionRef: fruitElementRef, destinationRef: symptomsAndExaminationContainerRef,
   ready: computed(() => isLoadingComplete.value && !isThreeDPreview.value),
