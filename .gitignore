@@ -37,5 +37,6 @@ logs
 
 # Local symptom photo sources and photo/video exports
 /public/images/symptoms/new/
+/public/images/post/
 /exports/
 /.cache/exports/
