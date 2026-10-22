@@ -1,5 +1,5 @@
 <template>
-  <section ref="sectionRef" id="choisir-un-gabarit" class="fruit-selection relative z-20 h-[100svh] text-primary" :class="{ 'is-active': active, 'is-continuing': continuing }" :style="{ zIndex: modelWaitExpired ? 201 : undefined }" aria-labelledby="fruit-selection-title" :data-selected-fruit="selectedFruit" :data-model="modelFile" :data-lenis-prevent-touch="active || continuing ? '' : undefined">
+  <section ref="sectionRef" id="choisir-un-gabarit" class="fruit-selection relative z-20 h-viewport text-primary" :class="{ 'is-active': active, 'is-continuing': continuing }" :style="{ zIndex: modelWaitExpired ? 201 : undefined }" aria-labelledby="fruit-selection-title" :data-selected-fruit="selectedFruit" :data-model="modelFile" :data-lenis-prevent-touch="active || continuing ? '' : undefined">
     <header class="fruit-heading absolute inset-x-5 top-[16svh] text-center">
       <h2 id="fruit-selection-title" class="mx-auto max-w-2xl text-3xl font-medium leading-tight sm:text-4xl">Choisis le modèle qui te ressemble.</h2>
     </header>

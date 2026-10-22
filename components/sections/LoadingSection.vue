@@ -1,7 +1,7 @@
 <template>
   <section
     ref="loadingSectionRef"
-    class="fixed inset-0 -z-1000 h-[100svh] w-full overflow-hidden bg-white text-primary"
+    class="fixed inset-0 -z-1000 h-viewport w-full overflow-hidden bg-white text-primary"
     aria-label="Chargement du site"
   >
     <div class="relative flex h-full flex-col items-center justify-between px-6 py-8 sm:px-8">

@@ -6,7 +6,7 @@
       aria-hidden="true"
     >
       <div
-        class="absolute inset-x-0 top-0 h-[100svh] overflow-hidden bg-white transition-[border-radius] duration-500 ease-out"
+        class="absolute inset-x-0 top-0 h-viewport overflow-hidden bg-white transition-[border-radius] duration-500 ease-out"
         :class="{ 'rounded-t-4xl': !hasReachedTop }"
       >
         <div ref="backgroundRef" class="absolute inset-0 bg-primary" />
@@ -14,11 +14,11 @@
     </div>
     <section
       ref="sectionRef"
-      class="relative z-30 overflow-hidden bg-primary text-primary transition-[border-radius] duration-500 ease-out lg:sticky lg:top-0 lg:h-[100svh] lg:bg-transparent"
+      class="relative z-30 overflow-hidden bg-primary text-primary transition-[border-radius] duration-500 ease-out lg:sticky lg:top-0 lg:h-viewport lg:bg-transparent"
       :class="{ 'rounded-t-4xl': !hasReachedTop }"
     >
       <div
-        class="relative z-10 mx-auto min-h-[100svh] max-w-[1366px] px-5 py-24 sm:px-10 lg:h-full lg:px-12 lg:py-0"
+        class="relative z-10 mx-auto min-h-viewport max-w-[1366px] px-5 py-24 sm:px-10 lg:h-full lg:px-12 lg:py-0"
       >
         <div class="relative z-20 max-w-[50rem] lg:pt-[17vh]">
           <p

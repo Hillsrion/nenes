@@ -6,7 +6,7 @@
     >
       <div
         ref="revealStageRef"
-        class="sticky top-0 h-[100svh] w-full overflow-hidden bg-white transition-[border-radius] duration-500 ease-out"
+        class="sticky top-0 h-viewport w-full overflow-hidden bg-white transition-[border-radius] duration-500 ease-out"
         :style="{
           borderTopLeftRadius: `${animationsStore.cover.cornerRadius}px`,
           borderTopRightRadius: `${animationsStore.cover.cornerRadius}px`,
@@ -83,7 +83,7 @@
     >
       <div
         ref="contentStageRef"
-        class="sticky top-0 h-[100svh] w-full overflow-hidden bg-white"
+        class="sticky top-0 h-viewport w-full overflow-hidden bg-white"
       >
         <ThreeFruitPile
           v-if="fruitRainStarted"
@@ -280,7 +280,7 @@ onUnmounted(() => {
 
 @media (prefers-reduced-motion: reduce) {
   .entry-reveal-track {
-    height: 100svh;
+    height: var(--visible-viewport-height, 100dvh);
   }
 
   .statistic-number,

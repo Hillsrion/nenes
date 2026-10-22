@@ -11,7 +11,7 @@
   >
     <div v-if="isIOS" class="h-svh"></div>
     <div
-      class="h-[100svh] w-full px-8 top-0 z-10 mx-auto flex flex-col justify-center overflow-hidden bg-transparent"
+      class="h-viewport w-full px-8 top-0 z-10 mx-auto flex flex-col justify-center overflow-hidden bg-transparent"
       :class="{
         sticky: !isIOS,
         fixed: isIOS,

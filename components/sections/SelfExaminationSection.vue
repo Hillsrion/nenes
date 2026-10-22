@@ -9,7 +9,7 @@
     <div v-if="isIOS" class="h-svh"></div>
     <div
       ref="frameRef"
-      class="h-[100svh] w-full top-0 overflow-hidden"
+      class="h-viewport w-full top-0 overflow-hidden"
       :style="{ visibility: isIOS && modelPresence <= 0 ? 'hidden' : undefined }"
       :class="[
         useSharedModel ? 'bg-transparent' : 'bg-white',

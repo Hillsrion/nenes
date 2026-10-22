@@ -54,3 +54,16 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.5);
 }
+
+/* Visual stages follow Safari's expanded/collapsed toolbar. Scroll tracks keep
+   svh so a toolbar animation never changes the length of a scroll sequence.
+   The measured height covers delays in Safari's dynamic viewport unit updates. */
+@utility h-viewport {
+  height: 100vh;
+  height: max(100dvh, var(--visible-viewport-height, 0px));
+}
+
+@utility min-h-viewport {
+  min-height: 100vh;
+  min-height: max(100dvh, var(--visible-viewport-height, 0px));
+}

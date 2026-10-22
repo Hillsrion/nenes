@@ -35,10 +35,13 @@
              bust in a single scene; the camera glides from one to the other as
              the reader scrolls between the two sections. A zero-height sticky
              sentinel carries the canvas: `fixed` would resolve against the
-             transformed body (GSAP normalizeScroll) instead of the viewport. -->
+             transformed body (GSAP normalizeScroll) instead of the viewport.
+             Visual stages follow the visible viewport when mobile browser bars
+             collapse; scroll tracks retain svh so their distances stay stable.
+             The canvases' ResizeObservers resize and redraw with the stages. -->
         <div ref="journeyTrackRef" class="relative">
           <div v-if="fruitContinuing" class="pointer-events-none sticky top-0 z-0 h-0" aria-hidden="true">
-            <div class="absolute inset-x-0 top-0 h-[100svh] bg-[radial-gradient(circle_at_58%_38%,#fff_0%,#ffe9f1_52%,#f8d6e2_100%)]" />
+            <div class="absolute inset-x-0 top-0 h-viewport bg-[radial-gradient(circle_at_58%_38%,#fff_0%,#ffe9f1_52%,#f8d6e2_100%)]" />
           </div>
           <div
             v-if="journeyStageReady"
@@ -47,7 +50,7 @@
             :style="{ zIndex: fruitContinuing ? 200 : 10 }"
             aria-hidden="true"
           >
-            <div class="absolute inset-x-0 top-0 h-[100svh]">
+            <div class="absolute inset-x-0 top-0 h-viewport">
               <div ref="journeyVideoLayerRef" class="pointer-events-none absolute inset-0 z-0" />
               <ThreeBustJourney
                 :style="{ opacity: mobilePalpationVideoActive ? 0 : 1 }"

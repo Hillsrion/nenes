@@ -53,7 +53,10 @@ export default defineNuxtConfig({
     "lenis/nuxt",
   ],
 
-  plugins: ["~/plugins/cloudflare-analytics.client"],
+  plugins: [
+    "~/plugins/cloudflare-analytics.client",
+    "~/plugins/visible-viewport.client",
+  ],
 
   typescript: {
     tsConfig: {
