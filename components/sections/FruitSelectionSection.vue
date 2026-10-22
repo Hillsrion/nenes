@@ -4,15 +4,16 @@
       <h2 id="fruit-selection-title" class="mx-auto max-w-2xl text-3xl font-medium leading-tight sm:text-4xl">Choisis le modèle qui te ressemble.</h2>
     </header>
     <div class="fruit-choices absolute inset-x-0 top-[32%] h-[42%]" role="group" aria-label="Choisir un gabarit de poitrine">
-      <button v-for="(choice, index) in journeyFruitChoices" :key="choice.id" :ref="element => setChoiceButton(element, index)" type="button" class="fruit-choice absolute top-0 h-full w-[40%] -translate-x-1/2" :style="{ left: `${50 + fruitSelectionColumn(index) * 50}%` }" :class="{ 'is-selected': choice.id === selectedFruit, 'has-landed': index < landedCount }" :aria-pressed="choice.id === selectedFruit" :aria-label="`Gabarit ${choice.sizeLabel.toLowerCase()}`" :disabled="continuing || !sceneReady || index >= landedCount" @click="choose(choice.id, true)" @mouseenter="$emit('hover', choice.id)" @mouseleave="$emit('hover', null)" @focus="$emit('hover', choice.id)" @blur="$emit('hover', null)" @keydown="navigateChoices($event, index)">
+      <button v-for="(choice, index) in journeyFruitChoices" :key="choice.id" :ref="element => setChoiceButton(element, index)" type="button" class="fruit-choice absolute top-0 h-full w-[40%] -translate-x-1/2" :style="{ left: `${50 + fruitSelectionColumn(index) * 50}%` }" :class="{ 'is-selected': choice.id === selectedFruit, 'has-landed': index < landedCount }" :aria-pressed="choice.id === selectedFruit" :aria-label="`Gabarit ${choice.sizeLabel.toLowerCase()}`" :disabled="continuing" @pointerdown="tap.down" @pointermove="tap.move" @pointercancel="tap.cancel" @pointerup="tap.up($event, () => choose(choice.id, true))" @click="tap.click($event, () => choose(choice.id, true))" @mouseenter="$emit('hover', choice.id)" @mouseleave="$emit('hover', null)" @focus="$emit('hover', choice.id)" @blur="$emit('hover', null)" @keydown="navigateChoices($event, index)">
         <span class="fruit-glow" aria-hidden="true" />
+        <span v-if="!sceneReady" class="relative flex flex-col items-center gap-2 text-base"><span class="text-5xl" aria-hidden="true">{{ choice.emoji }}</span>{{ choice.sizeLabel }}</span>
       </button>
     </div>
     <footer class="fruit-footer absolute inset-x-5 bottom-[8svh] flex flex-col items-center gap-3 text-center">
-      <button type="button" class="inline-flex items-center gap-4 rounded-full bg-primary px-7 py-3 text-sm font-medium text-white transition hover:bg-primary/85 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary disabled:opacity-60" :disabled="continuing || !sceneReady || selectedIndex >= landedCount" @click="continueJourney">{{ continuing ? 'Le modèle arrive…' : 'Continuer avec ce gabarit' }} <span aria-hidden="true">↗</span></button>
+      <button type="button" class="inline-flex items-center gap-4 rounded-full bg-primary px-7 py-3 text-sm font-medium text-white transition hover:bg-primary/85 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary disabled:opacity-60" :disabled="continuing" @pointerdown="tap.down" @pointermove="tap.move" @pointercancel="tap.cancel" @pointerup="tap.up($event, continueJourney)" @click="tap.click($event, continueJourney)">{{ continuing ? 'Le modèle arrive…' : 'Continuer avec ce gabarit' }} <span aria-hidden="true">↗</span></button>
       <div v-if="modelWaitExpired" class="model-wait-message max-w-sm rounded-2xl bg-white/95 p-4 text-sm" role="status">
         <p>Le modèle 3D met du temps à charger. Tu peux poursuivre les explications sans attendre.</p>
-        <button type="button" class="mt-2 underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary" @click="$emit('continueWithoutModel')">Continuer sans le modèle 3D</button>
+        <button type="button" class="mt-2 underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary" @pointerdown="tap.down" @pointermove="tap.move" @pointercancel="tap.cancel" @pointerup="tap.up($event, continueWithoutModel)" @click="tap.click($event, continueWithoutModel)">Continuer sans le modèle 3D</button>
       </div>
     </footer>
   </section>
@@ -21,16 +22,20 @@
 import type { ComponentPublicInstance } from "vue";
 import { journeyFruitChoices, type JourneyFruitId } from "~/config/bust-fruit-catalog";
 import { fruitSelectionColumn } from "~/utils/fruit-selection-motion";
-defineProps<{ active: boolean; continuing: boolean; selectedFruit: JourneyFruitId; selectedIndex: number; hoveredIndex: number; modelFile: string; sceneReady: boolean; landedCount: number; modelWaitExpired?: boolean }>();
+import { createTapActivation } from "~/utils/tap-activation";
+const props = defineProps<{ active: boolean; continuing: boolean; selectedFruit: JourneyFruitId; selectedIndex: number; hoveredIndex: number; modelFile: string; sceneReady: boolean; landedCount: number; modelWaitExpired?: boolean }>();
 const emit = defineEmits<{ select: [fruit: JourneyFruitId]; hover: [fruit: JourneyFruitId | null]; continue: []; continueWithoutModel: [] }>();
 const sectionRef = ref<HTMLElement | null>(null);
+const tap = createTapActivation();
 const choiceButtons: Array<HTMLButtonElement | null> = [];
 function setChoiceButton(element: Element | ComponentPublicInstance | null, index: number) { choiceButtons[index] = element as HTMLButtonElement | null; }
 function choose(id: JourneyFruitId, continueNow = false) {
+  if (props.continuing) return;
   emit("select", id);
   if (continueNow) continueJourney();
 }
-function continueJourney() { emit("continue"); }
+function continueJourney() { if (!props.continuing) emit("continue"); }
+function continueWithoutModel() { emit("continueWithoutModel"); }
 function navigateChoices(event: KeyboardEvent, index: number) {
   if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
   event.preventDefault();
