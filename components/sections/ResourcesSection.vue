@@ -62,7 +62,7 @@
           </div>
         </div>
         <div
-          class="md:ml-auto md:w-2/5 md:max-w-[572px] md:aspect-[1.55] md:h-auto sm:w-3/5 w-2/5 mx-auto my-8 md:mr-0 md:my-0 h-20"
+          class="md:ml-auto md:w-2/5 md:max-w-[572px] md:aspect-[1.55] md:h-auto sm:w-3/5 w-full mx-auto my-8 md:mr-0 md:my-0 h-48"
         >
           <div class="flex h-full items-center justify-center">
             <div class="aspect-square h-full">
