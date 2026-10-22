@@ -1,4 +1,5 @@
 import type { Ref } from "vue";
+import { symptomIntroPosition } from "../../utils/education-scroll";
 
 interface UseSymptomsProfileModelAnimationOptions {
   $gsap: any;
@@ -68,7 +69,7 @@ export const useSymptomsProfileModelAnimation = ({
         scrollTrigger: {
           trigger: sectionRef.value,
           start: "top top",
-          end: "22% top",
+          end: symptomIntroPosition(22),
           scrub: 1,
         },
       }

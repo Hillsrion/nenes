@@ -1,5 +1,6 @@
 import type { Ref } from "vue";
 import type { gsap } from "gsap";
+import { examinationScrollTiming } from "../../utils/education-scroll";
 
 interface CardSequenceOptions {
   $gsap: typeof gsap;
@@ -35,6 +36,7 @@ export function useExaminationCardSequence(options: CardSequenceOptions) {
     scrollTimeline?.kill();
 
     const totalSteps = options.getStepsCount();
+    const timing = examinationScrollTiming(totalSteps);
     const mobile = window.matchMedia("(max-width: 1023px)").matches;
     const getOffset = (index: number) => {
       const offset = restingOffsets[index % restingOffsets.length]!;
@@ -83,31 +85,29 @@ export function useExaminationCardSequence(options: CardSequenceOptions) {
         start: "top top",
         end: "bottom bottom",
         scrub: 0.8,
-        onUpdate: (self: any) => {
-          const progress = self.progress;
+      },
+      // Keep the model and video on the card actually rendered by scrub smoothing.
+      onUpdate: function () {
+        const time = this.time();
+        if (totalSteps <= 1) {
+          currentStepIndex.value = 0;
+          return;
+        }
 
-          if (totalSteps <= 1) {
-            currentStepIndex.value = 0;
-            return;
-          }
+        // Step 0 includes the introduction and the first demonstration.
+        if (time < timing.firstChange) {
+          if (currentStepIndex.value !== 0) currentStepIndex.value = 0;
+          return;
+        }
 
-          // Step 0 includes the introduction and the first demonstration.
-          if (progress < 0.50) {
-            if (currentStepIndex.value !== 0) currentStepIndex.value = 0;
-            return;
-          }
+        const stepIdx = Math.min(
+          totalSteps - 1,
+          1 + Math.floor((time - timing.firstChange) / timing.stepSpan)
+        );
 
-          // Remaining steps 1..totalSteps-1 follow the first card entrance.
-          const stepSpan = 0.40 / (totalSteps - 1);
-          const stepIdx = Math.min(
-            totalSteps - 1,
-            1 + Math.floor((progress - 0.50) / stepSpan)
-          );
-
-          if (currentStepIndex.value !== stepIdx) {
-            currentStepIndex.value = stepIdx;
-          }
-        },
+        if (currentStepIndex.value !== stepIdx) {
+          currentStepIndex.value = stepIdx;
+        }
       },
     });
 
@@ -154,14 +154,14 @@ export function useExaminationCardSequence(options: CardSequenceOptions) {
 
     // 3. Sequential stacking animations for cards 1..N-1
     if (totalSteps > 1) {
-      const stepDuration = 0.40 / (totalSteps - 1);
+      const stepDuration = timing.stepSpan;
 
       for (let i = 1; i < totalSteps; i++) {
         const card = cardRefs.value[i];
         if (!card) continue;
 
         const o = getOffset(i);
-        const startTime = 0.50 + (i - 1) * stepDuration;
+        const startTime = timing.firstChange + (i - 1) * stepDuration;
 
         if (mobile) tl.set(card, { opacity: 1 }, startTime);
         tl.to(
@@ -180,8 +180,8 @@ export function useExaminationCardSequence(options: CardSequenceOptions) {
       }
     }
 
-    // Keep the timeline duration fixed so scroll progress matches the card timings.
-    tl.to({}, { duration: 0.08 }, 0.92);
+    // Leave a reading pause after the last card and gesture have settled.
+    tl.to({}, { duration: 0.25 }, timing.end - 0.25);
 
     scrollTimeline = tl;
   };

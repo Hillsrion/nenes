@@ -3,7 +3,8 @@
     ref="sectionRef"
     id="autopalpation"
     :data-palpation-step="activeStepId"
-    class="relative z-20 min-h-[600svh]"
+    class="relative z-20"
+    :style="{ minHeight: `${examinationScrollTiming(steps.length).heightSvh}svh` }"
     :class="useSharedModel ? 'bg-transparent' : 'bg-white'"
   >
     <div v-if="isIOS" class="h-svh"></div>
@@ -112,6 +113,7 @@ import ThreeBustViewer from "~/components/ui/ThreeBustViewer.vue";
 import { useDemoBustModelUrls } from "~/composables/useDemoBustModelUrls";
 import { useAnimationsStore } from "~/stores";
 import { useIsIOS } from "~/composables/useIsIOS";
+import { examinationScrollTiming } from "~/utils/education-scroll";
 
 const { palpationFileName, getModelUrl } = useDemoBustModelUrls();
 

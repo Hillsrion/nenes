@@ -1,4 +1,5 @@
 import type { Ref } from "vue";
+import { symptomIntroPosition } from "../../utils/education-scroll";
 
 interface UseSymptomsCarouselAnimationOptions {
   $gsap: any;
@@ -115,10 +116,10 @@ export const useSymptomsCarouselAnimation = ({
         // Completion signals also keep this order when the reader scrolls fast.
         const carouselStart = showProfileModel
           ? isMobile
-            ? "50% top"
-            : "48% top"
+            ? symptomIntroPosition(50)
+            : symptomIntroPosition(48)
           : isMobile
-            ? "35% top"
+            ? symptomIntroPosition(35)
             : "top top";
         const titleHideStart = showProfileModel
           ? isMobile
@@ -174,7 +175,7 @@ export const useSymptomsCarouselAnimation = ({
           entranceAnimation = $gsap.to({}, {
             scrollTrigger: {
               trigger: sectionRef.value,
-              start: "34% top",
+              start: symptomIntroPosition(34),
               end: "bottom bottom",
               onEnter: () => {
                 onEntranceStart?.();
@@ -223,8 +224,8 @@ export const useSymptomsCarouselAnimation = ({
           titleHideAnimation = $gsap.timeline({
             scrollTrigger: {
               trigger: sectionRef.value,
-              start: introShowStart,
-              end: titleHideEnd,
+              start: symptomIntroPosition(showStartPct),
+              end: symptomIntroPosition(hideEndPct),
               scrub: true,
             },
           });

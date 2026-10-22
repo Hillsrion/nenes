@@ -1,6 +1,7 @@
 <template>
   <section
-    class="py-16 h-[600svh] relative z-20 sm:-mt-[25svh]"
+    class="py-16 relative z-20 sm:-mt-[25svh]"
+    :style="{ height: `${SYMPTOMS_HEIGHT_SVH}svh` }"
     ref="sectionRef"
     :data-active-symptom="activeSymptom"
     :data-symptom-phase="entrancePhase"
@@ -95,6 +96,7 @@ import { useDemoBustModelUrls } from "~/composables/useDemoBustModelUrls";
 import { useIsIOS } from "~/composables/useIsIOS";
 import { useSymptomsCarouselAnimation } from "~/composables/symptoms/useSymptomsCarouselAnimation";
 import { useSymptomsProfileModelAnimation } from "~/composables/symptoms/useSymptomsProfileModelAnimation";
+import { SYMPTOMS_HEIGHT_SVH } from "~/utils/education-scroll";
 
 const { palpationFileName, getModelUrl } = useDemoBustModelUrls();
 

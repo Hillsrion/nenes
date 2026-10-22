@@ -40,7 +40,7 @@ test('fast scrolling cannot move cards before the bust is ready, and reverse scr
     onSequenceReset: () => reset++,
   });
   sequence.initializeCarouselAnimation();
-  const entrance = triggers.find(trigger => trigger.start === '34% top');
+  const entrance = triggers.find(trigger => trigger.onEnter);
   entrance.onEnter();
   assert.equal(entered, 1);
   // The reader jumps halfway through the carousel before the 3D transition ends.
